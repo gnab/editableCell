@@ -1,6 +1,6 @@
 ko.bindingHandlers.editableCell = {
     init: function (element) {
-        var table = element.offsetParent, // Consider traversing parentElement chain
+        var table = $(element).parents('table')[0],
             selection = table._cellSelection;
 
         if (selection === undefined) {
@@ -15,6 +15,7 @@ ko.bindingHandlers.editableCell = {
         if (typeof value === "object" && value.value !== undefined) {
             element._cellValue = value.value;
             element._cellFormatted = value.formatted;
+            element._cellReadOnly = value.readOnly;
         }
         else {
             element._cellValue = valueAccessor();
@@ -43,6 +44,10 @@ ko.bindingHandlers.editableCell = {
         self.updateCellValue = function (cell, newValue) {
             var value;
 
+            if (!self.cellIsEditable(cell)) {
+                return;
+            }
+
             if (newValue === undefined) {
                 value = cell.textContent;
                 self.restoreCellText(cell);
@@ -63,6 +68,10 @@ ko.bindingHandlers.editableCell = {
             self.startEditingCell(self.range.start);
         };
         self.startEditingCell = function (cell) {
+            if (!self.cellIsEditable(cell)) {
+                return;
+            }
+
             if (self.range.start !== cell) {
                 self.range.setStart(cell);
             }
@@ -82,9 +91,12 @@ ko.bindingHandlers.editableCell = {
             cell.contentEditable = false;
             return self.updateCellValue(cell);
         };
-        self.cellIsEditable = function (cell) {
+        self.cellIsSelectable = function (cell) {
             return cell._cellValue !== undefined;
         };
+        self.cellIsEditable = function (cell) {
+            return ko.utils.unwrapObservable(cell._cellReadOnly) !== true;
+        }
 
         // <!-- Cell event handlers
         self.onCellMouseDown = function (cell, shiftKey) {
@@ -254,7 +266,7 @@ ko.bindingHandlers.editableCell = {
         self.end = undefined;
 
         self.moveInDirection = function (direction) {
-            var newStart = self.getEditableCellInDirection(self.start, direction),
+            var newStart = self.getSelectableCellInDirection(self.start, direction),
                 startChanged = newStart !== self.start;
 
             if (newStart !== self.start || self.start !== self.end) {
@@ -286,7 +298,7 @@ ko.bindingHandlers.editableCell = {
                 allEditable = true;
 
             ko.utils.arrayForEach(cellsInArea, function (cell) {
-                allEditable = allEditable && selection.cellIsEditable(cell);
+                allEditable = allEditable && selection.cellIsSelectable(cell);
             });
 
             if (!allEditable) {
@@ -316,7 +328,7 @@ ko.bindingHandlers.editableCell = {
 
             return originCell;
         };
-        self.getEditableCellInDirection = function (originCell, direction) {
+        self.getSelectableCellInDirection = function (originCell, direction) {
             var lastCell,
                 cell = originCell;
 
@@ -324,7 +336,7 @@ ko.bindingHandlers.editableCell = {
                 lastCell = cell;
                 cell = self.getCellInDirection(cell, direction);
 
-                if (selection.cellIsEditable(cell)) {
+                if (selection.cellIsSelectable(cell)) {
                     return cell;
                 }
             }

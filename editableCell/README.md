@@ -9,10 +9,18 @@ the same change to all selected cells.
 
 ### Usage
 
-Table cells bound using the `editableCell` property are selectable and editable. By specifying a `value` and a `formatted` field, a cell may display a formatted value when not edited, e.g.:
+Table cells bound using the `editableCell` property are by default selectable and editable. 
 
+To customize the default behaviour, you may bind to an object wich may have to following properties:
+
+ - `value` - The cell value (mandatory)
+ - `readOnly` - Whether or not the cell should be just selectable and not editable
+ - `formatted` - The cell text to display when the cell is not being edited
+
+Example illustrating how the `editableBinding` may be used:
 
 ```html
-<td data-bind="editableCell: nameObservable"></td>
+<td data-bind="editableCell: {value: id, readOnly: true}"></td>
+<td data-bind="editableCell: name"></td>
 <td data-bind="editableCell: {value: age, formatted: age() + ' years'}"></td>
 ```

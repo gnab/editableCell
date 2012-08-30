@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
+        <script type="text/javascript" src="http://cloud.github.com/downloads/SteveSanderson/knockout/knockout-2.1.0.js"></script>
+        <script type="text/javascript" src="knockout.editableCell.js"></script>
+        <style type="text/css">
+            body
+            {
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+                font-size: 13px;
+                line-height: 18px;
+                color: #333333;
+                padding: 30px;
+            }
+
+            table
+            {
+                max-width: 100%;
+                background-color: transparent;
+                border-collapse: collapse;
+                border-spacing: 0;
+            }
+
+            .table
+            {
+                width: 100%;
+                margin-bottom: 18px;
+            }
+
+                .table th,
+                .table td
+                {
+                    padding: 8px;
+                    line-height: 18px;
+                    text-align: left;
+                    vertical-align: top;
+                    border-top: 1px solid #dddddd;
+                }
+
+                .table th
+                {
+                    font-weight: bold;
+                }
+
+                .table thead th
+                {
+                    vertical-align: bottom;
+                }
+
+                .table caption + thead tr:first-child th,
+                .table caption + thead tr:first-child td,
+                .table colgroup + thead tr:first-child th,
+                .table colgroup + thead tr:first-child td,
+                .table thead:first-child tr:first-child th,
+                .table thead:first-child tr:first-child td
+                {
+                    border-top: 0;
+                }
+
+                .table tbody + tbody
+                {
+                    border-top: 2px solid #dddddd;
+                }
+
+            .table-condensed th,
+            .table-condensed td
+            {
+                padding: 4px 5px;
+            }
+
+            .table-bordered
+            {
+                border: 1px solid #dddddd;
+                border-collapse: separate;
+                *border-collapse: collapsed;
+                border-left: 0;
+                -webkit-border-radius: 4px;
+                -moz-border-radius: 4px;
+                border-radius: 4px;
+            }
+
+                .table-bordered th,
+                .table-bordered td
+                {
+                    border-left: 1px solid #dddddd;
+                }
+
+                .table-bordered caption + thead tr:first-child th,
+                .table-bordered caption + tbody tr:first-child th,
+                .table-bordered caption + tbody tr:first-child td,
+                .table-bordered colgroup + thead tr:first-child th,
+                .table-bordered colgroup + tbody tr:first-child th,
+                .table-bordered colgroup + tbody tr:first-child td,
+                .table-bordered thead:first-child tr:first-child th,
+                .table-bordered tbody:first-child tr:first-child th,
+                .table-bordered tbody:first-child tr:first-child td
+                {
+                    border-top: 0;
+                }
+
+                    .table-bordered thead:first-child tr:first-child th:first-child,
+                    .table-bordered tbody:first-child tr:first-child td:first-child
+                    {
+                        -webkit-border-top-left-radius: 4px;
+                        border-top-left-radius: 4px;
+                        -moz-border-radius-topleft: 4px;
+                    }
+
+                    .table-bordered thead:first-child tr:first-child th:last-child,
+                    .table-bordered tbody:first-child tr:first-child td:last-child
+                    {
+                        -webkit-border-top-right-radius: 4px;
+                        border-top-right-radius: 4px;
+                        -moz-border-radius-topright: 4px;
+                    }
+
+                .table-bordered thead:last-child tr:last-child th:first-child,
+                .table-bordered tbody:last-child tr:last-child td:first-child
+                {
+                    -webkit-border-radius: 0 0 0 4px;
+                    -moz-border-radius: 0 0 0 4px;
+                    border-radius: 0 0 0 4px;
+                    -webkit-border-bottom-left-radius: 4px;
+                    border-bottom-left-radius: 4px;
+                    -moz-border-radius-bottomleft: 4px;
+                }
+
+                .table-bordered thead:last-child tr:last-child th:last-child,
+                .table-bordered tbody:last-child tr:last-child td:last-child
+                {
+                    -webkit-border-bottom-right-radius: 4px;
+                    border-bottom-right-radius: 4px;
+                    -moz-border-radius-bottomright: 4px;
+                }
+
+            .table-striped tbody tr:nth-child(odd) td,
+            .table-striped tbody tr:nth-child(odd) th
+            {
+                background-color: #f9f9f9;
+            }
+
+            .table tbody tr:hover td,
+            .table tbody tr:hover th
+            {
+                background-color: #f5f5f5;
+            }
+        </style>
+    </head>
+    <body>
+        <h2><code>editableCell</code> binding</h2>
+        <table style="position: relative" class="table table-bordered table-condensed editable">
+            <thead>
+                <th width="30%">Firstname (editable)</th>
+                <th width="30%">Surname (read-only)</th>
+                <th>Salary</th>
+                <th width="20%">Age (editable)</th>
+            </thead>
+            <tbody>
+                <!-- ko foreach: entries -->
+                <tr>
+                    <td data-bind="editableCell: firstName"></td>
+                    <td data-bind="editableCell: {value: surName, readOnly: true}"></td>
+                    <td>100</td>
+                    <td data-bind="editableCell: {value: age, formatted: age() + ' years'}"></td>
+                </tr>
+                <!-- /ko -->
+            </tbody>
+        </table>
+        <p>Combined age: <span data-bind="text: combinedAge"></span></p>
+        <script type="text/javascript">
+            function ViewModel() {
+                var self = this;
+
+                self.entries = ko.observableArray([
+                    new Person('Bob', 'Geldof', 41),
+                    new Person('Roger', 'Moore', 42),
+                    new Person('James', 'Jameson', 43),
+                    new Person('Andy', 'McLaren', 44),
+                    new Person('Richard', 'Anderson', 45),
+                ]);
+
+                self.combinedAge = ko.computed(function () {
+                    var sum = 0;
+                    ko.utils.arrayForEach(self.entries(), function (person) {
+                        sum += parseFloat(person.age());
+                    });
+                    return sum;
+                });
+            }
+
+            function Person(firstName, surName, age) {
+                this.firstName = ko.observable(firstName);
+                this.surName = ko.observable(surName);
+                this.age = ko.observable(age);
+            }
+
+            ko.applyBindings(new ViewModel());
+        </script>
+    </body>
+</html>
