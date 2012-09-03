@@ -149,20 +149,20 @@
     </head>
     <body>
         <h2><code>editableCell</code> binding</h2>
-        <table style="position: relative" class="table table-bordered table-condensed editable">
+        <table style="position: relative" class="table table-bordered table-condensed">
             <thead>
-                <th width="30%">Firstname (editable)</th>
-                <th width="30%">Surname (read-only)</th>
-                <th>Salary</th>
+                <th width="30%">Firstname (editable, non-observable)</th>
+                <th width="30%">Surname (editable)</th>
+                <th>Salary (read-only)</th>
                 <th width="20%">Age (editable)</th>
             </thead>
             <tbody>
                 <!-- ko foreach: entries -->
                 <tr>
                     <td data-bind="editableCell: firstName"></td>
-                    <td data-bind="editableCell: {value: surName, readOnly: true}"></td>
-                    <td>100</td>
-                    <td data-bind="editableCell: {value: age, formatted: age() + ' years'}"></td>
+                    <td data-bind="editableCell: surName, cellReadOnly: true"></td>
+                    <td data-bind="editableCell: 100, cellReadOnly: true"></td>
+                    <td data-bind="editableCell: age, cellText: age() + ' years'"></td>
                 </tr>
                 <!-- /ko -->
             </tbody>
@@ -190,12 +190,14 @@
             }
 
             function Person(firstName, surName, age) {
-                this.firstName = ko.observable(firstName);
+                this.firstName = firstName;
                 this.surName = ko.observable(surName);
                 this.age = ko.observable(age);
             }
 
-            ko.applyBindings(new ViewModel());
+            var viewModel = new ViewModel();
+
+            ko.applyBindings(viewModel);
         </script>
     </body>
 </html>

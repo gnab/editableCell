@@ -1,7 +1,8 @@
 ko.bindingHandlers.editableCell = {
     init: function (element, valueAccessor, allBindingsAccessor) {
         var table = $(element).parents('table')[0],
-            selection = table._cellSelection;
+            selection = table._cellSelection,
+            value = ko.utils.unwrapObservable(valueAccessor());
 
         if (selection === undefined) {
             table._cellSelection = selection = new ko.bindingHandlers.editableCell.Selection(table);
@@ -9,36 +10,28 @@ ko.bindingHandlers.editableCell = {
 
         selection.registerCell(element);
 
+        element._cellValue = valueAccessor;
+        element._cellText = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellText); }
+        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
         element._cellValueUpdater = function (newValue) {
             if (ko.isWriteableObservable(element._cellValue())) {
                 element._cellValue()(newValue);
                 return;
             }
 
-            var propWriters = allBindingsAccessor()['_ko_property_writers'];
-            if (propWriters && propWriters['editableCell']) {
-                propWriters['editableCell'](newValue);
+            var propertyWriters = allBindingsAccessor()._ko_property_writers;
+            if (propertyWriters && propertyWriters.editableCell) {
+                propertyWriters.editableCell(newValue);
             }
 
             if (!ko.isObservable(element._cellValue())) {
-                allBindingsAccessor()['editableCell'] = newValue;
-                element.textContent = ko.utils.unwrapObservable(element._cellFormatted || element._cellValue());
+                allBindingsAccessor().editableCell = newValue;
+                element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
             }
         };
     },
-    update: function (element, valueAccessor) {
-        var value = ko.utils.unwrapObservable(valueAccessor());
-
-        if (typeof value === "object" && value.value !== undefined) {
-            element._cellValue = function () { return value.value };
-            element._cellFormatted = value.formatted;
-            element._cellReadOnly = value.readOnly;
-        }
-        else {
-            element._cellValue = valueAccessor;
-        }
-
-        element.textContent = ko.utils.unwrapObservable(element._cellFormatted || element._cellValue());
+    update: function (element, valueAccessor, allBindingsAccessor) {
+        element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
     },
     Selection: function (table) {
         var self = this;
@@ -112,7 +105,7 @@ ko.bindingHandlers.editableCell = {
             return cell._cellValue !== undefined;
         };
         self.cellIsEditable = function (cell) {
-            return ko.utils.unwrapObservable(cell._cellReadOnly) !== true;
+            return cell._cellReadOnly() !== true;
         }
 
         // <!-- Cell event handlers
