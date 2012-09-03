@@ -1,5 +1,5 @@
 ko.bindingHandlers.editableCell = {
-    init: function (element) {
+    init: function (element, valueAccessor, allBindingsAccessor) {
         var table = $(element).parents('table')[0],
             selection = table._cellSelection;
 
@@ -8,20 +8,37 @@ ko.bindingHandlers.editableCell = {
         }
 
         selection.registerCell(element);
+
+        element._cellValueUpdater = function (newValue) {
+            if (ko.isWriteableObservable(element._cellValue())) {
+                element._cellValue()(newValue);
+                return;
+            }
+
+            var propWriters = allBindingsAccessor()['_ko_property_writers'];
+            if (propWriters && propWriters['editableCell']) {
+                propWriters['editableCell'](newValue);
+            }
+
+            if (!ko.isObservable(element._cellValue())) {
+                allBindingsAccessor()['editableCell'] = newValue;
+                element.textContent = ko.utils.unwrapObservable(element._cellFormatted || element._cellValue());
+            }
+        };
     },
     update: function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor());
 
         if (typeof value === "object" && value.value !== undefined) {
-            element._cellValue = value.value;
+            element._cellValue = function () { return value.value };
             element._cellFormatted = value.formatted;
             element._cellReadOnly = value.readOnly;
         }
         else {
-            element._cellValue = valueAccessor();
+            element._cellValue = valueAccessor;
         }
 
-        element.textContent = ko.utils.unwrapObservable(element._cellFormatted || element._cellValue);
+        element.textContent = ko.utils.unwrapObservable(element._cellFormatted || element._cellValue());
     },
     Selection: function (table) {
         var self = this;
@@ -56,7 +73,7 @@ ko.bindingHandlers.editableCell = {
                 value = newValue;
             }
 
-            cell._cellValue(value);
+            cell._cellValueUpdater(value);
 
             return value;
         };
@@ -77,7 +94,7 @@ ko.bindingHandlers.editableCell = {
             }
 
             cell._oldTextContent = cell.textContent;
-            cell.textContent = ko.utils.unwrapObservable(cell._cellValue);
+            cell.textContent = ko.utils.unwrapObservable(cell._cellValue());
 
             cell.contentEditable = true;
             cell.focus();
