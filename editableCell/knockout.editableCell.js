@@ -318,22 +318,26 @@ ko.bindingHandlers.editableCell = {
             self.end = element;
             view.update(self.start, self.end);
         };
-        self.getCellInDirection = function (originCell, direction) {
-            var cellIndex = originCell.cellIndex,
-                originRow = originCell.parentNode,
-                rowIndex = originRow.rowIndex - self.getRowsOffset(originCell);
+        self.getCellInDirection = function (originCell, direction, rowIndex, cellIndex) {
+            var originRow = originCell.parentNode,
+                cell;
+
+            rowIndex = typeof rowIndex !== 'undefined' ? rowIndex : originRow.rowIndex - self.getRowsOffset(originCell),
+            cellIndex = typeof cellIndex !== 'undefined' ? cellIndex : originCell.cellIndex;
 
             if (direction === 'Left' && cellIndex > 0) {
                 return originRow.children[cellIndex - 1];
             }
             if (direction === 'Up' && rowIndex > 0) {
-                return originRow.parentNode.children[rowIndex - 1].children[cellIndex];
+                cell = originRow.parentNode.children[rowIndex - 1].children[cellIndex];
+                return cell || self.getCellInDirection(originCell, direction, rowIndex - 1, cellIndex);
             }
             if (direction === 'Right' && cellIndex < originCell.parentNode.children.length - 1) {
                 return originRow.children[cellIndex + 1];
             }
             if (direction === 'Down' && rowIndex < originCell.parentNode.parentNode.children.length - 1) {
-                return originRow.parentNode.children[rowIndex + 1].children[cellIndex];
+                cell = originRow.parentNode.children[rowIndex + 1].children[cellIndex];
+                return cell || self.getCellInDirection(originCell, direction, rowIndex + 1, cellIndex);
             }
 
             return originCell;
@@ -363,11 +367,13 @@ ko.bindingHandlers.editableCell = {
                 endY = Math.max(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
                 x, y,
                 rowsOffset = self.getRowsOffset(startCell),
+                cell,
                 cells = [];
 
             for (x = startX; x <= endX; ++x) {
                 for (y = startY; y <= endY; ++y) {
-                    cells.push(startCell.parentNode.parentNode.children[y - rowsOffset].children[x]);
+                    cell = startCell.parentNode.parentNode.children[y - rowsOffset].children[x];
+                    cells.push(cell || {});
                 }
             }
 
