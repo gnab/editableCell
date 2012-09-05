@@ -168,10 +168,10 @@ ko.bindingHandlers.editableCell = {
         self.onArrows = function (event) {
             var preventDefault;
 
-            if (event.shiftKey) {
+            if (event.shiftKey && !event.ctrlKey) {
                 preventDefault = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode]);
             }
-            else {
+            else if (!event.ctrlKey) {
                 preventDefault = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode]);
             }
 
