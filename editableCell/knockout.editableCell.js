@@ -43,8 +43,18 @@ ko.bindingHandlers.editableCell = {
 
         self.registerCell = function (cell) {
             ko.utils.registerEventHandler(cell, "mousedown", function (event) {
+                if (self.isEditingCell(cell)) {
+                    return;
+                }
+
                 self.onCellMouseDown(cell, event.shiftKey);
                 event.preventDefault();
+            });
+            ko.utils.registerEventHandler(cell, "mouseup", function (event) {
+                if (self.isEditingCell(cell)) {
+                    event.stopPropagation();
+                    return;
+                }
             });
             ko.utils.registerEventHandler(cell, "mouseover", self.onCellMouseOver);
             ko.utils.registerEventHandler(cell, "blur", self.onCellBlur);
@@ -92,13 +102,19 @@ ko.bindingHandlers.editableCell = {
             cell.contentEditable = true;
             cell.focus();
             document.execCommand('selectAll', false, null);
+            self.view.element.style.pointerEvents = 'none';
+        };
+        self.isEditingCell = function (cell) {
+            return cell.contentEditable === 'true';
         };
         self.cancelEditingCell = function (cell) {
             cell.contentEditable = false;
             self.restoreCellText(cell);
+            self.view.element.style.pointerEvents = 'inherit';
         };
         self.endEditingCell = function (cell) {
             cell.contentEditable = false;
+            self.view.element.style.pointerEvents = 'inherit';
             return self.updateCellValue(cell);
         };
         self.cellIsSelectable = function (cell) {
