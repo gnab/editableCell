@@ -195,6 +195,30 @@ ko.bindingHandlers.editableCell = {
                 event.preventDefault();
             }
         };
+        self.onPaste = function (text) {
+            var selStart = self.range.getCells()[0],
+                cells,
+                values = ko.utils.arrayMap(text.trim().split(/\r?\n/), function (line) { return line.split('\t'); }),
+                row = values.length,
+                col = values[0].length,
+                rows = 1,
+                cols = 1,
+                i = 0;
+
+            self.range.setStart(selStart);
+
+            while (row-- > 1 && self.range.extendInDirection('Down')) { rows++ };
+            while (col-- > 1 && self.range.extendInDirection('Right')) { cols++ };
+
+            cells = self.range.getCells();
+
+            for (col = 0; col < cols; col++) {
+                for (row = 0; row < rows; row++) {
+                    self.updateCellValue(cells[i], values[row][col]);
+                    i++;
+                }
+            }
+        };
         self.keyCodeIdentifier = {
             37: 'Left',
             38: 'Up',
@@ -211,7 +235,13 @@ ko.bindingHandlers.editableCell = {
         self.element.style.display = 'none';
         self.element.tabIndex = -1;
 
+        self.pasteElement = document.createElement('textarea');
+        self.pasteElement.style.position = 'absolute';
+        self.pasteElement.style.opacity = '0.0';
+        self.pasteElement.style.display = 'none';
+
         table.appendChild(self.element);
+        table.appendChild(self.pasteElement);
 
         self.show = function () {
             self.element.style.display = 'block';
@@ -283,6 +313,19 @@ ko.bindingHandlers.editableCell = {
         ko.utils.registerEventHandler(self.element, "keydown", function (event) {
             if (event.keyCode === 13) { selection.onReturn(event); }
             else if ([37, 38, 39, 40].indexOf(event.keyCode) !== -1) { selection.onArrows(event); }
+            else if (event.keyCode === 86 && event.ctrlKey) {
+                self.pasteElement.value = '';
+                self.pasteElement.style.display = 'block';
+                self.pasteElement.focus();
+            }
+        });
+
+        ko.utils.registerEventHandler(self.pasteElement, "input", function (event) {
+            self.pasteElement.style.display = 'none';
+            selection.onPaste(event.target.value);
+            setTimeout(function () {
+                self.focus();
+            }, 0);
         });
     },
     SelectionRange: function (selection, view) {
