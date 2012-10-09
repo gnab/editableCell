@@ -195,6 +195,29 @@ ko.bindingHandlers.editableCell = {
                 event.preventDefault();
             }
         };
+        self.onCopy = function () {
+            var cells = self.range.getCells(),
+                cols = cells[cells.length - 1].cellIndex - cells[0].cellIndex + 1,
+                rows = cells.length / cols,
+                lines = [],
+                i = 0;
+
+            ko.utils.arrayForEach(cells, function (cell) {
+                var lineIndex = i % rows,
+                    rowIndex = Math.floor(i / rows);
+
+                console.log(lineIndex + '-' + rowIndex);
+
+                lines[lineIndex] = lines[lineIndex] || [];
+                lines[lineIndex][rowIndex] = ko.utils.unwrapObservable(cell._cellValue());
+
+                i++;
+            });
+
+            return ko.utils.arrayMap(lines, function (line) {
+                return line.join('\t');
+            }).join('\r\n');
+        };
         self.onPaste = function (text) {
             var selStart = self.range.getCells()[0],
                 cells,
@@ -235,13 +258,13 @@ ko.bindingHandlers.editableCell = {
         self.element.style.display = 'none';
         self.element.tabIndex = -1;
 
-        self.pasteElement = document.createElement('textarea');
-        self.pasteElement.style.position = 'absolute';
-        self.pasteElement.style.opacity = '0.0';
-        self.pasteElement.style.display = 'none';
+        self.copyPasteElement = document.createElement('textarea');
+        self.copyPasteElement.style.position = 'absolute';
+        self.copyPasteElement.style.opacity = '0.0';
+        self.copyPasteElement.style.display = 'none';
 
         table.appendChild(self.element);
-        table.appendChild(self.pasteElement);
+        table.appendChild(self.copyPasteElement);
 
         self.show = function () {
             self.element.style.display = 'block';
@@ -314,18 +337,25 @@ ko.bindingHandlers.editableCell = {
             if (event.keyCode === 13) { selection.onReturn(event); }
             else if ([37, 38, 39, 40].indexOf(event.keyCode) !== -1) { selection.onArrows(event); }
             else if (event.keyCode === 86 && event.ctrlKey) {
-                self.pasteElement.value = '';
-                self.pasteElement.style.display = 'block';
-                self.pasteElement.focus();
+                self.copyPasteElement.value = '';
+                self.copyPasteElement.style.display = 'block';
+                self.copyPasteElement.focus();
+                setTimeout(function () {
+                    selection.onPaste(self.copyPasteElement.value);
+                    self.copyPasteElement.style.display = 'none';
+                    self.focus();
+                }, 0);
             }
-        });
-
-        ko.utils.registerEventHandler(self.pasteElement, "input", function (event) {
-            self.pasteElement.style.display = 'none';
-            selection.onPaste(event.target.value);
-            setTimeout(function () {
-                self.focus();
-            }, 0);
+            else if (event.keyCode === 67 && event.ctrlKey) {
+                self.copyPasteElement.value = selection.onCopy();
+                self.copyPasteElement.style.display = 'block';
+                self.copyPasteElement.focus();
+                document.execCommand('selectAll', false, null);
+                setTimeout(function () {
+                    self.copyPasteElement.style.display = 'none';
+                    self.focus();
+                }, 0);
+            }
         });
     },
     SelectionRange: function (selection, view) {
