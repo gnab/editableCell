@@ -1,8 +1,7 @@
 ko.bindingHandlers.editableCell = {
     init: function (element, valueAccessor, allBindingsAccessor) {
         var table = $(element).parents('table')[0],
-            selection = table._cellSelection,
-            value = ko.utils.unwrapObservable(valueAccessor());
+            selection = table._cellSelection;
 
         if (selection === undefined) {
             table._cellSelection = selection = new ko.bindingHandlers.editableCell.Selection(table);
@@ -328,6 +327,10 @@ ko.bindingHandlers.editableCell = {
         });
 
         ko.utils.registerEventHandler(self.element, "mousedown", function (event) {
+            if (event.button !== 0) {
+                return;
+            }
+
             self.hide();
 
             var cell = event.view.document.elementFromPoint(event.clientX, event.clientY);
