@@ -11,33 +11,43 @@ ko.bindingHandlers.editableCell = {
         selection.registerCell(element);
 
         element._cellValue = valueAccessor;
-        element._cellText = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellText); }
+        element._cellText = function () { return allBindingsAccessor().cellText || element._cellValue(); };
         element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
         element._cellValueUpdater = function (newValue) {
-            if (ko.isWriteableObservable(element._cellValue())) {
-                element._cellValue()(newValue);
-                return;
-            }
-
-            var propertyWriters = allBindingsAccessor()._ko_property_writers;
-            if (propertyWriters && propertyWriters.editableCell) {
-                propertyWriters.editableCell(newValue);
-            }
+            ko.bindingHandlers.editableCell.updateBindingValue('editableCell', element._cellValue, allBindingsAccessor, newValue);
 
             if (!ko.isObservable(element._cellValue())) {
-                allBindingsAccessor().editableCell = newValue;
-                element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
+                element.textContent = ko.utils.unwrapObservable(element._cellText());
             }
         };
     },
     update: function (element, valueAccessor, allBindingsAccessor) {
-        element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
+        element.textContent = ko.utils.unwrapObservable(element._cellText());
+    },
+    updateBindingValue: function (bindingName, valueAccessor, allBindingsAccessor, newValue) {
+        if (ko.isWriteableObservable(valueAccessor())) {
+            valueAccessor()(newValue);
+            return;
+        }
+
+        var propertyWriters = allBindingsAccessor()._ko_property_writers;
+        if (propertyWriters && propertyWriters[bindingName]) {
+            propertyWriters[bindingName](newValue);
+        }
+
+        if (!ko.isObservable(valueAccessor())) {
+            allBindingsAccessor()[bindingName] = newValue;
+        }
     },
     Selection: function (table) {
         var self = this;
 
         self.view = new ko.bindingHandlers.editableCell.SelectionView(table, self);
-        self.range = new ko.bindingHandlers.editableCell.SelectionRange(self, self.view);
+        self.range = new ko.bindingHandlers.editableCell.SelectionRange(cellIsSelectable);
+
+        self.range.selection.subscribe(function (newSelection) {
+            self.view.update(newSelection[0], newSelection[newSelection.length - 1]);
+        });
 
         self.focus = self.view.focus;
 
@@ -117,7 +127,7 @@ ko.bindingHandlers.editableCell = {
             self.view.element.style.pointerEvents = 'inherit';
             return self.updateCellValue(cell);
         };
-        self.cellIsSelectable = function (cell) {
+        function cellIsSelectable (cell) {
             return cell._cellValue !== undefined;
         };
         self.cellIsEditable = function (cell) {
@@ -358,11 +368,12 @@ ko.bindingHandlers.editableCell = {
             }
         });
     },
-    SelectionRange: function (selection, view) {
+    SelectionRange: function (cellIsSelectable) {
         var self = this;
 
         self.start = undefined;
         self.end = undefined;
+        self.selection = ko.observableArray();
 
         self.moveInDirection = function (direction) {
             var newStart = self.getSelectableCellInDirection(self.start, direction),
@@ -385,7 +396,7 @@ ko.bindingHandlers.editableCell = {
         self.setStart = function (element) {
             self.start = element;
             self.end = element;
-            view.update(self.start, self.end);
+            self.selection(self.getCells());
         };
         self.setEnd = function (element) {
             if (element === self.end) {
@@ -397,7 +408,7 @@ ko.bindingHandlers.editableCell = {
                 allEditable = true;
 
             ko.utils.arrayForEach(cellsInArea, function (cell) {
-                allEditable = allEditable && selection.cellIsSelectable(cell);
+                allEditable = allEditable && cellIsSelectable(cell);
             });
 
             if (!allEditable) {
@@ -405,7 +416,7 @@ ko.bindingHandlers.editableCell = {
             }
 
             self.end = element;
-            view.update(self.start, self.end);
+            self.selection(self.getCells());
         };
         self.getCellInDirection = function (originCell, direction, rowIndex, cellIndex) {
             var originRow = originCell.parentNode,
@@ -439,7 +450,7 @@ ko.bindingHandlers.editableCell = {
                 lastCell = cell;
                 cell = self.getCellInDirection(cell, direction);
 
-                if (selection.cellIsSelectable(cell)) {
+                if (cellIsSelectable(cell)) {
                     return cell;
                 }
             }
@@ -473,5 +484,31 @@ ko.bindingHandlers.editableCell = {
 
             return rows[rows.length - 1].rowIndex + 1 - rows.length;
         };
+    }
+};
+ko.bindingHandlers.editableCellSelection = {
+    init: function (element, valueAccessor, allBindingsAccessor) {
+        var table = element,
+            selection = table._cellSelection;
+
+        if (element.tagName !== 'TABLE') {
+            throw new Error('editableCellSelection binding can only be applied to tables');
+        }
+
+        if (selection === undefined) {
+            table._cellSelection = selection = new ko.bindingHandlers.editableCell.Selection(table);
+        }
+
+        selection.range.selection.subscribe(function (newSelection) {
+            var selection = ko.utils.arrayMap(newSelection, function (cell) {
+                return {
+                    cell: cell,
+                    value: cell._cellValue(),
+                    text: cell._cellText()
+                };
+            });
+
+            ko.bindingHandlers.editableCell.updateBindingValue('editableCellSelection', valueAccessor, allBindingsAccessor, selection);
+        });
     }
 };
