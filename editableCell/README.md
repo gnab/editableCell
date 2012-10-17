@@ -23,3 +23,22 @@ Example illustrating how the `editableBinding` may be used:
 <td data-bind="editableCell: name"></td>
 <td data-bind="editableCell: age, cellText: age() + ' years'"></td>
 ```
+
+To get hold of the currently selected cells in the table, you can bind an observable array, i.e. `selection`, to your table using the `editableCellSelection` binding:
+
+```html
+<table data-bind="editableCellSelection: selection">
+```
+
+Whenever the selection changes, the observable array `selection` will be populated with the list of selected cells on the following format:
+
+```javascript
+[
+  {
+    cell: [the HTMLTableCellElement],
+	value: [the (observable) property the cell is bound to with the editableCell binding],
+	text: [the (observable) property the cell is bound to with the cellText binding, or else same as value]
+  },
+  ...
+]
+```
