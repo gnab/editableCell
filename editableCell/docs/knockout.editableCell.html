@@ -372,14 +372,17 @@
             }
         });
     },
-    SelectionRange: <span class="function"><span class="keyword">function</span> <span class="params">(cellIsSelectable)</span> {</span>
+</pre></div>              </td>            </tr>                                  <tr id="section-2">              <td class="docs">                <div class="pilwrap">                  <a class="pilcrow" href="#section-2">&#182;</a>                </div>                <h4><code>SelectionRange</code></h4>
+
+<p>The <code>SelectionRange</code> is used internally to hold the current selection, represented by a start and an end cell.
+In addition, it has functionality for moving and extending the selection inside the table.</p>              </td>              <td class="code">                <div class="highlight"><pre>    SelectionRange: <span class="function"><span class="keyword">function</span> <span class="params">(cellIsSelectable)</span> {</span>
         <span class="keyword">var</span> self = <span class="keyword">this</span>;
 
         self.start = <span class="literal">undefined</span>;
         self.end = <span class="literal">undefined</span>;
         self.selection = ko.observableArray();
 
-        self.moveInDirection = <span class="function"><span class="keyword">function</span> <span class="params">(direction)</span> {</span>
+</pre></div>              </td>            </tr>                                  <tr id="section-3">              <td class="docs">                <div class="pilwrap">                  <a class="pilcrow" href="#section-3">&#182;</a>                </div>                <p><code>moveInDirection</code> drops the current selection and makes the single cell in the specified <code>direction</code> the new selection.</p>              </td>              <td class="code">                <div class="highlight"><pre>        self.moveInDirection = <span class="function"><span class="keyword">function</span> <span class="params">(direction)</span> {</span>
             <span class="keyword">var</span> newStart = self.getSelectableCellInDirection(self.start, direction),
                 startChanged = newStart !== self.start;
 
@@ -389,7 +392,8 @@
 
             <span class="keyword">return</span> startChanged;
         };
-        self.extendInDirection = <span class="function"><span class="keyword">function</span> <span class="params">(direction)</span> {</span>
+
+</pre></div>              </td>            </tr>                                  <tr id="section-4">              <td class="docs">                <div class="pilwrap">                  <a class="pilcrow" href="#section-4">&#182;</a>                </div>                <p><code>extendIndirection</code> keeps the current selection and extends it in the specified <code>direction</code>.</p>              </td>              <td class="code">                <div class="highlight"><pre>        self.extendInDirection = <span class="function"><span class="keyword">function</span> <span class="params">(direction)</span> {</span>
             <span class="keyword">var</span> newEnd = self.getCellInDirection(self.end, direction),
                 endChanged = newEnd !== self.end;
 
@@ -397,6 +401,11 @@
 
             <span class="keyword">return</span> endChanged;
         };
+
+</pre></div>              </td>            </tr>                                  <tr id="section-5">              <td class="docs">                <div class="pilwrap">                  <a class="pilcrow" href="#section-5">&#182;</a>                </div>                <p><code>getCells</code> returnes the cells contained in the current selection.</p>              </td>              <td class="code">                <div class="highlight"><pre>        self.getCells = <span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span>
+            <span class="keyword">return</span> self.getCellsInArea(self.start, self.end);
+        };
+
         self.setStart = <span class="function"><span class="keyword">function</span> <span class="params">(element)</span> {</span>
             self.start = element;
             self.end = element;
@@ -461,9 +470,6 @@
 
             <span class="keyword">return</span> originCell;
         };
-        self.getCells = <span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span>
-            <span class="keyword">return</span> self.getCellsInArea(self.start, self.end);
-        };
         self.getCellsInArea = <span class="function"><span class="keyword">function</span> <span class="params">(startCell, endCell)</span> {</span>
             <span class="keyword">var</span> startX = Math.min(startCell.cellIndex, endCell.cellIndex),
                 startY = Math.min(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
@@ -491,7 +497,7 @@
     }
 };
 
-</pre></div>              </td>            </tr>                                  <tr id="section-2">              <td class="docs">                <div class="pilwrap">                  <a class="pilcrow" href="#section-2">&#182;</a>                </div>                <h3><code>editableCellSelection</code> binding</h3>
+</pre></div>              </td>            </tr>                                  <tr id="section-6">              <td class="docs">                <div class="pilwrap">                  <a class="pilcrow" href="#section-6">&#182;</a>                </div>                <h3><code>editableCellSelection</code> binding</h3>
 
 <p>The <code>editableCellSelection</code> binding is a one-way binding that will reflect the currently selected cells in a table.</p>
 
@@ -505,7 +511,17 @@
 <p>2) Bind the property to the table element using the <code>editableCellSelection</code> binding:</p>
 
 <pre><code>&lt;table data-bind="editableCellSelection: selection" .. &gt;
-</code></pre>              </td>              <td class="code">                <div class="highlight"><pre>
+</code></pre>
+
+<p>Each element in the observable array will have the following properties:</p>
+
+<ul>
+<li><code>cell</code> - The table cell itself</li>
+<li><code>value</code> - The value of the <code>editableCell</code> binding</li>
+<li><code>text</code> - The value of the <code>cellText</code> binding, or same as <code>value</code></li>
+</ul>
+
+<p>Using utility functions like <code>ko.dataFor</code> on the <code>cell</code> property, you can get hold of the row view model.</p>              </td>              <td class="code">                <div class="highlight"><pre>
 ko.bindingHandlers.editableCellSelection = {
     init: <span class="function"><span class="keyword">function</span> <span class="params">(element, valueAccessor, allBindingsAccessor)</span> {</span>
         <span class="keyword">var</span> table = element,
@@ -521,13 +537,7 @@ ko.bindingHandlers.editableCellSelection = {
 
         selection.range.selection.subscribe(<span class="function"><span class="keyword">function</span> <span class="params">(newSelection)</span> {</span>
             <span class="keyword">var</span> selection = ko.utils.arrayMap(newSelection, <span class="function"><span class="keyword">function</span> <span class="params">(cell)</span> {</span>
-</pre></div>              </td>            </tr>                                  <tr id="section-3">              <td class="docs">                <div class="pilwrap">                  <a class="pilcrow" href="#section-3">&#182;</a>                </div>                <p>Each element in the observable array will have the following properties:</p>
-
-<ul>
-<li><code>cell</code> - The table cell itself</li>
-<li><code>value</code> - The value of the <code>editableCell</code> binding</li>
-<li><code>text</code> - The value of the <code>cellText</code> binding, or same as <code>value</code></li>
-</ul>              </td>              <td class="code">                <div class="highlight"><pre>                <span class="keyword">return</span> {
+                <span class="keyword">return</span> {
                     cell: cell,
                     value: cell._cellValue(),
                     text: cell._cellText()

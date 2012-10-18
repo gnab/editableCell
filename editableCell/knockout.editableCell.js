@@ -373,6 +373,10 @@ ko.bindingHandlers.editableCell = {
             }
         });
     },
+    // #### `SelectionRange`
+    //
+    // The `SelectionRange` is used internally to hold the current selection, represented by a start and an end cell.
+    // In addition, it has functionality for moving and extending the selection inside the table.
     SelectionRange: function (cellIsSelectable) {
         var self = this;
 
@@ -380,6 +384,7 @@ ko.bindingHandlers.editableCell = {
         self.end = undefined;
         self.selection = ko.observableArray();
 
+        // `moveInDirection` drops the current selection and makes the single cell in the specified `direction` the new selection.
         self.moveInDirection = function (direction) {
             var newStart = self.getSelectableCellInDirection(self.start, direction),
                 startChanged = newStart !== self.start;
@@ -390,6 +395,8 @@ ko.bindingHandlers.editableCell = {
 
             return startChanged;
         };
+
+        // `extendIndirection` keeps the current selection and extends it in the specified `direction`.
         self.extendInDirection = function (direction) {
             var newEnd = self.getCellInDirection(self.end, direction),
                 endChanged = newEnd !== self.end;
@@ -398,6 +405,12 @@ ko.bindingHandlers.editableCell = {
 
             return endChanged;
         };
+
+        // `getCells` returnes the cells contained in the current selection.
+        self.getCells = function () {
+            return self.getCellsInArea(self.start, self.end);
+        };
+
         self.setStart = function (element) {
             self.start = element;
             self.end = element;
@@ -462,9 +475,6 @@ ko.bindingHandlers.editableCell = {
 
             return originCell;
         };
-        self.getCells = function () {
-            return self.getCellsInArea(self.start, self.end);
-        };
         self.getCellsInArea = function (startCell, endCell) {
             var startX = Math.min(startCell.cellIndex, endCell.cellIndex),
                 startY = Math.min(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
@@ -506,7 +516,13 @@ ko.bindingHandlers.editableCell = {
 //
 //     <table data-bind="editableCellSelection: selection" .. >
 //
+// Each element in the observable array will have the following properties:
 //
+// - `cell` - The table cell itself
+// - `value` - The value of the `editableCell` binding
+// - `text` - The value of the `cellText` binding, or same as `value`
+//
+// Using utility functions like `ko.dataFor` on the `cell` property, you can get hold of the row view model.
 
 ko.bindingHandlers.editableCellSelection = {
     init: function (element, valueAccessor, allBindingsAccessor) {
@@ -523,11 +539,6 @@ ko.bindingHandlers.editableCellSelection = {
 
         selection.range.selection.subscribe(function (newSelection) {
             var selection = ko.utils.arrayMap(newSelection, function (cell) {
-                // Each element in the observable array will have the following properties:
-                //
-                // - `cell` - The table cell itself
-                // - `value` - The value of the `editableCell` binding
-                // - `text` - The value of the `cellText` binding, or same as `value`
                 return {
                     cell: cell,
                     value: cell._cellValue(),
