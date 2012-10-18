@@ -1,3 +1,10 @@
+// ### `editableCell` binding
+//
+// The `editableCell` binding is a binding that turns regular table cells into selectable, editable Excel-like cells.
+//
+// #### Usage
+//
+// WIP
 ko.bindingHandlers.editableCell = {
     init: function (element, valueAccessor, allBindingsAccessor) {
         var table = $(element).parents('table')[0],
@@ -133,7 +140,6 @@ ko.bindingHandlers.editableCell = {
             return cell._cellReadOnly() !== true;
         }
 
-        // <!-- Cell event handlers
         self.onCellMouseDown = function (cell, shiftKey) {
             if (shiftKey) {
                 self.range.setEnd(cell);
@@ -181,9 +187,6 @@ ko.bindingHandlers.editableCell = {
 
             self.endEditingCell(event.target);
         };
-        // Cell event handlers -->
-
-        // <!-- Selection event handlers
         self.onReturn = function (event, preventMove) {
             if (preventMove !== true) {
                 self.range.moveInDirection('Down');
@@ -257,7 +260,6 @@ ko.bindingHandlers.editableCell = {
             39: 'Right',
             40: 'Down'
         };
-        // Selection event handlers -->
     },
     SelectionView: function (table, selection) {
         var self = this;
@@ -489,11 +491,28 @@ ko.bindingHandlers.editableCell = {
         };
     }
 };
+
+// ### `editableCellSelection` binding
+//
+// The `editableCellSelection` binding is a one-way binding that will reflect the currently selected cells in a table.
+//
+// #### Usage
+//
+// 1) Add a `selection` observable array to your view model:
+// 
+//     viewModel.selection = ko.observableArray();
+//
+// 2) Bind the property to the table element using the `editableCellSelection` binding:
+//
+//     <table data-bind="editableCellSelection: selection" .. >
+//
+//
+
 ko.bindingHandlers.editableCellSelection = {
     init: function (element, valueAccessor, allBindingsAccessor) {
         var table = element,
             selection = table._cellSelection;
-
+ 
         if (element.tagName !== 'TABLE') {
             throw new Error('editableCellSelection binding can only be applied to tables');
         }
@@ -504,6 +523,11 @@ ko.bindingHandlers.editableCellSelection = {
 
         selection.range.selection.subscribe(function (newSelection) {
             var selection = ko.utils.arrayMap(newSelection, function (cell) {
+                // Each element in the observable array will have the following properties:
+                //
+                // - `cell` - The table cell itself
+                // - `value` - The value of the `editableCell` binding
+                // - `text` - The value of the `cellText` binding, or same as `value`
                 return {
                     cell: cell,
                     value: cell._cellValue(),
