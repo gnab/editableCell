@@ -1,0 +1,541 @@
+<!DOCTYPE html>    <html>  <head>    <title>knockout.editableCell.js</title>    <meta http-equiv="content-type" content="text/html; charset=UTF-8">    <link rel="stylesheet" media="all" href="docco.css" />  </head>  <body>    <div id="container">      <div id="background"></div>            <table cellpadding="0" cellspacing="0">        <thead>          <tr>            <th class="docs">              <h1>                knockout.editableCell.js              </h1>            </th>            <th class="code">            </th>          </tr>        </thead>        <tbody>                                  <tr id="section-1">              <td class="docs">                <div class="pilwrap">                  <a class="pilcrow" href="#section-1">&#182;</a>                </div>                <h3><code>editableCell</code> binding</h3>
+
+<p>The <code>editableCell</code> binding is a binding that turns regular table cells into selectable, editable Excel-like cells.</p>
+
+<h4>Usage</h4>
+
+<p>WIP</p>              </td>              <td class="code">                <div class="highlight"><pre>ko.bindingHandlers.editableCell = {
+    init: <span class="function"><span class="keyword">function</span> <span class="params">(element, valueAccessor, allBindingsAccessor)</span> {</span>
+        <span class="keyword">var</span> table = $(element).parents(<span class="string">'table'</span>)[<span class="number">0</span>],
+            selection = table._cellSelection;
+
+        <span class="keyword">if</span> (selection === <span class="literal">undefined</span>) {
+            table._cellSelection = selection = <span class="keyword">new</span> ko.bindingHandlers.editableCell.Selection(table);
+        }
+
+        selection.registerCell(element);
+
+        element._cellValue = valueAccessor;
+        element._cellText = <span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span> <span class="keyword">return</span> allBindingsAccessor().cellText || element._cellValue(); };
+        element._cellReadOnly = <span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span> <span class="keyword">return</span> ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
+        element._cellValueUpdater = <span class="function"><span class="keyword">function</span> <span class="params">(newValue)</span> {</span>
+            ko.bindingHandlers.editableCell.updateBindingValue(<span class="string">'editableCell'</span>, element._cellValue, allBindingsAccessor, newValue);
+
+            <span class="keyword">if</span> (!ko.isObservable(element._cellValue())) {
+                element.textContent = ko.utils.unwrapObservable(element._cellText());
+            }
+        };
+    },
+    update: <span class="function"><span class="keyword">function</span> <span class="params">(element, valueAccessor, allBindingsAccessor)</span> {</span>
+        element.textContent = ko.utils.unwrapObservable(element._cellText());
+    },
+    updateBindingValue: <span class="function"><span class="keyword">function</span> <span class="params">(bindingName, valueAccessor, allBindingsAccessor, newValue)</span> {</span>
+        <span class="keyword">if</span> (ko.isWriteableObservable(valueAccessor())) {
+            valueAccessor()(newValue);
+            <span class="keyword">return</span>;
+        }
+
+        <span class="keyword">var</span> propertyWriters = allBindingsAccessor()._ko_property_writers;
+        <span class="keyword">if</span> (propertyWriters &amp;&amp; propertyWriters[bindingName]) {
+            propertyWriters[bindingName](newValue);
+        }
+
+        <span class="keyword">if</span> (!ko.isObservable(valueAccessor())) {
+            allBindingsAccessor()[bindingName] = newValue;
+        }
+    },
+    Selection: <span class="function"><span class="keyword">function</span> <span class="params">(table)</span> {</span>
+        <span class="keyword">var</span> self = <span class="keyword">this</span>;
+
+        self.view = <span class="keyword">new</span> ko.bindingHandlers.editableCell.SelectionView(table, self);
+        self.range = <span class="keyword">new</span> ko.bindingHandlers.editableCell.SelectionRange(cellIsSelectable);
+
+        self.range.selection.subscribe(<span class="function"><span class="keyword">function</span> <span class="params">(newSelection)</span> {</span>
+            self.view.update(newSelection[<span class="number">0</span>], newSelection[newSelection.length - <span class="number">1</span>]);
+        });
+
+        self.focus = self.view.focus;
+
+        self.registerCell = <span class="function"><span class="keyword">function</span> <span class="params">(cell)</span> {</span>
+            ko.utils.registerEventHandler(cell, <span class="string">"mousedown"</span>, <span class="function"><span class="keyword">function</span> <span class="params">(event)</span> {</span>
+                <span class="keyword">if</span> (self.isEditingCell(cell)) {
+                    <span class="keyword">return</span>;
+                }
+
+                self.onCellMouseDown(cell, event.shiftKey);
+                event.preventDefault();
+            });
+            ko.utils.registerEventHandler(cell, <span class="string">"mouseup"</span>, <span class="function"><span class="keyword">function</span> <span class="params">(event)</span> {</span>
+                <span class="keyword">if</span> (self.isEditingCell(cell)) {
+                    event.stopPropagation();
+                    <span class="keyword">return</span>;
+                }
+            });
+            ko.utils.registerEventHandler(cell, <span class="string">"mouseover"</span>, self.onCellMouseOver);
+            ko.utils.registerEventHandler(cell, <span class="string">"blur"</span>, self.onCellBlur);
+            ko.utils.registerEventHandler(cell, <span class="string">"keydown"</span>, self.onCellKeyDown);
+        };
+
+        self.updateCellValue = <span class="function"><span class="keyword">function</span> <span class="params">(cell, newValue)</span> {</span>
+            <span class="keyword">var</span> value;
+
+            <span class="keyword">if</span> (!self.cellIsEditable(cell)) {
+                <span class="keyword">return</span>;
+            }
+
+            <span class="keyword">if</span> (newValue === <span class="literal">undefined</span>) {
+                value = cell.textContent;
+                self.restoreCellText(cell);
+            }
+            <span class="keyword">else</span> {
+                value = newValue;
+            }
+
+            cell._cellValueUpdater(value);
+
+            <span class="keyword">return</span> value;
+        };
+        self.restoreCellText = <span class="function"><span class="keyword">function</span> <span class="params">(cell)</span> {</span>
+            cell.textContent = cell._oldTextContent;
+        };
+
+        self.startEditing = <span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span>
+            self.startEditingCell(self.range.start);
+        };
+        self.startEditingCell = <span class="function"><span class="keyword">function</span> <span class="params">(cell)</span> {</span>
+            <span class="keyword">if</span> (!self.cellIsEditable(cell)) {
+                <span class="keyword">return</span>;
+            }
+
+            <span class="keyword">if</span> (self.range.start !== cell) {
+                self.range.setStart(cell);
+            }
+
+            cell._oldTextContent = cell.textContent;
+            cell.textContent = ko.utils.unwrapObservable(cell._cellValue());
+
+            cell.contentEditable = <span class="literal">true</span>;
+            cell.focus();
+            document.execCommand(<span class="string">'selectAll'</span>, <span class="literal">false</span>, <span class="literal">null</span>);
+            self.view.element.style.pointerEvents = <span class="string">'none'</span>;
+        };
+        self.isEditingCell = <span class="function"><span class="keyword">function</span> <span class="params">(cell)</span> {</span>
+            <span class="keyword">return</span> cell.contentEditable === <span class="string">'true'</span>;
+        };
+        self.cancelEditingCell = <span class="function"><span class="keyword">function</span> <span class="params">(cell)</span> {</span>
+            cell.contentEditable = <span class="literal">false</span>;
+            self.restoreCellText(cell);
+            self.view.element.style.pointerEvents = <span class="string">'inherit'</span>;
+        };
+        self.endEditingCell = <span class="function"><span class="keyword">function</span> <span class="params">(cell)</span> {</span>
+            cell.contentEditable = <span class="literal">false</span>;
+            self.view.element.style.pointerEvents = <span class="string">'inherit'</span>;
+            <span class="keyword">return</span> self.updateCellValue(cell);
+        };
+        <span class="function"><span class="keyword">function</span> <span class="title">cellIsSelectable</span> <span class="params">(cell)</span> {</span>
+            <span class="keyword">return</span> cell._cellValue !== <span class="literal">undefined</span>;
+        };
+        self.cellIsEditable = <span class="function"><span class="keyword">function</span> <span class="params">(cell)</span> {</span>
+            <span class="keyword">return</span> cell._cellReadOnly() !== <span class="literal">true</span>;
+        }
+
+        self.onCellMouseDown = <span class="function"><span class="keyword">function</span> <span class="params">(cell, shiftKey)</span> {</span>
+            <span class="keyword">if</span> (shiftKey) {
+                self.range.setEnd(cell);
+            }
+            <span class="keyword">else</span> {
+                self.range.setStart(cell);
+            }
+
+            self.view.beginDrag();
+            event.preventDefault();
+        };
+        self.onCellMouseOver = <span class="function"><span class="keyword">function</span> <span class="params">(event)</span> {</span>
+            <span class="keyword">if</span> (self.view.isDragging &amp;&amp; event.target !== self.range.end) {
+                self.range.setEnd(event.target);
+            }
+        };
+        self.onCellKeyDown = <span class="function"><span class="keyword">function</span> <span class="params">(event)</span> {</span>
+            <span class="keyword">if</span> (event.keyCode === <span class="number">13</span>) { <span class="comment">// Return</span>
+                <span class="keyword">var</span> value = self.endEditingCell(event.target);
+
+                <span class="keyword">if</span> (event.ctrlKey) {
+                    ko.utils.arrayForEach(self.range.getCells(), <span class="function"><span class="keyword">function</span> <span class="params">(cell)</span> {</span>
+                        self.updateCellValue(cell, value);
+                    });
+                }
+
+                self.onReturn(event, event.ctrlKey);
+                self.focus();
+                event.preventDefault();
+            }
+            <span class="keyword">else</span> <span class="keyword">if</span> ([<span class="number">37</span>, <span class="number">38</span>, <span class="number">39</span>, <span class="number">40</span>].indexOf(event.keyCode) !== -<span class="number">1</span>) { <span class="comment">// Arrows</span>
+                self.focus();
+                self.onArrows(event);
+                event.preventDefault();
+            }
+            <span class="keyword">else</span> <span class="keyword">if</span> (event.keyCode === <span class="number">27</span>) { <span class="comment">// Escape</span>
+                self.cancelEditingCell(event.target);
+                self.focus();
+            }
+        };
+        self.onCellBlur = <span class="function"><span class="keyword">function</span> <span class="params">(event)</span> {</span>
+            <span class="keyword">if</span> (event.target.contentEditable !== <span class="string">'true'</span>) {
+                <span class="keyword">return</span>;
+            }
+
+            self.endEditingCell(event.target);
+        };
+        self.onReturn = <span class="function"><span class="keyword">function</span> <span class="params">(event, preventMove)</span> {</span>
+            <span class="keyword">if</span> (preventMove !== <span class="literal">true</span>) {
+                self.range.moveInDirection(<span class="string">'Down'</span>);
+            }
+            event.preventDefault();
+        };
+        self.onArrows = <span class="function"><span class="keyword">function</span> <span class="params">(event)</span> {</span>
+            <span class="keyword">var</span> preventDefault;
+
+            <span class="keyword">if</span> (event.shiftKey &amp;&amp; !event.ctrlKey) {
+                preventDefault = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode]);
+            }
+            <span class="keyword">else</span> <span class="keyword">if</span> (!event.ctrlKey) {
+                preventDefault = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode]);
+            }
+
+            <span class="keyword">if</span> (preventDefault) {
+                event.preventDefault();
+            }
+        };
+        self.onCopy = <span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span>
+            <span class="keyword">var</span> cells = self.range.getCells(),
+                cols = cells[cells.length - <span class="number">1</span>].cellIndex - cells[<span class="number">0</span>].cellIndex + <span class="number">1</span>,
+                rows = cells.length / cols,
+                lines = [],
+                i = <span class="number">0</span>;
+
+            ko.utils.arrayForEach(cells, <span class="function"><span class="keyword">function</span> <span class="params">(cell)</span> {</span>
+                <span class="keyword">var</span> lineIndex = i % rows,
+                    rowIndex = Math.floor(i / rows);
+
+                console.log(lineIndex + <span class="string">'-'</span> + rowIndex);
+
+                lines[lineIndex] = lines[lineIndex] || [];
+                lines[lineIndex][rowIndex] = ko.utils.unwrapObservable(cell._cellValue());
+
+                i++;
+            });
+
+            <span class="keyword">return</span> ko.utils.arrayMap(lines, <span class="function"><span class="keyword">function</span> <span class="params">(line)</span> {</span>
+                <span class="keyword">return</span> line.join(<span class="string">'\t'</span>);
+            }).join(<span class="string">'\r\n'</span>);
+        };
+        self.onPaste = <span class="function"><span class="keyword">function</span> <span class="params">(text)</span> {</span>
+            <span class="keyword">var</span> selStart = self.range.getCells()[<span class="number">0</span>],
+                cells,
+                values = ko.utils.arrayMap(text.trim().split(<span class="regexp">/\r?\n/</span>), <span class="function"><span class="keyword">function</span> <span class="params">(line)</span> {</span> <span class="keyword">return</span> line.split(<span class="string">'\t'</span>); }),
+                row = values.length,
+                col = values[<span class="number">0</span>].length,
+                rows = <span class="number">1</span>,
+                cols = <span class="number">1</span>,
+                i = <span class="number">0</span>;
+
+            self.range.setStart(selStart);
+
+            <span class="keyword">while</span> (row-- &gt; <span class="number">1</span> &amp;&amp; self.range.extendInDirection(<span class="string">'Down'</span>)) { rows++ };
+            <span class="keyword">while</span> (col-- &gt; <span class="number">1</span> &amp;&amp; self.range.extendInDirection(<span class="string">'Right'</span>)) { cols++ };
+
+            cells = self.range.getCells();
+
+            <span class="keyword">for</span> (col = <span class="number">0</span>; col &lt; cols; col++) {
+                <span class="keyword">for</span> (row = <span class="number">0</span>; row &lt; rows; row++) {
+                    self.updateCellValue(cells[i], values[row][col]);
+                    i++;
+                }
+            }
+        };
+        self.keyCodeIdentifier = {
+            <span class="number">37</span>: <span class="string">'Left'</span>,
+            <span class="number">38</span>: <span class="string">'Up'</span>,
+            <span class="number">39</span>: <span class="string">'Right'</span>,
+            <span class="number">40</span>: <span class="string">'Down'</span>
+        };
+    },
+    SelectionView: <span class="function"><span class="keyword">function</span> <span class="params">(table, selection)</span> {</span>
+        <span class="keyword">var</span> self = <span class="keyword">this</span>;
+
+        self.element = document.createElement(<span class="string">'div'</span>);
+        self.element.style.position = <span class="string">'absolute'</span>;
+        self.element.style.display = <span class="string">'none'</span>;
+        self.element.tabIndex = -<span class="number">1</span>;
+
+        self.copyPasteElement = document.createElement(<span class="string">'textarea'</span>);
+        self.copyPasteElement.style.position = <span class="string">'absolute'</span>;
+        self.copyPasteElement.style.opacity = <span class="string">'0.0'</span>;
+        self.copyPasteElement.style.display = <span class="string">'none'</span>;
+
+        table.appendChild(self.element);
+        table.appendChild(self.copyPasteElement);
+
+        self.show = <span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span>
+            self.element.style.display = <span class="string">'block'</span>;
+            self.element.focus();
+        };
+        self.hide = <span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span>
+            self.element.style.display = <span class="string">'none'</span>;
+        };
+        self.focus = <span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span>
+            self.element.focus();
+        };
+        self.update = <span class="function"><span class="keyword">function</span> <span class="params">(start, end)</span> {</span>
+            <span class="keyword">var</span> top = Math.min(start.offsetTop, end.offsetTop),
+                left = Math.min(start.offsetLeft, end.offsetLeft),
+                bottom = Math.max(start.offsetTop + start.offsetHeight,
+                                end.offsetTop + end.offsetHeight),
+                right = Math.max(start.offsetLeft + start.offsetWidth,
+                                end.offsetLeft + end.offsetWidth);
+
+            self.element.style.top = top + <span class="number">1</span> + <span class="string">'px'</span>;
+            self.element.style.left = left + <span class="number">1</span> + <span class="string">'px'</span>;
+            self.element.style.height = bottom - top - <span class="number">1</span> + <span class="string">'px'</span>;
+            self.element.style.width = right - left - <span class="number">1</span> + <span class="string">'px'</span>;
+            self.element.style.backgroundColor = <span class="string">'rgba(245, 142, 00, 0.15)'</span>;
+
+            self.show();
+        };
+        self.beginDrag = <span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span>
+            self.canDrag = <span class="literal">true</span>;
+            ko.utils.registerEventHandler(self.element, <span class="string">'mousemove'</span>, self.doBeginDrag);
+        };
+        self.doBeginDrag = <span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span>
+            self.element.removeEventListener(<span class="string">'mousemove'</span>, self.doBeginDrag);
+
+            <span class="keyword">if</span> (!self.canDrag) {
+                <span class="keyword">return</span>;
+            }
+
+            self.isDragging = <span class="literal">true</span>;
+            self.element.style.pointerEvents = <span class="string">'none'</span>;
+        };
+        self.endDrag = <span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span>
+            self.element.removeEventListener(<span class="string">'mousemove'</span>, self.doBeginDrag);
+            self.isDragging = <span class="literal">false</span>;
+            self.canDrag = <span class="literal">false</span>;
+            self.element.style.pointerEvents = <span class="string">'inherit'</span>;
+        };
+
+        ko.utils.registerEventHandler(document.getElementsByTagName(<span class="string">'html'</span>)[<span class="number">0</span>], <span class="string">"mouseup"</span>, <span class="function"><span class="keyword">function</span> <span class="params">(event)</span> {</span>
+            self.endDrag();
+        });
+
+        ko.utils.registerEventHandler(self.element, <span class="string">"mousedown"</span>, <span class="function"><span class="keyword">function</span> <span class="params">(event)</span> {</span>
+            <span class="keyword">if</span> (event.button !== <span class="number">0</span>) {
+                <span class="keyword">return</span>;
+            }
+
+            self.hide();
+
+            <span class="keyword">var</span> cell = event.view.document.elementFromPoint(event.clientX, event.clientY);
+            selection.onCellMouseDown(cell, event.shiftKey);
+
+            event.preventDefault();
+        });
+
+        ko.utils.registerEventHandler(self.element, <span class="string">"dblclick"</span>, <span class="function"><span class="keyword">function</span> <span class="params">(event)</span> {</span>
+            selection.startEditing();
+        });
+        ko.utils.registerEventHandler(self.element, <span class="string">"keypress"</span>, <span class="function"><span class="keyword">function</span> <span class="params">(event)</span> {</span>
+            selection.startEditing();
+        });
+
+        ko.utils.registerEventHandler(self.element, <span class="string">"keydown"</span>, <span class="function"><span class="keyword">function</span> <span class="params">(event)</span> {</span>
+            <span class="keyword">if</span> (event.keyCode === <span class="number">13</span>) { selection.onReturn(event); }
+            <span class="keyword">else</span> <span class="keyword">if</span> ([<span class="number">37</span>, <span class="number">38</span>, <span class="number">39</span>, <span class="number">40</span>].indexOf(event.keyCode) !== -<span class="number">1</span>) { selection.onArrows(event); }
+            <span class="keyword">else</span> <span class="keyword">if</span> (event.keyCode === <span class="number">86</span> &amp;&amp; event.ctrlKey) {
+                self.copyPasteElement.value = <span class="string">''</span>;
+                self.copyPasteElement.style.display = <span class="string">'block'</span>;
+                self.copyPasteElement.focus();
+                setTimeout(<span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span>
+                    selection.onPaste(self.copyPasteElement.value);
+                    self.copyPasteElement.style.display = <span class="string">'none'</span>;
+                    self.focus();
+                }, <span class="number">0</span>);
+            }
+            <span class="keyword">else</span> <span class="keyword">if</span> (event.keyCode === <span class="number">67</span> &amp;&amp; event.ctrlKey) {
+                self.copyPasteElement.value = selection.onCopy();
+                self.copyPasteElement.style.display = <span class="string">'block'</span>;
+                self.copyPasteElement.focus();
+                document.execCommand(<span class="string">'selectAll'</span>, <span class="literal">false</span>, <span class="literal">null</span>);
+                setTimeout(<span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span>
+                    self.copyPasteElement.style.display = <span class="string">'none'</span>;
+                    self.focus();
+                }, <span class="number">0</span>);
+            }
+        });
+    },
+    SelectionRange: <span class="function"><span class="keyword">function</span> <span class="params">(cellIsSelectable)</span> {</span>
+        <span class="keyword">var</span> self = <span class="keyword">this</span>;
+
+        self.start = <span class="literal">undefined</span>;
+        self.end = <span class="literal">undefined</span>;
+        self.selection = ko.observableArray();
+
+        self.moveInDirection = <span class="function"><span class="keyword">function</span> <span class="params">(direction)</span> {</span>
+            <span class="keyword">var</span> newStart = self.getSelectableCellInDirection(self.start, direction),
+                startChanged = newStart !== self.start;
+
+            <span class="keyword">if</span> (newStart !== self.start || self.start !== self.end) {
+                self.setStart(newStart);
+            }
+
+            <span class="keyword">return</span> startChanged;
+        };
+        self.extendInDirection = <span class="function"><span class="keyword">function</span> <span class="params">(direction)</span> {</span>
+            <span class="keyword">var</span> newEnd = self.getCellInDirection(self.end, direction),
+                endChanged = newEnd !== self.end;
+
+            self.setEnd(newEnd);
+
+            <span class="keyword">return</span> endChanged;
+        };
+        self.setStart = <span class="function"><span class="keyword">function</span> <span class="params">(element)</span> {</span>
+            self.start = element;
+            self.end = element;
+            self.selection(self.getCells());
+        };
+        self.setEnd = <span class="function"><span class="keyword">function</span> <span class="params">(element)</span> {</span>
+            <span class="keyword">if</span> (element === self.end) {
+                <span class="keyword">return</span>;
+            }
+            self.start = self.start || element;
+
+            <span class="keyword">var</span> cellsInArea = self.getCellsInArea(self.start, element),
+                allEditable = <span class="literal">true</span>;
+
+            ko.utils.arrayForEach(cellsInArea, <span class="function"><span class="keyword">function</span> <span class="params">(cell)</span> {</span>
+                allEditable = allEditable &amp;&amp; cellIsSelectable(cell);
+            });
+
+            <span class="keyword">if</span> (!allEditable) {
+                <span class="keyword">return</span>;
+            }
+
+            self.end = element;
+            self.selection(self.getCells());
+        };
+        self.getCellInDirection = <span class="function"><span class="keyword">function</span> <span class="params">(originCell, direction, rowIndex, cellIndex)</span> {</span>
+            <span class="keyword">var</span> originRow = originCell.parentNode,
+                cell;
+
+            rowIndex = <span class="keyword">typeof</span> rowIndex !== <span class="string">'undefined'</span> ? rowIndex : originRow.rowIndex - self.getRowsOffset(originCell),
+            cellIndex = <span class="keyword">typeof</span> cellIndex !== <span class="string">'undefined'</span> ? cellIndex : originCell.cellIndex;
+
+            <span class="keyword">if</span> (direction === <span class="string">'Left'</span> &amp;&amp; cellIndex &gt; <span class="number">0</span>) {
+                <span class="keyword">return</span> originRow.children[cellIndex - <span class="number">1</span>];
+            }
+            <span class="keyword">if</span> (direction === <span class="string">'Up'</span> &amp;&amp; rowIndex &gt; <span class="number">0</span>) {
+                cell = originRow.parentNode.children[rowIndex - <span class="number">1</span>].children[cellIndex];
+                <span class="keyword">return</span> cell || self.getCellInDirection(originCell, direction, rowIndex - <span class="number">1</span>, cellIndex);
+            }
+            <span class="keyword">if</span> (direction === <span class="string">'Right'</span> &amp;&amp; cellIndex &lt; originCell.parentNode.children.length - <span class="number">1</span>) {
+                <span class="keyword">return</span> originRow.children[cellIndex + <span class="number">1</span>];
+            }
+            <span class="keyword">if</span> (direction === <span class="string">'Down'</span> &amp;&amp; rowIndex &lt; originCell.parentNode.parentNode.children.length - <span class="number">1</span>) {
+                cell = originRow.parentNode.children[rowIndex + <span class="number">1</span>].children[cellIndex];
+                <span class="keyword">return</span> cell || self.getCellInDirection(originCell, direction, rowIndex + <span class="number">1</span>, cellIndex);
+            }
+
+            <span class="keyword">return</span> originCell;
+        };
+        self.getSelectableCellInDirection = <span class="function"><span class="keyword">function</span> <span class="params">(originCell, direction)</span> {</span>
+            <span class="keyword">var</span> lastCell,
+                cell = originCell;
+
+            <span class="keyword">while</span> (cell !== lastCell) {
+                lastCell = cell;
+                cell = self.getCellInDirection(cell, direction);
+
+                <span class="keyword">if</span> (cellIsSelectable(cell)) {
+                    <span class="keyword">return</span> cell;
+                }
+            }
+
+            <span class="keyword">return</span> originCell;
+        };
+        self.getCells = <span class="function"><span class="keyword">function</span> <span class="params">()</span> {</span>
+            <span class="keyword">return</span> self.getCellsInArea(self.start, self.end);
+        };
+        self.getCellsInArea = <span class="function"><span class="keyword">function</span> <span class="params">(startCell, endCell)</span> {</span>
+            <span class="keyword">var</span> startX = Math.min(startCell.cellIndex, endCell.cellIndex),
+                startY = Math.min(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
+                endX = Math.max(startCell.cellIndex, endCell.cellIndex),
+                endY = Math.max(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
+                x, y,
+                rowsOffset = self.getRowsOffset(startCell),
+                cell,
+                cells = [];
+
+            <span class="keyword">for</span> (x = startX; x &lt;= endX; ++x) {
+                <span class="keyword">for</span> (y = startY; y &lt;= endY; ++y) {
+                    cell = startCell.parentNode.parentNode.children[y - rowsOffset].children[x];
+                    cells.push(cell || {});
+                }
+            }
+
+            <span class="keyword">return</span> cells;
+        };
+        self.getRowsOffset = <span class="function"><span class="keyword">function</span> <span class="params">(cell)</span> {</span>
+            <span class="keyword">var</span> rows = cell.parentNode.parentNode.children;
+
+            <span class="keyword">return</span> rows[rows.length - <span class="number">1</span>].rowIndex + <span class="number">1</span> - rows.length;
+        };
+    }
+};
+
+</pre></div>              </td>            </tr>                                  <tr id="section-2">              <td class="docs">                <div class="pilwrap">                  <a class="pilcrow" href="#section-2">&#182;</a>                </div>                <h3><code>editableCellSelection</code> binding</h3>
+
+<p>The <code>editableCellSelection</code> binding is a one-way binding that will reflect the currently selected cells in a table.</p>
+
+<h4>Usage</h4>
+
+<p>1) Add a <code>selection</code> observable array to your view model:</p>
+
+<pre><code>viewModel.selection = ko.observableArray();
+</code></pre>
+
+<p>2) Bind the property to the table element using the <code>editableCellSelection</code> binding:</p>
+
+<pre><code>&lt;table data-bind="editableCellSelection: selection" .. &gt;
+</code></pre>              </td>              <td class="code">                <div class="highlight"><pre>
+ko.bindingHandlers.editableCellSelection = {
+    init: <span class="function"><span class="keyword">function</span> <span class="params">(element, valueAccessor, allBindingsAccessor)</span> {</span>
+        <span class="keyword">var</span> table = element,
+            selection = table._cellSelection;
+ 
+        <span class="keyword">if</span> (element.tagName !== <span class="string">'TABLE'</span>) {
+            <span class="keyword">throw</span> <span class="keyword">new</span> Error(<span class="string">'editableCellSelection binding can only be applied to tables'</span>);
+        }
+
+        <span class="keyword">if</span> (selection === <span class="literal">undefined</span>) {
+            table._cellSelection = selection = <span class="keyword">new</span> ko.bindingHandlers.editableCell.Selection(table);
+        }
+
+        selection.range.selection.subscribe(<span class="function"><span class="keyword">function</span> <span class="params">(newSelection)</span> {</span>
+            <span class="keyword">var</span> selection = ko.utils.arrayMap(newSelection, <span class="function"><span class="keyword">function</span> <span class="params">(cell)</span> {</span>
+</pre></div>              </td>            </tr>                                  <tr id="section-3">              <td class="docs">                <div class="pilwrap">                  <a class="pilcrow" href="#section-3">&#182;</a>                </div>                <p>Each element in the observable array will have the following properties:</p>
+
+<ul>
+<li><code>cell</code> - The table cell itself</li>
+<li><code>value</code> - The value of the <code>editableCell</code> binding</li>
+<li><code>text</code> - The value of the <code>cellText</code> binding, or same as <code>value</code></li>
+</ul>              </td>              <td class="code">                <div class="highlight"><pre>                <span class="keyword">return</span> {
+                    cell: cell,
+                    value: cell._cellValue(),
+                    text: cell._cellText()
+                };
+            });
+
+            ko.bindingHandlers.editableCell.updateBindingValue(<span class="string">'editableCellSelection'</span>, valueAccessor, allBindingsAccessor, selection);
+        });
+    }
+};
+</pre></div>              </td>            </tr>                  </tbody>      </table>    </div>  </body>  </html>  
