@@ -1,11 +1,33 @@
 // ### `editableCell` binding
 //
-// The `editableCell` binding is a binding that turns regular table cells into selectable, editable Excel-like cells.
+// The `editableCell` binding turns regular table cells into selectable, editable Excel-like cells.
 //
 // #### Usage
 //
-// WIP
+// Bind a property to the table cell element:
+//
+//     <td data-bind="editableCell: name"></td>
+//
+// In addition, the following supporting bindings may be used for configuration:
+//
+// - `cellText` - Overrides the text displayed in the cell
+// 
+//          editableCell: amount, cellText: '$' + amount()
+// 
+// - `cellReadOnly` - Sets whether or not the cell can be edited
+//
+//          editableCell: amount, cellReadOnly: true
+//
+// Information on the currently cells in the table can be aquired using the
+// [`editableCellSelection`](#editablecellselection) table binding.
+
+// #### Documentation
 ko.bindingHandlers.editableCell = {
+    // Binding initialization makes sure the common selection is initialized, before initializing the cell in question
+    // and registering it with the selection.
+    //
+    // Every instance of the `editableCell` binding share a per table [selection](#selection).
+    // The first cell being initialized per table will do the one-time initialization of the common table selection.
     init: function (element, valueAccessor, allBindingsAccessor) {
         var table = $(element).parents('table')[0],
             selection = table._cellSelection;
@@ -27,9 +49,12 @@ ko.bindingHandlers.editableCell = {
             }
         };
     },
+    // Binding update simply updates the text content of the table cell.
     update: function (element, valueAccessor, allBindingsAccessor) {
         element.textContent = ko.utils.unwrapObservable(element._cellText());
     },
+    // `updateBindingValue` is a helper function borrowing private binding update functionality
+    // from Knockout.js for supporting updating of both observables and non-observables.
     updateBindingValue: function (bindingName, valueAccessor, allBindingsAccessor, newValue) {
         if (ko.isWriteableObservable(valueAccessor())) {
             valueAccessor()(newValue);
@@ -45,6 +70,11 @@ ko.bindingHandlers.editableCell = {
             allBindingsAccessor()[bindingName] = newValue;
         }
     },
+    // #### <a name="selection"></a> `Selection`
+    //
+    // The `Selection` is used internally to represent the selection for a single table, 
+    // comprising a [view](#view) and a [range](#range), as well as functionality for handling table cell
+    // operations like selecting, editing and copy and paste.
     Selection: function (table) {
         var self = this;
 
@@ -222,8 +252,6 @@ ko.bindingHandlers.editableCell = {
                 var lineIndex = i % rows,
                     rowIndex = Math.floor(i / rows);
 
-                console.log(lineIndex + '-' + rowIndex);
-
                 lines[lineIndex] = lines[lineIndex] || [];
                 lines[lineIndex][rowIndex] = ko.utils.unwrapObservable(cell._cellValue());
 
@@ -265,6 +293,10 @@ ko.bindingHandlers.editableCell = {
             40: 'Down'
         };
     },
+    // #### <a name="view"></a> `SelectionView`
+    //
+    // The `SelectionView` is used internally to represent the selection view, that is the
+    // visual selection of either one or more cells.
     SelectionView: function (table, selection) {
         var self = this;
 
@@ -385,7 +417,7 @@ ko.bindingHandlers.editableCell = {
             }, 0);
         });
     },
-    // #### `SelectionRange`
+    // #### <a name="range"></a> `SelectionRange`
     //
     // The `SelectionRange` is used internally to hold the current selection, represented by a start and an end cell.
     // In addition, it has functionality for moving and extending the selection inside the table.
@@ -423,6 +455,13 @@ ko.bindingHandlers.editableCell = {
             return self.getCellsInArea(self.start, self.end);
         };
 
+        // `clear` clears the current selection.
+        self.clear = function () {
+            self.start = undefined;
+            self.end = undefined;
+            self.selection([]);
+        };
+
         self.setStart = function (element) {
             self.start = element;
             self.end = element;
@@ -447,11 +486,6 @@ ko.bindingHandlers.editableCell = {
 
             self.end = element;
             self.selection(self.getCells());
-        };
-        self.clear = function() {
-            self.start = undefined;
-            self.end = undefined;
-            self.selection([]);
         };
         self.getCellInDirection = function (originCell, direction, rowIndex, cellIndex) {
             var originRow = originCell.parentNode,
@@ -519,7 +553,7 @@ ko.bindingHandlers.editableCell = {
     }
 };
 
-// ### `editableCellSelection` binding
+// ### <a name="editablecellselection"></a> `editableCellSelection` binding
 //
 // The `editableCellSelection` binding is a one-way binding that will reflect the currently selected cells in a table.
 //
