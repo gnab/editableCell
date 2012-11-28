@@ -52,6 +52,10 @@ ko.bindingHandlers.editableCell = {
         self.range = new ko.bindingHandlers.editableCell.SelectionRange(cellIsSelectable);
 
         self.range.selection.subscribe(function (newSelection) {
+            if (newSelection.length === 0) {
+                self.view.hide();
+                return;
+            }
             self.view.update(newSelection[0], newSelection[newSelection.length - 1]);
         });
 
@@ -372,6 +376,14 @@ ko.bindingHandlers.editableCell = {
                 }, 0);
             }
         });
+
+        ko.utils.registerEventHandler(self.element, "blur", function (event) {
+            setTimeout(function () {
+                if (selection.range.start && !selection.isEditingCell(selection.range.start)) {
+                    selection.range.clear();
+                }
+            }, 0);
+        });
     },
     // #### `SelectionRange`
     //
@@ -435,6 +447,11 @@ ko.bindingHandlers.editableCell = {
 
             self.end = element;
             self.selection(self.getCells());
+        };
+        self.clear = function() {
+            self.start = undefined;
+            self.end = undefined;
+            self.selection([]);
         };
         self.getCellInDirection = function (originCell, direction, rowIndex, cellIndex) {
             var originRow = originCell.parentNode,
