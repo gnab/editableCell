@@ -42,3 +42,7 @@ Whenever the selection changes, the observable array `selection` will be populat
   ...
 ]
 ```
+
+### Demo
+
+Check out the live [demo](http://gnab.github.com/knockout-bindings/editableCell/).
