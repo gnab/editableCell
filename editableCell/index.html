@@ -24,10 +24,10 @@
             <tbody>
                 <!-- ko foreach: entries -->
                 <tr>
-                    <td data-bind="editableCell: firstName"></td>
-                    <td data-bind="editableCell: surName"></td>
-                    <td data-bind="editableCell: 100, cellReadOnly: true"></td>
-                    <td data-bind="editableCell: age, cellText: age() + ' years'"></td>
+                    <td data-bind="editableCell: firstName" tabindex="0"></td>
+                    <td data-bind="editableCell: surName" tabindex="0"></td>
+                    <td data-bind="editableCell: 100, cellReadOnly: true" tabindex="0"></td>
+                    <td data-bind="editableCell: age, cellText: age() + ' years'" tabindex="0"></td>
                 </tr>
                 <!-- /ko -->
             </tbody>
@@ -57,6 +57,7 @@
                 self.selection = ko.observableArray();
 
                 self.selectionSum = ko.computed(function () {
+                    console.log('c');
                     return self.selection()
                         .filter(function (cell) { return typeof ko.utils.unwrapObservable(cell.value) === 'number'; })
                         .reduce(function (sum, cell) {

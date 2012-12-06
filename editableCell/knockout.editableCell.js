@@ -107,6 +107,7 @@ ko.bindingHandlers.editableCell = {
                 }
             });
             ko.utils.registerEventHandler(cell, "mouseover", self.onCellMouseOver);
+            ko.utils.registerEventHandler(cell, "focus", self.onCellFocus);
             ko.utils.registerEventHandler(cell, "blur", self.onCellBlur);
             ko.utils.registerEventHandler(cell, "keydown", self.onCellKeyDown);
         };
@@ -114,8 +115,8 @@ ko.bindingHandlers.editableCell = {
         self.updateCellValue = function (cell, newValue) {
             var value;
 
-            if (!self.cellIsEditable(cell)) {
-                return;
+            if (!cellIsEditable(cell)) {
+                return undefined;
             }
 
             if (newValue === undefined) {
@@ -138,7 +139,7 @@ ko.bindingHandlers.editableCell = {
             self.startEditingCell(self.range.start);
         };
         self.startEditingCell = function (cell) {
-            if (!self.cellIsEditable(cell)) {
+            if (!cellIsEditable(cell)) {
                 return;
             }
 
@@ -169,11 +170,10 @@ ko.bindingHandlers.editableCell = {
         };
         function cellIsSelectable (cell) {
             return cell._cellValue !== undefined;
-        };
-        self.cellIsEditable = function (cell) {
+        }
+        function cellIsEditable (cell) {
             return cell._cellReadOnly() !== true;
         }
-
         self.onCellMouseDown = function (cell, shiftKey) {
             if (shiftKey) {
                 self.range.setEnd(cell);
@@ -191,7 +191,13 @@ ko.bindingHandlers.editableCell = {
             }
         };
         self.onCellKeyDown = function (event) {
+            var cell = event.target;
+            
             if (event.keyCode === 13) { // Return
+                if (!self.isEditingCell(cell)) {
+                    return;
+                }
+
                 var value = self.endEditingCell(event.target);
 
                 if (event.ctrlKey) {
@@ -210,12 +216,30 @@ ko.bindingHandlers.editableCell = {
                 event.preventDefault();
             }
             else if (event.keyCode === 27) { // Escape
+                if (!self.isEditingCell(cell)) {
+                    return;
+                }
+                
                 self.cancelEditingCell(event.target);
                 self.focus();
             }
         };
+        self.onCellFocus = function (event) {
+            if (event.target === self.range.start) {
+                return;
+            }
+            
+            if (self.view.blurTimeout) {
+                clearTimeout(self.view.blurTimeout);
+                self.view.blurTimeout = undefined;
+            }
+
+            setTimeout(function () {
+                self.range.setStart(event.target);
+            }, 0);
+        };
         self.onCellBlur = function (event) {
-            if (event.target.contentEditable !== 'true') {
+            if (!self.isEditingCell(event.target)) {
                 return;
             }
 
@@ -286,6 +310,9 @@ ko.bindingHandlers.editableCell = {
                 }
             }
         };
+        self.onTab = function (event) {
+            self.range.start.focus();
+        };
         self.keyCodeIdentifier = {
             37: 'Left',
             38: 'Up',
@@ -316,6 +343,7 @@ ko.bindingHandlers.editableCell = {
         self.show = function () {
             self.element.style.display = 'block';
             self.element.focus();
+            self.element.scrollIntoViewIfNeeded();
         };
         self.hide = function () {
             self.element.style.display = 'none';
@@ -407,10 +435,13 @@ ko.bindingHandlers.editableCell = {
                     self.focus();
                 }, 0);
             }
+            else if (event.keyCode === 9) {
+                selection.onTab(event);
+            }
         });
 
         ko.utils.registerEventHandler(self.element, "blur", function (event) {
-            setTimeout(function () {
+            self.blurTimeout = setTimeout(function () {
                 if (selection.range.start && !selection.isEditingCell(selection.range.start)) {
                     selection.range.clear();
                 }
