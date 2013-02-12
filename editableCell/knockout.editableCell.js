@@ -261,11 +261,6 @@ ko.bindingHandlers.editableCell = {
                 return;
             }
             
-            if (self.view.blurTimeout) {
-                clearTimeout(self.view.blurTimeout);
-                self.view.blurTimeout = undefined;
-            }
-            
             setTimeout(function () {
                 self.range.setStart(event.target);
             }, 0);
@@ -378,7 +373,6 @@ ko.bindingHandlers.editableCell = {
             self.element.removeEventListener('dblclick', self.onDblClick);
             self.element.removeEventListener('keypress', self.onKeyPress);
             self.element.removeEventListener('keydown', self.onKeyDown);
-            self.element.removeEventListener('blur', self.onBlur);
             
             $(html).unbind('mouseup', self.onMouseUp);
 
@@ -481,19 +475,11 @@ ko.bindingHandlers.editableCell = {
                 selection.onTab(event);
             }
         };
-        self.onBlur = function (event) {
-            self.blurTimeout = setTimeout(function() {
-                if (selection.range.start && !selection.isEditingCell(selection.range.start)) {
-                    selection.range.clear();
-                }
-            }, 0);
-        };
 
         ko.utils.registerEventHandler(self.element, "mousedown", self.onMouseDown);
         ko.utils.registerEventHandler(self.element, "dblclick", self.onDblClick);
         ko.utils.registerEventHandler(self.element, "keypress", self.onKeyPress);
         ko.utils.registerEventHandler(self.element, "keydown", self.onKeyDown);
-        ko.utils.registerEventHandler(self.element, "blur", self.onBlur);
         
         ko.utils.registerEventHandler(html, "mouseup", self.onMouseUp);
     },
