@@ -49,7 +49,7 @@ ko.bindingHandlers.editableCell = {
             }
         };
 
-        ko.utils.domNodeDisposal.addDisposeCallback(element, function() {
+        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
             selection.unregisterCell(element);
 
             element._cellValue = null;
@@ -99,7 +99,7 @@ ko.bindingHandlers.editableCell = {
             self.view.update(newSelection[0], newSelection[newSelection.length - 1]);
         });
 
-        ko.utils.domNodeDisposal.addDisposeCallback(table, function() {
+        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
             selectionSubscription.dispose();
 
             self.view.destroy();
@@ -200,10 +200,10 @@ ko.bindingHandlers.editableCell = {
             self.view.element.style.pointerEvents = 'inherit';
             return self.updateCellValue(cell);
         };
-        function cellIsSelectable (cell) {
+        function cellIsSelectable(cell) {
             return cell._cellValue !== undefined;
         }
-        function cellIsEditable (cell) {
+        function cellIsEditable(cell) {
             return cell._cellReadOnly() !== true;
         }
         self.onCellMouseDown = function (cell, shiftKey) {
@@ -224,7 +224,7 @@ ko.bindingHandlers.editableCell = {
         };
         self.onCellKeyDown = function (event) {
             var cell = event.target;
-            
+
             if (event.keyCode === 13) { // Return
                 if (!self.isEditingCell(cell)) {
                     return;
@@ -251,7 +251,7 @@ ko.bindingHandlers.editableCell = {
                 if (!self.isEditingCell(cell)) {
                     return;
                 }
-                
+
                 self.cancelEditingCell(event.target);
                 self.focus();
             }
@@ -260,7 +260,7 @@ ko.bindingHandlers.editableCell = {
             if (event.target === self.range.start) {
                 return;
             }
-            
+
             setTimeout(function () {
                 self.range.setStart(event.target);
             }, 0);
@@ -373,7 +373,7 @@ ko.bindingHandlers.editableCell = {
             self.element.removeEventListener('dblclick', self.onDblClick);
             self.element.removeEventListener('keypress', self.onKeyPress);
             self.element.removeEventListener('keydown', self.onKeyDown);
-            
+
             $(html).unbind('mouseup', self.onMouseUp);
 
             table.removeChild(self.element);
@@ -457,7 +457,7 @@ ko.bindingHandlers.editableCell = {
                 self.copyPasteElement.value = '';
                 self.copyPasteElement.style.display = 'block';
                 self.copyPasteElement.focus();
-                setTimeout(function() {
+                setTimeout(function () {
                     selection.onPaste(self.copyPasteElement.value);
                     self.copyPasteElement.style.display = 'none';
                     self.focus();
@@ -467,7 +467,7 @@ ko.bindingHandlers.editableCell = {
                 self.copyPasteElement.style.display = 'block';
                 self.copyPasteElement.focus();
                 document.execCommand('selectAll', false, null);
-                setTimeout(function() {
+                setTimeout(function () {
                     self.copyPasteElement.style.display = 'none';
                     self.focus();
                 }, 0);
@@ -480,7 +480,7 @@ ko.bindingHandlers.editableCell = {
         ko.utils.registerEventHandler(self.element, "dblclick", self.onDblClick);
         ko.utils.registerEventHandler(self.element, "keypress", self.onKeyPress);
         ko.utils.registerEventHandler(self.element, "keydown", self.onKeyDown);
-        
+
         ko.utils.registerEventHandler(html, "mouseup", self.onMouseUp);
     },
     // #### <a name="range"></a> `SelectionRange`
@@ -642,11 +642,16 @@ ko.bindingHandlers.editableCell = {
 // Using utility functions like `ko.dataFor` on the `cell` property, you can get hold of the row view model.
 
 ko.bindingHandlers.editableCellSelection = {
-    init: function (element, valueAccessor, allBindingsAccessor) {
+    init: function (element) {
+        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
+            element._cellSelectionSubscription.dispose();
+            element._cellSelectionSubscription = null;
+        });
+    },
+    update: function (element, valueAccessor, allBindingsAccessor) {
         var table = element,
-            selection = table._cellSelection,
-            selectionSubscription;
- 
+            selection = table._cellSelection;
+
         if (element.tagName !== 'TABLE') {
             throw new Error('editableCellSelection binding can only be applied to tables');
         }
@@ -655,7 +660,11 @@ ko.bindingHandlers.editableCellSelection = {
             table._cellSelection = selection = new ko.bindingHandlers.editableCell.Selection(table);
         }
 
-        selectionSubscription = selection.range.selection.subscribe(function (newSelection) {
+        if (table._cellSelectionSubscription) {
+            table._cellSelectionSubscription.dispose();
+        }
+
+        table._cellSelectionSubscription = selection.range.selection.subscribe(function (newSelection) {
             newSelection = ko.utils.arrayMap(newSelection, function (cell) {
                 return {
                     cell: cell,
@@ -665,10 +674,6 @@ ko.bindingHandlers.editableCellSelection = {
             });
 
             ko.bindingHandlers.editableCell.updateBindingValue('editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
-        });
-
-        ko.utils.domNodeDisposal.addDisposeCallback(element, function() {
-            selectionSubscription.dispose();
         });
     }
 };
