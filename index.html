@@ -5,7 +5,7 @@
         <script type="text/javascript" src="http://knockoutjs.com/downloads/knockout-2.2.1.js"></script>
         <script type="text/javascript" src="knockout.editableCell.js"></script>
         <style type="text/css">
-            @import url('http://twitter.github.com/bootstrap/assets/css/bootstrap.css');
+            @import url('http://getbootstrap.com/dist/css/bootstrap.css');
 
             body    { padding: 30px; }
             h3 code { font-size: 0.8em; }
@@ -14,7 +14,7 @@
     <body>
         <h3><code>editableCell</code> binding</h3>
         <p><a href="./docs/knockout.editableCell.html">Documentation</a></p>
-        <table style="position: relative" class="table table-bordered table-condensed" data-bind="editableCellSelection: selection">
+        <table style="position: relative" class="table" data-bind="editableCellSelection: selection">
             <thead>
                 <th width="30%">Firstname (editable, non-observable)</th>
                 <th width="30%">Surname (editable)</th>
@@ -57,7 +57,6 @@
                 self.selection = ko.observableArray();
 
                 self.selectionSum = ko.computed(function () {
-                    console.log('c');
                     return self.selection()
                         .filter(function (cell) { return typeof ko.utils.unwrapObservable(cell.value) === 'number'; })
                         .reduce(function (sum, cell) {
@@ -67,9 +66,22 @@
             }
 
             function Person(firstName, surName, age) {
+                var self = this;
+
+                this._age = ko.observable(age);
+
                 this.firstName = firstName;
                 this.surName = ko.observable(surName);
-                this.age = ko.observable(age);
+                this.age = ko.computed({
+                    read: this._age,
+                    write: function (newAge) {
+                        var number = parseFloat(newAge);
+
+                        if (!isNaN(number)) {
+                            self._age(number);
+                        }
+                    }
+                });
             }
 
             var viewModel = new ViewModel();

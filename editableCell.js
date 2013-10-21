@@ -234,8 +234,10 @@ ko.bindingHandlers.editableCell = {
                 var value = self.endEditingCell(event.target);
 
                 if (event.ctrlKey) {
-                    ko.utils.arrayForEach(self.range.getCells(), function (cell) {
-                        self.updateCellValue(cell, value);
+                    ko.utils.arrayForEach(self.range.getCells(), function (cellInSelection) {
+                        if (cellInSelection !== cell) {
+                            self.updateCellValue(cellInSelection, value);    
+                        }
                     });
                 }
 
