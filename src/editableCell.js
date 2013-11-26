@@ -28,7 +28,7 @@ ko.bindingHandlers.editableCell = {
     //
     // Every instance of the `editableCell` binding share a per table [selection](#selection).
     // The first cell being initialized per table will do the one-time initialization of the common table selection.
-    init: function (element, valueAccessor, allBindingsAccessor) {
+    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var table = $(element).parents('table')[0],
             selection = table._cellSelection;
 
@@ -38,6 +38,7 @@ ko.bindingHandlers.editableCell = {
 
         selection.registerCell(element);
 
+        element._cellTemplated = element.innerHTML.trim() !== '';
         element._cellValue = valueAccessor;
         element._cellText = function () { return allBindingsAccessor().cellText || this._cellValue(); };
         element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
@@ -45,7 +46,7 @@ ko.bindingHandlers.editableCell = {
             ko.bindingHandlers.editableCell.updateBindingValue('editableCell', this._cellValue, allBindingsAccessor, newValue);
 
             if (!ko.isObservable(this._cellValue())) {
-                this.textContent = ko.utils.unwrapObservable(this._cellText());
+                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
             }
         };
 
@@ -57,10 +58,29 @@ ko.bindingHandlers.editableCell = {
             element._cellReadOnly = null;
             element._cellValueUpdater = null;
         });
+
+        if (element._cellTemplated) {
+            ko.utils.domData.set(element, 'editableCellTemplate', {});
+            return { 'controlsDescendantBindings': true };
+        }
     },
     // Binding update simply updates the text content of the table cell.
-    update: function (element, valueAccessor, allBindingsAccessor) {
-        element.textContent = ko.utils.unwrapObservable(element._cellText());
+    update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        if (element._cellTemplated) {
+          var template = ko.utils.domData.get(element, 'editableCellTemplate');
+
+          if (!template.savedNodes) {
+            template.savedNodes = ko.bindingHandlers.editableCell.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
+          }
+          else {
+            ko.virtualElements.setDomNodeChildren(element, ko.bindingHandlers.editableCell.cloneNodes(template.savedNodes));
+          }
+
+          ko.applyBindingsToDescendants(bindingContext.createChildContext(ko.utils.unwrapObservable(valueAccessor())), element);
+        }
+        else {
+          element.textContent = ko.utils.unwrapObservable(element._cellText());
+        }
     },
     // `updateBindingValue` is a helper function borrowing private binding update functionality
     // from Knockout.js for supporting updating of both observables and non-observables.
@@ -78,6 +98,13 @@ ko.bindingHandlers.editableCell = {
         if (!ko.isObservable(valueAccessor())) {
             allBindingsAccessor()[bindingName] = newValue;
         }
+    },
+    cloneNodes: function (nodesArray, shouldCleanNodes) {
+        for (var i = 0, j = nodesArray.length, newNodesArray = []; i < j; i++) {
+            var clonedNode = nodesArray[i].cloneNode(true);
+            newNodesArray.push(shouldCleanNodes ? ko.cleanNode(clonedNode) : clonedNode);
+        }
+        return newNodesArray;
     },
     // #### <a name="selection"></a> `Selection`
     //
@@ -112,36 +139,23 @@ ko.bindingHandlers.editableCell = {
 
         self.registerCell = function (cell) {
             ko.utils.registerEventHandler(cell, "mousedown", self.onMouseDown);
-            ko.utils.registerEventHandler(cell, "mouseup", self.onMouseUp);
             ko.utils.registerEventHandler(cell, "mouseover", self.onCellMouseOver);
             ko.utils.registerEventHandler(cell, "focus", self.onCellFocus);
-            ko.utils.registerEventHandler(cell, "blur", self.onCellBlur);
-            ko.utils.registerEventHandler(cell, "keydown", self.onCellKeyDown);
         };
 
         self.unregisterCell = function (cell) {
             cell.removeEventListener('mousedown', self.onMouseDown);
-            cell.removeEventListener('mouseup', self.onMouseUp);
             cell.removeEventListener('mouseover', self.onCellMouseOver);
             cell.removeEventListener('focus', self.onCellFocus);
-            cell.removeEventListener('blur', self.onCellBlur);
-            cell.removeEventListener('keydown', self.onCellKeyDown);
         };
 
         self.onMouseDown = function (event) {
-            if (self.isEditingCell(this)) {
-                return;
+            if (self.isEditingCell()) {
+              return;
             }
 
             self.onCellMouseDown(this, event.shiftKey);
             event.preventDefault();
-        };
-
-        self.onMouseUp = function (event) {
-            if (self.isEditingCell(this)) {
-                event.stopPropagation();
-                return;
-            }
         };
 
         self.updateCellValue = function (cell, newValue) {
@@ -152,8 +166,7 @@ ko.bindingHandlers.editableCell = {
             }
 
             if (newValue === undefined) {
-                value = cell.textContent;
-                self.restoreCellText(cell);
+                value = self.view.inputElement.value;
             }
             else {
                 value = newValue;
@@ -162,9 +175,6 @@ ko.bindingHandlers.editableCell = {
             cell._cellValueUpdater(value);
 
             return value;
-        };
-        self.restoreCellText = function (cell) {
-            cell.textContent = cell._oldTextContent;
         };
 
         self.startEditing = function () {
@@ -179,24 +189,26 @@ ko.bindingHandlers.editableCell = {
                 self.range.setStart(cell);
             }
 
-            cell._oldTextContent = cell.textContent;
-            cell.textContent = ko.utils.unwrapObservable(cell._cellValue());
+            self.view.inputElement.style.top = cell.offsetTop + 'px';
+            self.view.inputElement.style.left = cell.offsetLeft + 'px';
+            self.view.inputElement.style.width = cell.offsetWidth + 'px';
+            self.view.inputElement.style.height = cell.offsetHeight + 'px';
+            self.view.inputElement.value = ko.utils.unwrapObservable(cell._cellValue());
+            self.view.inputElement.style.display = 'block';
+            self.view.inputElement.focus();
 
-            cell.contentEditable = true;
-            cell.focus();
             document.execCommand('selectAll', false, null);
             self.view.element.style.pointerEvents = 'none';
         };
         self.isEditingCell = function (cell) {
-            return cell.contentEditable === 'true';
+            return self.view.inputElement.style.display === 'block';
         };
         self.cancelEditingCell = function (cell) {
-            cell.contentEditable = false;
-            self.restoreCellText(cell);
+            self.view.inputElement.style.display = 'none';
             self.view.element.style.pointerEvents = 'inherit';
         };
         self.endEditingCell = function (cell) {
-            cell.contentEditable = false;
+            self.view.inputElement.style.display = 'none';
             self.view.element.style.pointerEvents = 'inherit';
             return self.updateCellValue(cell);
         };
@@ -222,42 +234,6 @@ ko.bindingHandlers.editableCell = {
                 self.range.setEnd(event.target);
             }
         };
-        self.onCellKeyDown = function (event) {
-            var cell = event.target;
-
-            if (event.keyCode === 13) { // Return
-                if (!self.isEditingCell(cell)) {
-                    return;
-                }
-
-                var value = self.endEditingCell(event.target);
-
-                if (event.ctrlKey) {
-                    ko.utils.arrayForEach(self.range.getCells(), function (cellInSelection) {
-                        if (cellInSelection !== cell) {
-                            self.updateCellValue(cellInSelection, value);
-                        }
-                    });
-                }
-
-                self.onReturn(event, event.ctrlKey);
-                self.focus();
-                event.preventDefault();
-            }
-            else if ([37, 38, 39, 40].indexOf(event.keyCode) !== -1) { // Arrows
-                self.focus();
-                self.onArrows(event);
-                event.preventDefault();
-            }
-            else if (event.keyCode === 27) { // Escape
-                if (!self.isEditingCell(cell)) {
-                    return;
-                }
-
-                self.cancelEditingCell(event.target);
-                self.focus();
-            }
-        };
         self.onCellFocus = function (event) {
             if (event.target === self.range.start) {
                 return;
@@ -266,13 +242,6 @@ ko.bindingHandlers.editableCell = {
             setTimeout(function () {
                 self.range.setStart(event.target);
             }, 0);
-        };
-        self.onCellBlur = function (event) {
-            if (!self.isEditingCell(event.target)) {
-                return;
-            }
-
-            self.endEditingCell(event.target);
         };
         self.onReturn = function (event, preventMove) {
             if (preventMove !== true) {
@@ -362,12 +331,17 @@ ko.bindingHandlers.editableCell = {
         self.element.style.display = 'none';
         self.element.tabIndex = -1;
 
+        self.inputElement = document.createElement('input');
+        self.inputElement.style.position = 'absolute';
+        self.inputElement.style.display = 'none';
+
         self.copyPasteElement = document.createElement('textarea');
         self.copyPasteElement.style.position = 'absolute';
         self.copyPasteElement.style.opacity = '0.0';
         self.copyPasteElement.style.display = 'none';
 
         table.appendChild(self.element);
+        table.appendChild(self.inputElement);
         table.appendChild(self.copyPasteElement);
 
         self.destroy = function () {
@@ -376,9 +350,13 @@ ko.bindingHandlers.editableCell = {
             self.element.removeEventListener('keypress', self.onKeyPress);
             self.element.removeEventListener('keydown', self.onKeyDown);
 
+            self.inputElement.removeEventListener('keydown', self.onInputKeydown);
+            self.inputElement.removeEventListener('blur', self.onInputBlur);
+
             $(html).unbind('mouseup', self.onMouseUp);
 
             table.removeChild(self.element);
+            table.removeChild(self.inputElement);
             table.removeChild(self.copyPasteElement);
         };
         self.show = function () {
@@ -477,11 +455,43 @@ ko.bindingHandlers.editableCell = {
                 selection.onTab(event);
             }
         };
+        self.onInputKeydown = function (event) {
+          var cell = selection.range.start;
+
+          if (event.keyCode === 13) { // Return
+              var value = selection.endEditingCell(cell);
+
+              if (event.ctrlKey) {
+                  ko.utils.arrayForEach(selection.range.getCells(), function (cellInSelection) {
+                      if (cellInSelection !== cell) {
+                          selection.updateCellValue(cellInSelection, value);
+                      }
+                  });
+              }
+
+              selection.onReturn(event, event.ctrlKey);
+              self.focus();
+              event.preventDefault();
+          }
+          else if (event.keyCode === 27) { // Escape
+              selection.cancelEditingCell(cell);
+              self.focus();
+          }
+        };
+        self.onInputBlur = function (event) {
+          if (!selection.isEditingCell()) {
+            return;
+          }
+          selection.endEditingCell(selection.range.start);
+        };
 
         ko.utils.registerEventHandler(self.element, "mousedown", self.onMouseDown);
         ko.utils.registerEventHandler(self.element, "dblclick", self.onDblClick);
         ko.utils.registerEventHandler(self.element, "keypress", self.onKeyPress);
         ko.utils.registerEventHandler(self.element, "keydown", self.onKeyDown);
+
+        ko.utils.registerEventHandler(self.inputElement, "keydown", self.onInputKeydown);
+        ko.utils.registerEventHandler(self.inputElement, "blur", self.onInputBlur);
 
         ko.utils.registerEventHandler(html, "mouseup", self.onMouseUp);
     },
