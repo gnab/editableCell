@@ -12,9 +12,9 @@
 // In addition, the following supporting bindings may be used for configuration:
 //
 // - `cellText` - Overrides the text displayed in the cell
-// 
+//
 //          editableCell: amount, cellText: '$' + amount()
-// 
+//
 // - `cellReadOnly` - Sets whether or not the cell can be edited
 //
 //          editableCell: amount, cellReadOnly: true
@@ -82,7 +82,7 @@ ko.bindingHandlers.editableCell = {
     },
     // #### <a name="selection"></a> `Selection`
     //
-    // The `Selection` is used internally to represent the selection for a single table, 
+    // The `Selection` is used internally to represent the selection for a single table,
     // comprising a [view](#view) and a [range](#range), as well as functionality for handling table cell
     // operations like selecting, editing and copy and paste.
     Selection: function (table) {
@@ -236,7 +236,7 @@ ko.bindingHandlers.editableCell = {
                 if (event.ctrlKey) {
                     ko.utils.arrayForEach(self.range.getCells(), function (cellInSelection) {
                         if (cellInSelection !== cell) {
-                            self.updateCellValue(cellInSelection, value);    
+                            self.updateCellValue(cellInSelection, value);
                         }
                     });
                 }
@@ -328,8 +328,8 @@ ko.bindingHandlers.editableCell = {
 
             self.range.setStart(selStart);
 
-            while (row-- > 1 && self.range.extendInDirection('Down')) { rows++ };
-            while (col-- > 1 && self.range.extendInDirection('Right')) { cols++ };
+            while (row-- > 1 && self.range.extendInDirection('Down')) { rows++; }
+            while (col-- > 1 && self.range.extendInDirection('Right')) { cols++; }
 
             cells = self.range.getCells();
 
@@ -560,7 +560,7 @@ ko.bindingHandlers.editableCell = {
             var originRow = originCell.parentNode,
                 cell;
 
-            rowIndex = typeof rowIndex !== 'undefined' ? rowIndex : originRow.rowIndex - self.getRowsOffset(originCell),
+            rowIndex = typeof rowIndex !== 'undefined' ? rowIndex : originRow.rowIndex - self.getRowsOffset(originCell);
             cellIndex = typeof cellIndex !== 'undefined' ? cellIndex : originCell.cellIndex;
 
             if (direction === 'Left' && cellIndex > 0) {
@@ -629,7 +629,7 @@ ko.bindingHandlers.editableCell = {
 // #### Usage
 //
 // 1) Add a `selection` observable array to your view model:
-// 
+//
 //     viewModel.selection = ko.observableArray();
 //
 // 2) Bind the property to the table element using the `editableCellSelection` binding:
@@ -680,5 +680,6 @@ ko.bindingHandlers.editableCellSelection = {
         });
     }
 };
+
 },{}]},{},[1])
 ;
