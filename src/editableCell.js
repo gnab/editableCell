@@ -30,7 +30,8 @@ ko.bindingHandlers.editableCell = {
     // The first cell being initialized per table will do the one-time initialization of the common table selection.
     init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var table = $(element).parents('table')[0],
-            selection = table._cellSelection;
+            selection = table._cellSelection,
+            valueBindingName = 'editableCell';
 
         if (selection === undefined) {
             table._cellSelection = selection = new ko.bindingHandlers.editableCell.Selection(table);
@@ -38,12 +39,17 @@ ko.bindingHandlers.editableCell = {
 
         selection.registerCell(element);
 
+        if (allBindingsAccessor().cellValue) {
+            valueBindingName = 'cellValue';
+            valueAccessor = function () { return allBindingsAccessor().cellValue; };
+        }
+
         element._cellTemplated = element.innerHTML.trim() !== '';
         element._cellValue = valueAccessor;
         element._cellText = function () { return allBindingsAccessor().cellText || this._cellValue(); };
         element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
         element._cellValueUpdater = function (newValue) {
-            ko.bindingHandlers.editableCell.updateBindingValue('editableCell', this._cellValue, allBindingsAccessor, newValue);
+            ko.bindingHandlers.editableCell.updateBindingValue(valueBindingName, this._cellValue, allBindingsAccessor, newValue);
 
             if (!ko.isObservable(this._cellValue())) {
                 ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
