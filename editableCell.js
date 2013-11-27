@@ -74,19 +74,19 @@ ko.bindingHandlers.editableCell = {
     // Binding update simply updates the text content of the table cell.
     update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         if (element._cellTemplated) {
-          var template = ko.utils.domData.get(element, 'editableCellTemplate');
+            var template = ko.utils.domData.get(element, 'editableCellTemplate');
 
-          if (!template.savedNodes) {
-            template.savedNodes = ko.bindingHandlers.editableCell.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
-          }
-          else {
-            ko.virtualElements.setDomNodeChildren(element, ko.bindingHandlers.editableCell.cloneNodes(template.savedNodes));
-          }
+            if (!template.savedNodes) {
+                template.savedNodes = ko.bindingHandlers.editableCell.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
+            }
+            else {
+                ko.virtualElements.setDomNodeChildren(element, ko.bindingHandlers.editableCell.cloneNodes(template.savedNodes));
+            }
 
-          ko.applyBindingsToDescendants(bindingContext.createChildContext(ko.utils.unwrapObservable(valueAccessor())), element);
+            ko.applyBindingsToDescendants(bindingContext.createChildContext(ko.utils.unwrapObservable(valueAccessor())), element);
         }
         else {
-          element.textContent = ko.utils.unwrapObservable(element._cellText());
+            element.textContent = ko.utils.unwrapObservable(element._cellText());
         }
     },
     // `updateBindingValue` is a helper function borrowing private binding update functionality
@@ -158,7 +158,7 @@ ko.bindingHandlers.editableCell = {
 
         self.onMouseDown = function (event) {
             if (self.isEditingCell()) {
-              return;
+                return;
             }
 
             self.onCellMouseDown(this, event.shiftKey);
@@ -463,33 +463,33 @@ ko.bindingHandlers.editableCell = {
             }
         };
         self.onInputKeydown = function (event) {
-          var cell = selection.range.start;
+            var cell = selection.range.start;
 
-          if (event.keyCode === 13) { // Return
-              var value = selection.endEditingCell(cell);
+            if (event.keyCode === 13) { // Return
+                var value = selection.endEditingCell(cell);
 
-              if (event.ctrlKey) {
-                  ko.utils.arrayForEach(selection.range.getCells(), function (cellInSelection) {
-                      if (cellInSelection !== cell) {
-                          selection.updateCellValue(cellInSelection, value);
-                      }
-                  });
+                if (event.ctrlKey) {
+                    ko.utils.arrayForEach(selection.range.getCells(), function (cellInSelection) {
+                    if (cellInSelection !== cell) {
+                        selection.updateCellValue(cellInSelection, value);
+                    }
+                    });
               }
 
-              selection.onReturn(event, event.ctrlKey);
-              self.focus();
-              event.preventDefault();
-          }
-          else if (event.keyCode === 27) { // Escape
-              selection.cancelEditingCell(cell);
-              self.focus();
-          }
+                selection.onReturn(event, event.ctrlKey);
+                self.focus();
+                event.preventDefault();
+            }
+            else if (event.keyCode === 27) { // Escape
+                selection.cancelEditingCell(cell);
+                self.focus();
+            }
         };
         self.onInputBlur = function (event) {
-          if (!selection.isEditingCell()) {
-            return;
-          }
-          selection.endEditingCell(selection.range.start);
+            if (!selection.isEditingCell()) {
+                return;
+            }
+            selection.endEditingCell(selection.range.start);
         };
 
         ko.utils.registerEventHandler(self.element, "mousedown", self.onMouseDown);
