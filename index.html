@@ -9,6 +9,7 @@
 
             body    { padding: 30px; }
             h3 code { font-size: 0.8em; }
+            input   { padding-left: 8px; }
         </style>
     </head>
     <body>
@@ -16,10 +17,12 @@
         <p><a href="./docs/knockout.editableCell.html">Documentation</a></p>
         <table style="position: relative" class="table" data-bind="editableCellSelection: selection">
             <thead>
-                <th width="30%">Firstname (editable, non-observable)</th>
-                <th width="30%">Surname (editable)</th>
-                <th>Salary (read-only)</th>
-                <th width="20%">Age (editable)</th>
+                <tr>
+                    <th width="30%">Firstname (editable, non-observable)</th>
+                    <th width="30%">Surname (editable)</th>
+                    <th>Salary (read-only)</th>
+                    <th width="20%">Age (editable)</th>
+                </tr>
             </thead>
             <tbody>
                 <!-- ko foreach: entries -->
