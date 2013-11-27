@@ -369,7 +369,12 @@ ko.bindingHandlers.editableCell = {
         self.show = function () {
             self.element.style.display = 'block';
             self.element.focus();
-            self.element.scrollIntoViewIfNeeded();
+            if (self.element.scrollIntoViewIfNeeded) {
+                self.element.scrollIntoViewIfNeeded();
+            }
+            else {
+                self.element.scrollIntoView();   
+            }
         };
         self.hide = function () {
             self.element.style.display = 'none';
