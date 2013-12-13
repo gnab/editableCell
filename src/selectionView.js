@@ -110,7 +110,7 @@ function SelectionView (table, selection) {
         event.preventDefault();
     };
     self.onDblClick = function (event) {
-        selection.startEditing();
+        selection.startLockedEditing();
     };
     self.onKeyPress = function (event) {
         selection.startEditing();
@@ -163,6 +163,13 @@ function SelectionView (table, selection) {
         else if (event.keyCode === 27) { // Escape
             selection.cancelEditingCell(cell);
             self.focus();
+        }
+        else if ([37, 38, 39, 40].indexOf(event.keyCode) !== -1) { // Arrows
+            if(!self.isLockedToCell) {
+                self.focus();
+                selection.onArrows(event);
+                event.preventDefault();
+            }
         }
     };
     self.onInputBlur = function (event) {
