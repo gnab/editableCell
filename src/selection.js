@@ -77,7 +77,12 @@ function Selection (table) {
     self.startEditing = function () {
         self.startEditingCell(self.range.start);
     };
-    self.startEditingCell = function (cell) {
+
+    self.startLockedEditing = function () {
+        self.startEditingCell(self.range.start, true);
+    };
+
+    self.startEditingCell = function (cell, isLockedToCell) {
         if (!cellIsEditable(cell)) {
             return;
         }
@@ -93,6 +98,7 @@ function Selection (table) {
         self.view.inputElement.value = ko.utils.unwrapObservable(cell._cellValue());
         self.view.inputElement.style.display = 'block';
         self.view.inputElement.focus();
+        self.view.isLockedToCell = isLockedToCell;
 
         document.execCommand('selectAll', false, null);
         self.view.element.style.pointerEvents = 'none';
