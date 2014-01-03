@@ -73,10 +73,10 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
     self.getCellInDirection = function (originCell, direction, rowIndex, cellIndex) {
 
         rowIndex = typeof rowIndex !== 'undefined' ? rowIndex : originCell.parentNode.rowIndex;
-        cellIndex = typeof cellIndex !== 'undefined' ? cellIndex : originCell.cellIndex;
+        cellIndex = typeof cellIndex !== 'undefined' ? cellIndex : getCellIndex(originCell);
 
         var row = getRowByIndex(rowIndex + getDirectionYDelta(direction)),
-            cell = row && row.children[cellIndex + getDirectionXDelta(direction)];
+            cell = row && getRowCellByIndex(row, cellIndex + getDirectionXDelta(direction));
 
         if (direction === 'Left' && cell) {
             return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex, cellIndex - 1);
@@ -109,9 +109,9 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
         return originCell;
     };
     self.getCellsInArea = function (startCell, endCell) {
-        var startX = Math.min(startCell.cellIndex, endCell.cellIndex),
+        var startX = Math.min(getCellIndex(startCell), getCellIndex(endCell)),
             startY = Math.min(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
-            endX = Math.max(startCell.cellIndex, endCell.cellIndex),
+            endX = Math.max(getCellIndex(startCell), getCellIndex(endCell)),
             endY = Math.max(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
             x, y,
             cell,
@@ -119,7 +119,7 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
 
         for (x = startX; x <= endX; ++x) {
             for (y = startY; y <= endY; ++y) {
-                cell = getRowByIndex(y).children[x];
+                cell = getRowCellByIndex(getRowByIndex(y), x);
                 cells.push(cell || {});
             }
         }
@@ -149,5 +149,36 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
         }
 
         return 0;
+    }
+
+    function getCellIndex (cell) {
+        var row = cell.parentNode,
+            colSpanSum = 0,
+            i;
+
+        for (i = 0; i < row.children.length; i++) {
+            if (row.children[i] === cell) {
+                break;
+            }
+
+            colSpanSum += row.children[i].colSpan;
+        }
+
+        return colSpanSum;
+    }
+
+    function getRowCellByIndex (row, index) {
+        var i, colSpanSum = 0;
+
+        for (i = 0; i < row.children.length; i++) {
+            if (index < colSpanSum) {
+                return row.children[i - 1];
+            }
+            if (index === colSpanSum) {
+                return row.children[i];
+            }
+
+            colSpanSum += row.children[i].colSpan;
+        }
     }
 }
