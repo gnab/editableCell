@@ -78,18 +78,20 @@ function SelectionRange (cellIsSelectable, cellIsVisible) {
         cellIndex = typeof cellIndex !== 'undefined' ? cellIndex : originCell.cellIndex;
 
         if (direction === 'Left' && cellIndex > 0) {
-            return originRow.children[cellIndex - 1];
+            cell = originRow.children[cellIndex - 1];
+            return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex, cellIndex - 1);
         }
         if (direction === 'Up' && rowIndex > 0) {
             cell = originRow.parentNode.children[rowIndex - 1].children[cellIndex];
-            return cell || self.getCellInDirection(originCell, direction, rowIndex - 1, cellIndex);
+            return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex - 1, cellIndex);
         }
         if (direction === 'Right' && cellIndex < originCell.parentNode.children.length - 1) {
-            return originRow.children[cellIndex + 1];
+            cell = originRow.children[cellIndex + 1];
+            return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex, cellIndex + 1);
         }
         if (direction === 'Down' && rowIndex < originCell.parentNode.parentNode.children.length - 1) {
             cell = originRow.parentNode.children[rowIndex + 1].children[cellIndex];
-            return cell || self.getCellInDirection(originCell, direction, rowIndex + 1, cellIndex);
+            return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex + 1, cellIndex);
         }
 
         return originCell;
