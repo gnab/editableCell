@@ -121,6 +121,9 @@ function Selection (table) {
     function cellIsEditable(cell) {
         return cell._cellReadOnly() !== true;
     }
+    function cellIsVisible (cell) {
+        return cell && cell.offsetHeight !== 0;
+    }
     self.onCellMouseDown = function (cell, shiftKey) {
         if (shiftKey) {
             self.range.setEnd(cell);
