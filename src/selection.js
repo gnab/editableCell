@@ -124,6 +124,9 @@ function Selection (table) {
     function cellIsVisible (cell) {
         return cell && cell.offsetHeight !== 0;
     }
+    function getRowByIndex (index) {
+        return table.rows[index];
+    }
     self.onCellMouseDown = function (cell, shiftKey) {
         if (shiftKey) {
             self.range.setEnd(cell);
