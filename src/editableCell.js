@@ -161,8 +161,17 @@ ko.bindingHandlers.editableCellSelection = {
                     return;
                 }
 
-                selection.range.setStart(newSelection && newSelection[0]);
-                selection.range.setEnd(newSelection && newSelection[newSelection.length - 1]);
+                var start = newSelection && newSelection[0],
+                    end = newSelection && newSelection[newSelection.length - 1];
+
+                // Make sure selected cells belongs to current table, or else hide selection
+                if (!start.parentNode || start.parentNode.parentNode.parentNode !== table) {
+                    selection.view.hide();
+                    return;
+                }
+
+                selection.range.setStart(start);
+                selection.range.setEnd(end);
             }));
         }
     }
