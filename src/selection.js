@@ -13,7 +13,7 @@ function Selection (table) {
         selectionSubscription;
 
     self.view = new SelectionView(table, self);
-    self.range = new SelectionRange(cellIsSelectable);
+    self.range = new SelectionRange(cellIsSelectable, cellIsVisible);
 
     selectionSubscription = self.range.selection.subscribe(function (newSelection) {
         if (newSelection.length === 0) {
