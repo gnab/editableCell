@@ -118,8 +118,7 @@ ko.bindingHandlers.editableCell = {
 ko.bindingHandlers.editableCellSelection = {
     init: function (element) {
         ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
-            element._cellSelectionSubscription.dispose();
-            element._cellSelectionSubscription = null;
+            disposeSelectionSubscriptions(element);
         });
     },
     update: function (element, valueAccessor, allBindingsAccessor) {
@@ -134,11 +133,13 @@ ko.bindingHandlers.editableCellSelection = {
             table._cellSelection = selection = new Selection(table);
         }
 
-        if (table._cellSelectionSubscription) {
-            table._cellSelectionSubscription.dispose();
-        }
+        table._cellSelectionSubscriptions = table._cellSelectionSubscriptions || [];
+        disposeSelectionSubscriptions(element);
 
-        table._cellSelectionSubscription = selection.range.selection.subscribe(function (newSelection) {
+        var updatingBindingValue = false;
+
+        // Update supplied observable array when selection range changes
+        table._cellSelectionSubscriptions.push(selection.range.selection.subscribe(function (newSelection) {
             newSelection = ko.utils.arrayMap(newSelection, function (cell) {
                 return {
                     cell: cell,
@@ -147,10 +148,33 @@ ko.bindingHandlers.editableCellSelection = {
                 };
             });
 
+            updatingBindingValue = true;
             updateBindingValue('editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
-        });
+            updatingBindingValue = false;
+        }));
+
+        var value = valueAccessor();
+
+        if (ko.isObservable(value)) {
+            // Update selection range when supplied observable array changes
+            table._cellSelectionSubscriptions.push(value.subscribe(function (newSelection) {
+                if (updatingBindingValue) {
+                    return;
+                }
+
+                selection.range.setStart(newSelection && newSelection[0]);
+                selection.range.setEnd(newSelection && newSelection[newSelection.length - 1]);
+            }));
+        }
     }
 };
+
+function disposeSelectionSubscriptions (element) {
+    ko.utils.arrayForEach(element._cellSelectionSubscriptions, function (subscription) {
+        subscription.dispose();
+    });
+    element._cellSelectionSubscriptions = [];
+}
 
 // `updateBindingValue` is a helper function borrowing private binding update functionality
 // from Knockout.js for supporting updating of both observables and non-observables.
