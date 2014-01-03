@@ -71,26 +71,23 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
         self.selection(self.getCells());
     };
     self.getCellInDirection = function (originCell, direction, rowIndex, cellIndex) {
-        var originRow = originCell.parentNode,
-            cell;
 
-        rowIndex = typeof rowIndex !== 'undefined' ? rowIndex : originRow.rowIndex - self.getRowsOffset(originCell);
+        rowIndex = typeof rowIndex !== 'undefined' ? rowIndex : originCell.parentNode.rowIndex;
         cellIndex = typeof cellIndex !== 'undefined' ? cellIndex : originCell.cellIndex;
 
-        if (direction === 'Left' && cellIndex > 0) {
-            cell = originRow.children[cellIndex - 1];
+        var row = getRowByIndex(rowIndex + getDirectionYDelta(direction)),
+            cell = row && row.children[cellIndex + getDirectionXDelta(direction)];
+
+        if (direction === 'Left' && cell) {
             return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex, cellIndex - 1);
         }
-        if (direction === 'Up' && rowIndex > 0) {
-            cell = originRow.parentNode.children[rowIndex - 1].children[cellIndex];
+        if (direction === 'Up' && row) {
             return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex - 1, cellIndex);
         }
-        if (direction === 'Right' && cellIndex < originCell.parentNode.children.length - 1) {
-            cell = originRow.children[cellIndex + 1];
+        if (direction === 'Right' && cell) {
             return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex, cellIndex + 1);
         }
-        if (direction === 'Down' && rowIndex < originCell.parentNode.parentNode.children.length - 1) {
-            cell = originRow.parentNode.children[rowIndex + 1].children[cellIndex];
+        if (direction === 'Down' && row) {
             return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex + 1, cellIndex);
         }
 
@@ -117,22 +114,40 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
             endX = Math.max(startCell.cellIndex, endCell.cellIndex),
             endY = Math.max(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
             x, y,
-            rowsOffset = self.getRowsOffset(startCell),
             cell,
             cells = [];
 
         for (x = startX; x <= endX; ++x) {
             for (y = startY; y <= endY; ++y) {
-                cell = startCell.parentNode.parentNode.children[y - rowsOffset].children[x];
+                cell = getRowByIndex(y).children[x];
                 cells.push(cell || {});
             }
         }
 
         return cells;
     };
-    self.getRowsOffset = function (cell) {
-        var rows = cell.parentNode.parentNode.children;
+    
+    function getDirectionXDelta (direction) {
+        if (direction === 'Left') {
+            return -1;
+        }
 
-        return rows[rows.length - 1].rowIndex + 1 - rows.length;
-    };
+        if (direction === 'Right') {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    function getDirectionYDelta (direction) {
+        if (direction === 'Up') {
+            return -1;
+        }
+
+        if (direction === 'Down') {
+            return 1;
+        }
+
+        return 0;
+    }
 }
