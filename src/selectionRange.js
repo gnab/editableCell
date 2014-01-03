@@ -4,7 +4,7 @@ module.exports = SelectionRange;
 //
 // The `SelectionRange` is used internally to hold the current selection, represented by a start and an end cell.
 // In addition, it has functionality for moving and extending the selection inside the table.
-function SelectionRange (cellIsSelectable, cellIsVisible) {
+function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
     var self = this;
 
     self.start = undefined;
