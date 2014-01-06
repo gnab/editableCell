@@ -36,7 +36,7 @@ ko.bindingHandlers.editableCell = {
             valueBindingName = 'editableCell';
 
         if (selection === undefined) {
-            table._cellSelection = selection = new Selection(table);
+            table._cellSelection = selection = new Selection(table, ko.bindingHandlers.editableCellSelection._selectionMappings);
         }
 
         selection.registerCell(element);
@@ -115,6 +115,8 @@ ko.bindingHandlers.editableCell = {
 // Using utility functions like `ko.dataFor` on the `cell` property, you can get hold of the row view model.
 
 ko.bindingHandlers.editableCellSelection = {
+    _selectionMappings: [],
+
     init: function (element, valueAccessor, allBindingsAccessor) {
         var table = element,
             selection = table._cellSelection;
@@ -124,7 +126,7 @@ ko.bindingHandlers.editableCellSelection = {
         }
 
         if (selection === undefined) {
-            table._cellSelection = selection = new Selection(table);
+            table._cellSelection = selection = new Selection(table, ko.bindingHandlers.editableCellSelection._selectionMappings);
         }
 
         table._cellSelectionSubscriptions = table._cellSelectionSubscriptions || [];
@@ -142,8 +144,21 @@ ko.bindingHandlers.editableCellSelection = {
             updateBindingValue('editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
         }));
 
-        // Dispose subscriptions when table is removed from DOM
+        // Keep track of selections
+        ko.bindingHandlers.editableCellSelection._selectionMappings.push([valueAccessor, table]);
+
+        // Perform clean-up when table is removed from DOM
         ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
+            // Detach selection from table
+            table._cellSelection = null;
+
+            // Remove selection from list
+            var selectionIndex = ko.utils.arrayFirst(ko.bindingHandlers.editableCellSelection._selectionMappings, function (tuple) {
+                return tuple[0] === valueAccessor;
+            });
+            ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
+
+            // Dispose subscriptions
             disposeSelectionSubscriptions(table);
         });
     },
@@ -192,7 +207,7 @@ function disposeSelectionSubscriptions (element) {
     ko.utils.arrayForEach(element._cellSelectionSubscriptions, function (subscription) {
         subscription.dispose();
     });
-    element._cellSelectionSubscriptions = [];
+    element._cellSelectionSubscriptions = null;
 }
 
 // `updateBindingValue` is a helper function borrowing private binding update functionality

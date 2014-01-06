@@ -8,12 +8,12 @@ module.exports = Selection;
 // The `Selection` is used internally to represent the selection for a single table,
 // comprising a [view](#view) and a [range](#range), as well as functionality for handling table cell
 // operations like selecting, editing and copy and paste.
-function Selection (table) {
+function Selection (table, selectionMappings) {
     var self = this,
         selectionSubscription;
 
     self.view = new SelectionView(table, self);
-    self.range = new SelectionRange(getRowByIndex, cellIsSelectable, cellIsVisible);
+    self.range = new SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible);
 
     selectionSubscription = self.range.selection.subscribe(function (newSelection) {
         if (newSelection.length === 0) {
@@ -124,8 +124,58 @@ function Selection (table) {
     function cellIsVisible (cell) {
         return cell && cell.offsetHeight !== 0;
     }
-    function getRowByIndex (index) {
-        return table.rows[index];
+    function getRowByIndex (index, originTable) {
+        var targetTable = originTable || table;
+
+        // Check if we're moving out of table
+        if (index === -1 || index === targetTable.rows.length) {
+            // Find selection mapping for table
+            var selectionMapping = getSelectionMappingForTable(targetTable);
+
+            // We can only proceed check if mapping exists, i.e. that editableCellSelection binding is used
+            if (selectionMapping) {
+                // Find all selection mappings for selection, excluding the one for the current table
+                var tableMappings = ko.utils.arrayFilter(selectionMappings, function (tuple) {
+                    return tuple[0]() === selectionMapping[0]() && tuple[1] !== targetTable;
+                });
+
+                var tables = ko.utils.arrayMap(tableMappings, function (tuple) { return tuple[1]; });
+                var beforeTables = ko.utils.arrayFilter(tables, function (t) { return t.offsetTop + t.offsetHeight < table.offsetTop; });
+                var afterTables = ko.utils.arrayFilter(tables, function (t) { return t.offsetTop > table.offsetTop + table.offsetHeight; });
+
+                // Moving upwards
+                if (index === -1 && beforeTables.length) {
+                    targetTable = beforeTables[beforeTables.length - 1];
+                    index = targetTable.rows.length - 1;
+                }
+                // Moving downwards
+                else if (index === targetTable.rows.length && afterTables.length) {
+                    targetTable = afterTables[0];
+                    index = 0;
+                }
+            }
+        }
+        
+        return targetTable.rows[index];
+    }
+    function getCellByIndex (row, index) {
+        var i, colSpanSum = 0;
+
+        for (i = 0; i < row.children.length; i++) {
+            if (index < colSpanSum) {
+                return row.children[i - 1];
+            }
+            if (index === colSpanSum) {
+                return row.children[i];
+            }
+
+            colSpanSum += row.children[i].colSpan;
+        }
+    }
+    function getSelectionMappingForTable (table) {
+        return ko.utils.arrayFirst(selectionMappings, function (tuple) {
+                return tuple[1] === table;
+        });
     }
     self.onCellMouseDown = function (cell, shiftKey) {
         if (shiftKey) {
@@ -169,16 +219,25 @@ function Selection (table) {
         event.preventDefault();
     };
     self.onArrows = function (event) {
-        var preventDefault;
+        var newStartOrEnd, newTable;
 
         if (event.shiftKey && !event.ctrlKey) {
-            preventDefault = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode]);
+            newStartOrEnd = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode]);
         }
         else if (!event.ctrlKey) {
-            preventDefault = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode]);
+            newStartOrEnd = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode]);
+            newTable = newStartOrEnd && newStartOrEnd.parentNode && newStartOrEnd.parentNode.parentNode.parentNode;
+
+            if (newTable !== table) {
+                var mapping = getSelectionMappingForTable(newTable);
+                if (mapping) {
+                    var selection = mapping[0]();
+                    selection([newStartOrEnd]);
+                }
+            }
         }
 
-        if (preventDefault) {
+        if (newStartOrEnd) {
             event.preventDefault();
         }
     };

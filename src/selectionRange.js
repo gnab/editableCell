@@ -4,7 +4,7 @@ module.exports = SelectionRange;
 //
 // The `SelectionRange` is used internally to hold the current selection, represented by a start and an end cell.
 // In addition, it has functionality for moving and extending the selection inside the table.
-function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
+function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
     var self = this;
 
     self.start = undefined;
@@ -14,13 +14,16 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
     // `moveInDirection` drops the current selection and makes the single cell in the specified `direction` the new selection.
     self.moveInDirection = function (direction) {
         var newStart = self.getSelectableCellInDirection(self.start, direction),
-            startChanged = newStart !== self.start;
+            startChanged = newStart !== self.start,
+            belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== self.start.parentNode.parentNode.parentNode;
 
-        if (newStart !== self.start || self.start !== self.end) {
+        if (!belongingToOtherTable && (startChanged || self.start !== self.end)) {
             self.setStart(newStart);
         }
 
-        return startChanged;
+        if (startChanged) {
+            return newStart;
+        }
     };
 
     // `extendIndirection` keeps the current selection and extends it in the specified `direction`.
@@ -30,7 +33,9 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
 
         self.setEnd(newEnd);
 
-        return endChanged;
+        if (endChanged) {
+            return newEnd;
+        }
     };
 
     // `getCells` returnes the cells contained in the current selection.
@@ -75,8 +80,8 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
         rowIndex = typeof rowIndex !== 'undefined' ? rowIndex : originCell.parentNode.rowIndex;
         cellIndex = typeof cellIndex !== 'undefined' ? cellIndex : getCellIndex(originCell);
 
-        var row = getRowByIndex(rowIndex + getDirectionYDelta(direction)),
-            cell = row && getRowCellByIndex(row, cellIndex + getDirectionXDelta(direction));
+        var row = getRowByIndex(rowIndex + getDirectionYDelta(direction), originCell.parentNode.parentNode.parentNode),
+            cell = row && getCellByIndex(row, cellIndex + getDirectionXDelta(direction));
 
         if (direction === 'Left' && cell) {
             return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex, cellIndex - 1);
@@ -119,7 +124,7 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
 
         for (x = startX; x <= endX; ++x) {
             for (y = startY; y <= endY; ++y) {
-                cell = getRowCellByIndex(getRowByIndex(y), x);
+                cell = getCellByIndex(getRowByIndex(y), x);
                 cells.push(cell || {});
             }
         }
@@ -165,20 +170,5 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
         }
 
         return colSpanSum;
-    }
-
-    function getRowCellByIndex (row, index) {
-        var i, colSpanSum = 0;
-
-        for (i = 0; i < row.children.length; i++) {
-            if (index < colSpanSum) {
-                return row.children[i - 1];
-            }
-            if (index === colSpanSum) {
-                return row.children[i];
-            }
-
-            colSpanSum += row.children[i].colSpan;
-        }
     }
 }

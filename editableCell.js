@@ -37,7 +37,7 @@ ko.bindingHandlers.editableCell = {
             valueBindingName = 'editableCell';
 
         if (selection === undefined) {
-            table._cellSelection = selection = new Selection(table);
+            table._cellSelection = selection = new Selection(table, ko.bindingHandlers.editableCellSelection._selectionMappings);
         }
 
         selection.registerCell(element);
@@ -116,6 +116,8 @@ ko.bindingHandlers.editableCell = {
 // Using utility functions like `ko.dataFor` on the `cell` property, you can get hold of the row view model.
 
 ko.bindingHandlers.editableCellSelection = {
+    _selectionMappings: [],
+
     init: function (element, valueAccessor, allBindingsAccessor) {
         var table = element,
             selection = table._cellSelection;
@@ -125,7 +127,7 @@ ko.bindingHandlers.editableCellSelection = {
         }
 
         if (selection === undefined) {
-            table._cellSelection = selection = new Selection(table);
+            table._cellSelection = selection = new Selection(table, ko.bindingHandlers.editableCellSelection._selectionMappings);
         }
 
         table._cellSelectionSubscriptions = table._cellSelectionSubscriptions || [];
@@ -143,8 +145,21 @@ ko.bindingHandlers.editableCellSelection = {
             updateBindingValue('editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
         }));
 
-        // Dispose subscriptions when table is removed from DOM
+        // Keep track of selections
+        ko.bindingHandlers.editableCellSelection._selectionMappings.push([valueAccessor, table]);
+
+        // Perform clean-up when table is removed from DOM
         ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
+            // Detach selection from table
+            table._cellSelection = null;
+
+            // Remove selection from list
+            var selectionIndex = ko.utils.arrayFirst(ko.bindingHandlers.editableCellSelection._selectionMappings, function (tuple) {
+                return tuple[0] === valueAccessor;
+            });
+            ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
+
+            // Dispose subscriptions
             disposeSelectionSubscriptions(table);
         });
     },
@@ -193,7 +208,7 @@ function disposeSelectionSubscriptions (element) {
     ko.utils.arrayForEach(element._cellSelectionSubscriptions, function (subscription) {
         subscription.dispose();
     });
-    element._cellSelectionSubscriptions = [];
+    element._cellSelectionSubscriptions = null;
 }
 
 // `updateBindingValue` is a helper function borrowing private binding update functionality
@@ -233,12 +248,12 @@ module.exports = Selection;
 // The `Selection` is used internally to represent the selection for a single table,
 // comprising a [view](#view) and a [range](#range), as well as functionality for handling table cell
 // operations like selecting, editing and copy and paste.
-function Selection (table) {
+function Selection (table, selectionMappings) {
     var self = this,
         selectionSubscription;
 
     self.view = new SelectionView(table, self);
-    self.range = new SelectionRange(getRowByIndex, cellIsSelectable, cellIsVisible);
+    self.range = new SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible);
 
     selectionSubscription = self.range.selection.subscribe(function (newSelection) {
         if (newSelection.length === 0) {
@@ -349,8 +364,58 @@ function Selection (table) {
     function cellIsVisible (cell) {
         return cell && cell.offsetHeight !== 0;
     }
-    function getRowByIndex (index) {
-        return table.rows[index];
+    function getRowByIndex (index, originTable) {
+        var targetTable = originTable || table;
+
+        // Check if we're moving out of table
+        if (index === -1 || index === targetTable.rows.length) {
+            // Find selection mapping for table
+            var selectionMapping = getSelectionMappingForTable(targetTable);
+
+            // We can only proceed check if mapping exists, i.e. that editableCellSelection binding is used
+            if (selectionMapping) {
+                // Find all selection mappings for selection, excluding the one for the current table
+                var tableMappings = ko.utils.arrayFilter(selectionMappings, function (tuple) {
+                    return tuple[0]() === selectionMapping[0]() && tuple[1] !== targetTable;
+                });
+
+                var tables = ko.utils.arrayMap(tableMappings, function (tuple) { return tuple[1]; });
+                var beforeTables = ko.utils.arrayFilter(tables, function (t) { return t.offsetTop + t.offsetHeight < table.offsetTop; });
+                var afterTables = ko.utils.arrayFilter(tables, function (t) { return t.offsetTop > table.offsetTop + table.offsetHeight; });
+
+                // Moving upwards
+                if (index === -1 && beforeTables.length) {
+                    targetTable = beforeTables[beforeTables.length - 1];
+                    index = targetTable.rows.length - 1;
+                }
+                // Moving downwards
+                else if (index === targetTable.rows.length && afterTables.length) {
+                    targetTable = afterTables[0];
+                    index = 0;
+                }
+            }
+        }
+        
+        return targetTable.rows[index];
+    }
+    function getCellByIndex (row, index) {
+        var i, colSpanSum = 0;
+
+        for (i = 0; i < row.children.length; i++) {
+            if (index < colSpanSum) {
+                return row.children[i - 1];
+            }
+            if (index === colSpanSum) {
+                return row.children[i];
+            }
+
+            colSpanSum += row.children[i].colSpan;
+        }
+    }
+    function getSelectionMappingForTable (table) {
+        return ko.utils.arrayFirst(selectionMappings, function (tuple) {
+                return tuple[1] === table;
+        });
     }
     self.onCellMouseDown = function (cell, shiftKey) {
         if (shiftKey) {
@@ -394,16 +459,25 @@ function Selection (table) {
         event.preventDefault();
     };
     self.onArrows = function (event) {
-        var preventDefault;
+        var newStartOrEnd, newTable;
 
         if (event.shiftKey && !event.ctrlKey) {
-            preventDefault = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode]);
+            newStartOrEnd = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode]);
         }
         else if (!event.ctrlKey) {
-            preventDefault = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode]);
+            newStartOrEnd = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode]);
+            newTable = newStartOrEnd && newStartOrEnd.parentNode && newStartOrEnd.parentNode.parentNode.parentNode;
+
+            if (newTable !== table) {
+                var mapping = getSelectionMappingForTable(newTable);
+                if (mapping) {
+                    var selection = mapping[0]();
+                    selection([newStartOrEnd]);
+                }
+            }
         }
 
-        if (preventDefault) {
+        if (newStartOrEnd) {
             event.preventDefault();
         }
     };
@@ -663,7 +737,7 @@ module.exports = SelectionRange;
 //
 // The `SelectionRange` is used internally to hold the current selection, represented by a start and an end cell.
 // In addition, it has functionality for moving and extending the selection inside the table.
-function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
+function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
     var self = this;
 
     self.start = undefined;
@@ -673,13 +747,16 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
     // `moveInDirection` drops the current selection and makes the single cell in the specified `direction` the new selection.
     self.moveInDirection = function (direction) {
         var newStart = self.getSelectableCellInDirection(self.start, direction),
-            startChanged = newStart !== self.start;
+            startChanged = newStart !== self.start,
+            belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== self.start.parentNode.parentNode.parentNode;
 
-        if (newStart !== self.start || self.start !== self.end) {
+        if (!belongingToOtherTable && (startChanged || self.start !== self.end)) {
             self.setStart(newStart);
         }
 
-        return startChanged;
+        if (startChanged) {
+            return newStart;
+        }
     };
 
     // `extendIndirection` keeps the current selection and extends it in the specified `direction`.
@@ -689,7 +766,9 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
 
         self.setEnd(newEnd);
 
-        return endChanged;
+        if (endChanged) {
+            return newEnd;
+        }
     };
 
     // `getCells` returnes the cells contained in the current selection.
@@ -734,8 +813,8 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
         rowIndex = typeof rowIndex !== 'undefined' ? rowIndex : originCell.parentNode.rowIndex;
         cellIndex = typeof cellIndex !== 'undefined' ? cellIndex : getCellIndex(originCell);
 
-        var row = getRowByIndex(rowIndex + getDirectionYDelta(direction)),
-            cell = row && getRowCellByIndex(row, cellIndex + getDirectionXDelta(direction));
+        var row = getRowByIndex(rowIndex + getDirectionYDelta(direction), originCell.parentNode.parentNode.parentNode),
+            cell = row && getCellByIndex(row, cellIndex + getDirectionXDelta(direction));
 
         if (direction === 'Left' && cell) {
             return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex, cellIndex - 1);
@@ -778,7 +857,7 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
 
         for (x = startX; x <= endX; ++x) {
             for (y = startY; y <= endY; ++y) {
-                cell = getRowCellByIndex(getRowByIndex(y), x);
+                cell = getCellByIndex(getRowByIndex(y), x);
                 cells.push(cell || {});
             }
         }
@@ -824,21 +903,6 @@ function SelectionRange (getRowByIndex, cellIsSelectable, cellIsVisible) {
         }
 
         return colSpanSum;
-    }
-
-    function getRowCellByIndex (row, index) {
-        var i, colSpanSum = 0;
-
-        for (i = 0; i < row.children.length; i++) {
-            if (index < colSpanSum) {
-                return row.children[i - 1];
-            }
-            if (index === colSpanSum) {
-                return row.children[i];
-            }
-
-            colSpanSum += row.children[i].colSpan;
-        }
     }
 }
 },{}]},{},[1])
