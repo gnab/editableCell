@@ -29,9 +29,11 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
     // `extendIndirection` keeps the current selection and extends it in the specified `direction`.
     self.extendInDirection = function (direction) {
         var newEnd = self.getCellInDirection(self.end, direction),
-            endChanged = newEnd !== self.end;
+            endChanged = newEnd && newEnd !== self.end;
 
-        self.setEnd(newEnd);
+        if (newEnd) {
+            self.setEnd(newEnd);    
+        }
 
         if (endChanged) {
             return newEnd;
@@ -75,38 +77,38 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         self.end = element;
         self.selection(self.getCells());
     };
-    self.getCellInDirection = function (originCell, direction, rowIndex, cellIndex) {
+    self.getCellInDirection = function (originCell, direction) {
 
-        rowIndex = typeof rowIndex !== 'undefined' ? rowIndex : originCell.parentNode.rowIndex;
-        cellIndex = typeof cellIndex !== 'undefined' ? cellIndex : getCellIndex(originCell);
+        var rowIndex = originCell.parentNode.rowIndex;
+        var cellIndex = getCellIndex(originCell);
 
-        var row = getRowByIndex(rowIndex + getDirectionYDelta(direction), originCell.parentNode.parentNode.parentNode),
+        var table = originCell.parentNode.parentNode.parentNode,
+            row = getRowByIndex(rowIndex + getDirectionYDelta(direction), table),
             cell = row && getCellByIndex(row, cellIndex + getDirectionXDelta(direction));
 
         if (direction === 'Left' && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex, cellIndex - 1);
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
         }
-        if (direction === 'Up' && row) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex - 1, cellIndex);
+        if (direction === 'Up' && row && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
         }
         if (direction === 'Right' && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex, cellIndex + 1);
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
         }
-        if (direction === 'Down' && row) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(originCell, direction, rowIndex + 1, cellIndex);
+        if (direction === 'Down' && row && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
         }
 
-        return originCell;
+        return undefined;
     };
     self.getSelectableCellInDirection = function (originCell, direction) {
         var lastCell,
             cell = originCell;
 
-        while (cell !== lastCell) {
-            lastCell = cell;
+        while (cell) {
             cell = self.getCellInDirection(cell, direction);
 
-            if (cellIsSelectable(cell)) {
+            if (cell && cellIsSelectable(cell)) {
                 return cell;
             }
         }
