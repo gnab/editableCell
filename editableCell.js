@@ -116,12 +116,7 @@ ko.bindingHandlers.editableCell = {
 // Using utility functions like `ko.dataFor` on the `cell` property, you can get hold of the row view model.
 
 ko.bindingHandlers.editableCellSelection = {
-    init: function (element) {
-        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
-            disposeSelectionSubscriptions(element);
-        });
-    },
-    update: function (element, valueAccessor, allBindingsAccessor) {
+    init: function (element, valueAccessor, allBindingsAccessor) {
         var table = element,
             selection = table._cellSelection;
 
@@ -134,9 +129,6 @@ ko.bindingHandlers.editableCellSelection = {
         }
 
         table._cellSelectionSubscriptions = table._cellSelectionSubscriptions || [];
-        disposeSelectionSubscriptions(element);
-
-        var updatingBindingValue = false;
 
         // Update supplied observable array when selection range changes
         table._cellSelectionSubscriptions.push(selection.range.selection.subscribe(function (newSelection) {
@@ -148,32 +140,51 @@ ko.bindingHandlers.editableCellSelection = {
                 };
             });
 
-            updatingBindingValue = true;
             updateBindingValue('editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
-            updatingBindingValue = false;
         }));
 
-        var value = valueAccessor();
+        // Dispose subscriptions when table is removed from DOM
+        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
+            disposeSelectionSubscriptions(table);
+        });
+    },
+    update: function (element, valueAccessor, allBindingsAccessor) {
+        var table = element,
+            selection = table._cellSelection,
+            newSelection = ko.utils.unwrapObservable(valueAccessor()) || [];
 
-        if (ko.isObservable(value)) {
-            // Update selection range when supplied observable array changes
-            table._cellSelectionSubscriptions.push(value.subscribe(function (newSelection) {
-                if (updatingBindingValue) {
-                    return;
-                }
+        // Empty selection, so simply clear it out
+        if (newSelection.length === 0) {
+            selection.range.clear();
+            return;
+        }
 
-                var start = newSelection && newSelection[0],
-                    end = newSelection && newSelection[newSelection.length - 1];
+        var start = newSelection[0],
+            end = newSelection[newSelection.length - 1];
 
-                // Make sure selected cells belongs to current table, or else hide selection
-                if (!start.parentNode || start.parentNode.parentNode.parentNode !== table) {
-                    selection.view.hide();
-                    return;
-                }
+        var isDirectUpdate = start.tagName === 'TD' || start.tagName === 'TH';
 
-                selection.range.setStart(start);
-                selection.range.setEnd(end);
-            }));
+        // Notification of changed selection, either after programmatic  
+        // update or after changing current selection in user interface
+        if (!isDirectUpdate) {
+            start = start.cell;
+            end = end.cell;
+        }
+
+        // Make sure selected cells belongs to current table, or else hide selection
+        var parentRowHidden = !start.parentNode;
+        var belongingToOtherTable = start.parentNode && start.parentNode.parentNode.parentNode !== table;
+
+        if (parentRowHidden || belongingToOtherTable) {
+            // Selection cannot be cleared, since that will affect selection in other table
+            selection.view.hide();
+            return;
+        }
+
+        // Programmatic update of selection, i.e. selection([startCell, endCell]);
+        if (isDirectUpdate) {
+            selection.range.setStart(start);
+            selection.range.setEnd(end);
         }
     }
 };
@@ -211,7 +222,6 @@ function cloneNodes (nodesArray, shouldCleanNodes) {
     }
     return newNodesArray;
 }
-
 },{"./selection":2}],2:[function(require,module,exports){
 var SelectionView = require('./selectionView'),
     SelectionRange = require('./selectionRange');
