@@ -354,8 +354,18 @@ function Selection (table) {
         event.preventDefault();
     };
     self.onCellMouseOver = function (event) {
-        if (self.view.isDragging && event.target !== self.range.end) {
-            self.range.setEnd(event.target);
+        var cell = event.target;
+
+        if (!self.view.isDragging) {
+            return;
+        }
+
+        while (cell && !(cell.tagName === 'TD' || cell.tagName === 'TH')) {
+            cell = cell.parentNode;
+        }
+
+        if (cell && cell !== self.range.end) {
+            self.range.setEnd(cell);
         }
     };
     self.onCellFocus = function (event) {

@@ -39,6 +39,28 @@
         </table>
         <p>Combined age: <span data-bind="text: combinedAge"></span></p>
         <p>Selection sum: <span data-bind="text: selectionSum"></span></p>
+        <table style="position: relative" class="table" data-bind="editableCellSelection: selection">
+            <thead>
+                <tr>
+                    <th width="30%">Firstname (editable, non-observable)</th>
+                    <th width="30%">Surname (editable)</th>
+                    <th>Salary (read-only)</th>
+                    <th width="20%">Age (editable)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- ko foreach: entries -->
+                <tr>
+                    <td data-bind="editableCell: firstName" tabindex="0"></td>
+                    <td data-bind="editableCell: surName" tabindex="0"></td>
+                    <td data-bind="editableCell: 100, cellReadOnly: true" tabindex="0"></td>
+                    <td data-bind="editableCell: age" tabindex="0">
+                      <span data-bind="text: $data"></span> years
+                    </td>
+                </tr>
+                <!-- /ko -->
+            </tbody>
+        </table>
         <script type="text/javascript">
             function ViewModel() {
                 var self = this;
@@ -90,11 +112,21 @@
                 this.props = {
                   age: ko.observable(10)
                 };
+                this.visible = ko.observable(true);
             }
 
             var viewModel = new ViewModel();
 
             ko.applyBindings(viewModel);
+
+            window.onkeydown = function (event) {
+                if (event.keyCode === 27) {
+
+                    viewModel.selection([document.getElementsByTagName('TD')[0], document.getElementsByTagName('TD')[1]]);
+
+                    event.preventDefault();
+                }
+            };
         </script>
     </body>
 </html>
