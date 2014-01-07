@@ -331,8 +331,8 @@ function Selection (table, selectionMappings) {
             self.range.setStart(cell);
         }
 
-        self.view.inputElement.style.top = cell.offsetTop + 'px';
-        self.view.inputElement.style.left = cell.offsetLeft + 'px';
+        self.view.inputElement.style.top = table.offsetTop + cell.offsetTop + 'px';
+        self.view.inputElement.style.left = table.offsetLeft + cell.offsetLeft + 'px';
         self.view.inputElement.style.width = cell.offsetWidth + 'px';
         self.view.inputElement.style.height = cell.offsetHeight + 'px';
         self.view.inputElement.value = ko.utils.unwrapObservable(cell._cellValue());
@@ -549,11 +549,13 @@ function SelectionView (table, selection) {
         html = document.getElementsByTagName('html')[0];
 
     self.element = document.createElement('div');
+    self.element.className = 'editable-cell-selection';
     self.element.style.position = 'absolute';
     self.element.style.display = 'none';
     self.element.tabIndex = -1;
 
     self.inputElement = document.createElement('input');
+    self.inputElement.className = 'editable-cell-input';
     self.inputElement.style.position = 'absolute';
     self.inputElement.style.display = 'none';
 
@@ -562,8 +564,8 @@ function SelectionView (table, selection) {
     self.copyPasteElement.style.opacity = '0.0';
     self.copyPasteElement.style.display = 'none';
 
-    table.appendChild(self.element);
-    table.appendChild(self.inputElement);
+    table.parentNode.insertBefore(self.element, table.nextSibling);
+    table.parentNode.insertBefore(self.inputElement, table.nextSibling);
     table.appendChild(self.copyPasteElement);
 
     self.destroy = function () {
@@ -577,8 +579,8 @@ function SelectionView (table, selection) {
 
         $(html).unbind('mouseup', self.onMouseUp);
 
-        table.removeChild(self.element);
-        table.removeChild(self.inputElement);
+        table.parentNode.removeChild(self.element);
+        table.parentNode.removeChild(self.inputElement);
         table.removeChild(self.copyPasteElement);
     };
     self.show = function () {
@@ -605,8 +607,8 @@ function SelectionView (table, selection) {
             right = Math.max(start.offsetLeft + start.offsetWidth,
                             end.offsetLeft + end.offsetWidth);
 
-        self.element.style.top = top + 1 + 'px';
-        self.element.style.left = left + 1 + 'px';
+        self.element.style.top = table.offsetTop + top + 1 + 'px';
+        self.element.style.left = table.offsetLeft + left + 1 + 'px';
         self.element.style.height = bottom - top - 1 + 'px';
         self.element.style.width = right - left - 1 + 'px';
         self.element.style.backgroundColor = 'rgba(245, 142, 00, 0.15)';

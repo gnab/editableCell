@@ -91,8 +91,8 @@ function Selection (table, selectionMappings) {
             self.range.setStart(cell);
         }
 
-        self.view.inputElement.style.top = cell.offsetTop + 'px';
-        self.view.inputElement.style.left = cell.offsetLeft + 'px';
+        self.view.inputElement.style.top = table.offsetTop + cell.offsetTop + 'px';
+        self.view.inputElement.style.left = table.offsetLeft + cell.offsetLeft + 'px';
         self.view.inputElement.style.width = cell.offsetWidth + 'px';
         self.view.inputElement.style.height = cell.offsetHeight + 'px';
         self.view.inputElement.value = ko.utils.unwrapObservable(cell._cellValue());
