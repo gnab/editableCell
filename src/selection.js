@@ -140,8 +140,8 @@ function Selection (table, selectionMappings) {
                 });
 
                 var tables = ko.utils.arrayMap(tableMappings, function (tuple) { return tuple[1]; });
-                var beforeTables = ko.utils.arrayFilter(tables, function (t) { return t.offsetTop + t.offsetHeight < table.offsetTop; });
-                var afterTables = ko.utils.arrayFilter(tables, function (t) { return t.offsetTop > table.offsetTop + table.offsetHeight; });
+                var beforeTables = ko.utils.arrayFilter(tables, function (t) { return t.offsetTop + t.offsetHeight <= table.offsetTop; });
+                var afterTables = ko.utils.arrayFilter(tables, function (t) { return t.offsetTop >= table.offsetTop + table.offsetHeight; });
 
                 // Moving upwards
                 if (index === -1 && beforeTables.length) {
