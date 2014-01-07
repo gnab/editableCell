@@ -84,7 +84,7 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
 
         var table = originCell.parentNode.parentNode.parentNode,
             row = getRowByIndex(rowIndex + getDirectionYDelta(direction), table),
-            cell = row && getCellByIndex(row, cellIndex + getDirectionXDelta(direction));
+            cell = row && getCellByIndex(row, cellIndex + getDirectionXDelta(direction, originCell));
 
         if (direction === 'Left' && cell) {
             return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
@@ -134,13 +134,13 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         return cells;
     };
     
-    function getDirectionXDelta (direction) {
+    function getDirectionXDelta (direction, cell) {
         if (direction === 'Left') {
             return -1;
         }
 
         if (direction === 'Right') {
-            return 1;
+            return cell.colSpan;
         }
 
         return 0;
