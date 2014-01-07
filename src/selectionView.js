@@ -46,11 +46,17 @@ function SelectionView (table, selection) {
     self.show = function () {
         self.element.style.display = 'block';
         self.element.focus();
-        if (self.element.scrollIntoViewIfNeeded) {
-            self.element.scrollIntoViewIfNeeded();
+
+        var margin = 10,
+            rect = selection.range.end.getBoundingClientRect(),
+            topOffset = rect.top - margin,
+            bottomOffset = window.innerHeight - rect.bottom - margin;
+
+        if (topOffset < 0) {
+            document.documentElement.scrollTop += topOffset;
         }
-        else {
-            self.element.scrollIntoView();
+        else if (bottomOffset < 0) {
+            document.documentElement.scrollTop -= bottomOffset;
         }
     };
     self.hide = function () {
