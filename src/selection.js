@@ -34,6 +34,10 @@ function Selection (table, selectionMappings) {
 
     self.focus = self.view.focus;
 
+    self.setViewport = function (viewport) {
+        self.view.viewport = viewport;
+    };
+
     self.registerCell = function (cell) {
         ko.utils.registerEventHandler(cell, "mousedown", self.onMouseDown);
         ko.utils.registerEventHandler(cell, "mouseover", self.onCellMouseOver);

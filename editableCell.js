@@ -204,6 +204,28 @@ ko.bindingHandlers.editableCellSelection = {
     }
 };
 
+ko.bindingHandlers.editableCellViewport = {
+    init: function (element) {
+        var table = element,
+            selection = table._cellSelection;
+
+        if (element.tagName !== 'TABLE') {
+            throw new Error('editableCellSelection binding can only be applied to tables');
+        }
+
+        if (selection === undefined) {
+            table._cellSelection = selection = new Selection(table, ko.bindingHandlers.editableCellSelection._selectionMappings);
+        }
+    },
+    update: function (element, valueAccessor) {
+        var table = element,
+            selection = table._cellSelection,
+            viewport = ko.utils.unwrapObservable(valueAccessor());
+
+        selection.setViewport(viewport);
+    }
+};
+
 function disposeSelectionSubscriptions (element) {
     ko.utils.arrayForEach(element._cellSelectionSubscriptions, function (subscription) {
         subscription.dispose();
@@ -273,6 +295,10 @@ function Selection (table, selectionMappings) {
     });
 
     self.focus = self.view.focus;
+
+    self.setViewport = function (viewport) {
+        self.view.viewport = viewport;
+    };
 
     self.registerCell = function (cell) {
         ko.utils.registerEventHandler(cell, "mousedown", self.onMouseDown);
@@ -548,6 +574,8 @@ function SelectionView (table, selection) {
     var self = this,
         html = document.getElementsByTagName('html')[0];
 
+    self.viewport = {};
+
     self.element = document.createElement('div');
     self.element.className = 'editable-cell-selection';
     self.element.style.position = 'absolute';
@@ -588,9 +616,11 @@ function SelectionView (table, selection) {
         self.element.focus();
 
         var margin = 10,
+            viewportTop = resolve(self.viewport.top) || 0,
+            viewportBottom = resolve(self.viewport.bottom) || window.innerHeight,
             rect = selection.range.end.getBoundingClientRect(),
-            topOffset = rect.top - margin,
-            bottomOffset = window.innerHeight - rect.bottom - margin;
+            topOffset = rect.top - margin - viewportTop,
+            bottomOffset = viewportBottom - rect.bottom - margin;
 
         if (topOffset < 0) {
             document.documentElement.scrollTop += topOffset;
@@ -599,6 +629,15 @@ function SelectionView (table, selection) {
             document.documentElement.scrollTop -= bottomOffset;
         }
     };
+    
+    function resolve (value) {
+        if (typeof value === 'function') {
+            return value();
+        }
+
+        return value;
+    }
+
     self.hide = function () {
         self.element.style.display = 'none';
     };

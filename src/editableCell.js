@@ -203,6 +203,28 @@ ko.bindingHandlers.editableCellSelection = {
     }
 };
 
+ko.bindingHandlers.editableCellViewport = {
+    init: function (element) {
+        var table = element,
+            selection = table._cellSelection;
+
+        if (element.tagName !== 'TABLE') {
+            throw new Error('editableCellSelection binding can only be applied to tables');
+        }
+
+        if (selection === undefined) {
+            table._cellSelection = selection = new Selection(table, ko.bindingHandlers.editableCellSelection._selectionMappings);
+        }
+    },
+    update: function (element, valueAccessor) {
+        var table = element,
+            selection = table._cellSelection,
+            viewport = ko.utils.unwrapObservable(valueAccessor());
+
+        selection.setViewport(viewport);
+    }
+};
+
 function disposeSelectionSubscriptions (element) {
     ko.utils.arrayForEach(element._cellSelectionSubscriptions, function (subscription) {
         subscription.dispose();
