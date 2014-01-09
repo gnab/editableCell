@@ -1,9 +1,7 @@
+var polyfill = require('./polyfill');
+
 module.exports = SelectionView;
 
-// #### <a name="view"></a> `SelectionView`
-//
-// The `SelectionView` is used internally to represent the selection view, that is the
-// visual selection of either one or more cells.
 function SelectionView (table, selection) {
     var self = this,
         html = document.getElementsByTagName('html')[0];
@@ -39,7 +37,7 @@ function SelectionView (table, selection) {
         self.inputElement.removeEventListener('keydown', self.onInputKeydown);
         self.inputElement.removeEventListener('blur', self.onInputBlur);
 
-        $(html).unbind('mouseup', self.onMouseUp);
+        html.removeEventListener('mouseup', self.onMouseUp);
 
         table.parentNode.removeChild(self.element);
         table.parentNode.removeChild(self.inputElement);
@@ -57,10 +55,10 @@ function SelectionView (table, selection) {
             bottomOffset = viewportBottom - rect.bottom - margin;
 
         if (topOffset < 0) {
-            document.documentElement.scrollTop += topOffset;
+            document.body.scrollTop += topOffset;
         }
         else if (bottomOffset < 0) {
-            document.documentElement.scrollTop -= bottomOffset;
+            document.body.scrollTop -= bottomOffset;
         }
     };
     
@@ -96,7 +94,7 @@ function SelectionView (table, selection) {
     };
     self.beginDrag = function () {
         self.canDrag = true;
-        ko.utils.registerEventHandler(self.element, 'mousemove', self.doBeginDrag);
+        self.element.addEventListener('mousemove', self.doBeginDrag);
     };
     self.doBeginDrag = function () {
         self.element.removeEventListener('mousemove', self.doBeginDrag);
@@ -170,12 +168,12 @@ function SelectionView (table, selection) {
             var value = selection.endEditingCell(cell);
 
             if (event.ctrlKey) {
-                ko.utils.arrayForEach(selection.range.getCells(), function (cellInSelection) {
-                if (cellInSelection !== cell) {
-                    selection.updateCellValue(cellInSelection, value);
-                }
+                selection.range.selection.forEach(function (cellInSelection) {
+                    if (cellInSelection !== cell) {
+                        selection.updateCellValue(cellInSelection, value);
+                    }
                 });
-          }
+            }
 
             selection.onReturn(event, event.ctrlKey);
             self.focus();
@@ -200,13 +198,13 @@ function SelectionView (table, selection) {
         selection.endEditingCell(selection.range.start);
     };
 
-    ko.utils.registerEventHandler(self.element, "mousedown", self.onMouseDown);
-    ko.utils.registerEventHandler(self.element, "dblclick", self.onDblClick);
-    ko.utils.registerEventHandler(self.element, "keypress", self.onKeyPress);
-    ko.utils.registerEventHandler(self.element, "keydown", self.onKeyDown);
+    self.element.addEventListener("mousedown", self.onMouseDown);
+    self.element.addEventListener("dblclick", self.onDblClick);
+    self.element.addEventListener("keypress", self.onKeyPress);
+    self.element.addEventListener("keydown", self.onKeyDown);
 
-    ko.utils.registerEventHandler(self.inputElement, "keydown", self.onInputKeydown);
-    ko.utils.registerEventHandler(self.inputElement, "blur", self.onInputBlur);
+    self.inputElement.addEventListener("keydown", self.onInputKeydown);
+    self.inputElement.addEventListener("blur", self.onInputBlur);
 
-    ko.utils.registerEventHandler(html, "mouseup", self.onMouseUp);
+    html.addEventListener("mouseup", self.onMouseUp);
 }

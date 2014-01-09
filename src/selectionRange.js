@@ -1,17 +1,22 @@
+var EventEmitter = require('events').EventEmitter,
+    polyfill = require('./polyfill');
+
 module.exports = SelectionRange;
 
-// #### <a name="range"></a> `SelectionRange`
-//
-// The `SelectionRange` is used internally to hold the current selection, represented by a start and an end cell.
-// In addition, it has functionality for moving and extending the selection inside the table.
+SelectionRange.prototype = new EventEmitter();
+
 function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
     var self = this;
 
     self.start = undefined;
     self.end = undefined;
-    self.selection = ko.observableArray();
+    self.selection = [];
 
-    // `moveInDirection` drops the current selection and makes the single cell in the specified `direction` the new selection.
+    function setSelection (cells) {
+        self.selection = cells;
+        self.emit('change', cells);
+    }
+
     self.moveInDirection = function (direction) {
         var newStart = self.getSelectableCellInDirection(self.start, direction),
             startChanged = newStart !== self.start,
@@ -26,7 +31,6 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         }
     };
 
-    // `extendIndirection` keeps the current selection and extends it in the specified `direction`.
     self.extendInDirection = function (direction) {
         var newEnd = self.getCellInDirection(self.end, direction),
             endChanged = newEnd && newEnd !== self.end;
@@ -40,22 +44,25 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         }
     };
 
-    // `getCells` returnes the cells contained in the current selection.
     self.getCells = function () {
         return self.getCellsInArea(self.start, self.end);
     };
 
-    // `clear` clears the current selection.
     self.clear = function () {
         self.start = undefined;
         self.end = undefined;
-        self.selection([]);
+        setSelection([]);
+    };
+
+    self.destroy = function () {
+        self.removeAllListeners('change');
+        self.clear();
     };
 
     self.setStart = function (element) {
         self.start = element;
         self.end = element;
-        self.selection(self.getCells());
+        setSelection(self.getCells());
     };
     self.setEnd = function (element) {
         if (element === self.end) {
@@ -66,7 +73,7 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         var cellsInArea = self.getCellsInArea(self.start, element),
             allEditable = true;
 
-        ko.utils.arrayForEach(cellsInArea, function (cell) {
+        cellsInArea.forEach(function (cell) {
             allEditable = allEditable && cellIsSelectable(cell);
         });
 
@@ -75,7 +82,7 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         }
 
         self.end = element;
-        self.selection(self.getCells());
+        setSelection(self.getCells());
     };
     self.getCellInDirection = function (originCell, direction) {
 

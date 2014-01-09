@@ -44,7 +44,7 @@ target.test = function () {
 
 target.bundle = function () {
   console.log('Bundling...');
-  run('browserify src/editableCell.js', {silent: true}).output.to('editableCell.js');
+  run('browserify src/index.js', {silent: true}).output.to('editableCell.js');
 };
 
 target.minify = function () {

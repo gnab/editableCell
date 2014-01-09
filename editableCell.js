@@ -1,44 +1,73 @@
 ;(function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0].call(u.exports,function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({1:[function(require,module,exports){
-var Selection = require('./selection');
+require('./ko');
+},{"./ko":2}],2:[function(require,module,exports){
+var polyfill = require('../polyfill');
 
-// ### `editableCell` binding
-//
-// The `editableCell` binding turns regular table cells into selectable, editable Excel-like cells.
-//
-// #### Usage
-//
-// Bind a property to the table cell element:
-//
-//     <td data-bind="editableCell: name"></td>
-//
-// In addition, the following supporting bindings may be used for configuration:
-//
-// - `cellText` - Overrides the text displayed in the cell
-//
-//          editableCell: amount, cellText: '$' + amount()
-//
-// - `cellReadOnly` - Sets whether or not the cell can be edited
-//
-//          editableCell: amount, cellReadOnly: true
-//
-// Information on the currently cells in the table can be aquired using the
-// [`editableCellSelection`](#editablecellselection) table binding.
+// Knockout binding handlers
+var bindingHandlers = {
+    editableCell: require('./editableCell'),
+    editableCellSelection: require('./editableCellSelection'),
+    editableCellViewport: require('./editableCellViewport'),
+};
 
-// #### Documentation
-ko.bindingHandlers.editableCell = {
-    // Binding initialization makes sure the common selection is initialized, before initializing the cell in question
-    // and registering it with the selection.
-    //
-    // Every instance of the `editableCell` binding share a per table [selection](#selection).
-    // The first cell being initialized per table will do the one-time initialization of the common table selection.
+// Register Knockout binding handlers if Knockout is loaded
+if (typeof ko !== 'undefined') {
+    for (var bindingHandler in bindingHandlers) {
+        ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
+    }
+}
+},{"../polyfill":3,"./editableCell":4,"./editableCellSelection":5,"./editableCellViewport":6}],3:[function(require,module,exports){
+function forEach (list, f) {
+  var i;
+
+  for (i = 0; i < list.length; ++i) {
+    f(list[i], i);
+  }
+}
+
+forEach([Array, window.NodeList, window.HTMLCollection], extend);
+
+function extend (object) {
+  var prototype = object && object.prototype;
+
+  if (!prototype) {
+    return;
+  }
+
+  prototype.forEach = prototype.forEach || function (f) {
+    forEach(this, f);
+  };
+
+  prototype.filter = prototype.filter || function (f) {
+    var result = [];
+
+    this.forEach(function (element) {
+      if (f(element, result.length)) {
+        result.push(element);
+      }
+    });
+
+    return result;
+  };
+
+  prototype.map = prototype.map || function (f) {
+    var result = [];
+
+    this.forEach(function (element) {
+      result.push(f(element, result.length));
+    });
+
+    return result;
+  };
+}
+},{}],4:[function(require,module,exports){
+var utils = require('./utils');
+
+var editableCell = {
     init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var table = $(element).parents('table')[0],
-            selection = table._cellSelection,
+            selection = utils.initializeSelection(table),
             valueBindingName = 'editableCell';
-
-        if (selection === undefined) {
-            table._cellSelection = selection = new Selection(table, ko.bindingHandlers.editableCellSelection._selectionMappings);
-        }
 
         selection.registerCell(element);
 
@@ -52,7 +81,7 @@ ko.bindingHandlers.editableCell = {
         element._cellText = function () { return allBindingsAccessor().cellText || this._cellValue(); };
         element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
         element._cellValueUpdater = function (newValue) {
-            updateBindingValue(valueBindingName, this._cellValue, allBindingsAccessor, newValue);
+            utils.updateBindingValue(valueBindingName, this._cellValue, allBindingsAccessor, newValue);
 
             if (!ko.isObservable(this._cellValue())) {
                 ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
@@ -73,16 +102,15 @@ ko.bindingHandlers.editableCell = {
             return { 'controlsDescendantBindings': true };
         }
     },
-    // Binding update simply updates the text content of the table cell.
     update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         if (element._cellTemplated) {
             var template = ko.utils.domData.get(element, 'editableCellTemplate');
 
             if (!template.savedNodes) {
-                template.savedNodes = cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
+                template.savedNodes = utils.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
             }
             else {
-                ko.virtualElements.setDomNodeChildren(element, cloneNodes(template.savedNodes));
+                ko.virtualElements.setDomNodeChildren(element, utils.cloneNodes(template.savedNodes));
             }
 
             ko.applyBindingsToDescendants(bindingContext.createChildContext(ko.utils.unwrapObservable(valueAccessor())), element);
@@ -93,47 +121,25 @@ ko.bindingHandlers.editableCell = {
     }
 };
 
-// ### <a name="editablecellselection"></a> `editableCellSelection` binding
-//
-// The `editableCellSelection` binding is a one-way binding that will reflect the currently selected cells in a table.
-//
-// #### Usage
-//
-// 1) Add a `selection` observable array to your view model:
-//
-//     viewModel.selection = ko.observableArray();
-//
-// 2) Bind the property to the table element using the `editableCellSelection` binding:
-//
-//     <table data-bind="editableCellSelection: selection" .. >
-//
-// Each element in the observable array will have the following properties:
-//
-// - `cell` - The table cell itself
-// - `value` - The value of the `editableCell` binding
-// - `text` - The value of the `cellText` binding, or same as `value`
-//
-// Using utility functions like `ko.dataFor` on the `cell` property, you can get hold of the row view model.
+module.exports = editableCell;
+},{"./utils":7}],5:[function(require,module,exports){
+var utils = require('./utils');
 
-ko.bindingHandlers.editableCellSelection = {
+var editableCellSelection = {
     _selectionMappings: [],
 
     init: function (element, valueAccessor, allBindingsAccessor) {
-        var table = element,
-            selection = table._cellSelection;
-
         if (element.tagName !== 'TABLE') {
             throw new Error('editableCellSelection binding can only be applied to tables');
         }
 
-        if (selection === undefined) {
-            table._cellSelection = selection = new Selection(table, ko.bindingHandlers.editableCellSelection._selectionMappings);
-        }
-
-        table._cellSelectionSubscriptions = table._cellSelectionSubscriptions || [];
+        var table = element,
+            selection = utils.initializeSelection(table);
 
         // Update supplied observable array when selection range changes
-        table._cellSelectionSubscriptions.push(selection.range.selection.subscribe(function (newSelection) {
+        selection.range.on('change', rangeChanged);
+
+        function rangeChanged (newSelection) {
             newSelection = ko.utils.arrayMap(newSelection, function (cell) {
                 return {
                     cell: cell,
@@ -142,25 +148,22 @@ ko.bindingHandlers.editableCellSelection = {
                 };
             });
 
-            updateBindingValue('editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
-        }));
+            utils.updateBindingValue('editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
+        }
 
         // Keep track of selections
         ko.bindingHandlers.editableCellSelection._selectionMappings.push([valueAccessor, table]);
 
         // Perform clean-up when table is removed from DOM
         ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
-            // Detach selection from table
-            table._cellSelection = null;
-
             // Remove selection from list
             var selectionIndex = ko.utils.arrayFirst(ko.bindingHandlers.editableCellSelection._selectionMappings, function (tuple) {
                 return tuple[0] === valueAccessor;
             });
             ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
 
-            // Dispose subscriptions
-            disposeSelectionSubscriptions(table);
+            // Remove event listener
+            selection.range.removeListener('change', rangeChanged);
         });
     },
     update: function (element, valueAccessor, allBindingsAccessor) {
@@ -204,18 +207,17 @@ ko.bindingHandlers.editableCellSelection = {
     }
 };
 
-ko.bindingHandlers.editableCellViewport = {
+module.exports = editableCellSelection;
+},{"./utils":7}],6:[function(require,module,exports){
+var utils = require('./utils');
+
+var editableCellViewport = {
     init: function (element) {
-        var table = element,
-            selection = table._cellSelection;
-
         if (element.tagName !== 'TABLE') {
-            throw new Error('editableCellSelection binding can only be applied to tables');
+            throw new Error('editableCellViewport binding can only be applied to tables');
         }
 
-        if (selection === undefined) {
-            table._cellSelection = selection = new Selection(table, ko.bindingHandlers.editableCellSelection._selectionMappings);
-        }
+        utils.initializeSelection(element);
     },
     update: function (element, valueAccessor) {
         var table = element,
@@ -226,11 +228,28 @@ ko.bindingHandlers.editableCellViewport = {
     }
 };
 
-function disposeSelectionSubscriptions (element) {
-    ko.utils.arrayForEach(element._cellSelectionSubscriptions, function (subscription) {
-        subscription.dispose();
-    });
-    element._cellSelectionSubscriptions = null;
+module.exports = editableCellViewport;
+},{"./utils":7}],7:[function(require,module,exports){
+var Selection = require('../selection');
+
+module.exports = {
+    initializeSelection: initializeSelection,
+    updateBindingValue: updateBindingValue,
+    cloneNodes: cloneNodes
+};
+
+function initializeSelection (table) {
+    var selection = table._cellSelection;
+
+    if (selection === undefined) {
+        table._cellSelection = selection = new Selection(table, ko.bindingHandlers.editableCellSelection._selectionMappings);
+
+        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
+            table._cellSelection.destroy();
+        });
+    }
+
+    return selection;
 }
 
 // `updateBindingValue` is a helper function borrowing private binding update functionality
@@ -259,25 +278,20 @@ function cloneNodes (nodesArray, shouldCleanNodes) {
     }
     return newNodesArray;
 }
-},{"./selection":2}],2:[function(require,module,exports){
+},{"../selection":8}],8:[function(require,module,exports){
 var SelectionView = require('./selectionView'),
-    SelectionRange = require('./selectionRange');
+    SelectionRange = require('./selectionRange'),
+    polyfill = require('./polyfill');
 
 module.exports = Selection;
 
-// #### <a name="selection"></a> `Selection`
-//
-// The `Selection` is used internally to represent the selection for a single table,
-// comprising a [view](#view) and a [range](#range), as well as functionality for handling table cell
-// operations like selecting, editing and copy and paste.
 function Selection (table, selectionMappings) {
-    var self = this,
-        selectionSubscription;
+    var self = this;
 
     self.view = new SelectionView(table, self);
     self.range = new SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible);
 
-    selectionSubscription = self.range.selection.subscribe(function (newSelection) {
+    self.range.on('change', function (newSelection) {
         if (newSelection.length === 0) {
             self.view.hide();
             return;
@@ -285,14 +299,12 @@ function Selection (table, selectionMappings) {
         self.view.update(newSelection[0], newSelection[newSelection.length - 1]);
     });
 
-    ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
-        selectionSubscription.dispose();
-
+    self.destroy = function () {
         self.view.destroy();
-        self.range.clear();
+        self.range.destroy();
 
         table._cellSelection = null;
-    });
+    };
 
     self.focus = self.view.focus;
 
@@ -301,9 +313,9 @@ function Selection (table, selectionMappings) {
     };
 
     self.registerCell = function (cell) {
-        ko.utils.registerEventHandler(cell, "mousedown", self.onMouseDown);
-        ko.utils.registerEventHandler(cell, "mouseover", self.onCellMouseOver);
-        ko.utils.registerEventHandler(cell, "focus", self.onCellFocus);
+        cell.addEventListener("mousedown", self.onMouseDown);
+        cell.addEventListener("mouseover", self.onCellMouseOver);
+        cell.addEventListener("focus", self.onCellFocus);
     };
 
     self.unregisterCell = function (cell) {
@@ -401,13 +413,13 @@ function Selection (table, selectionMappings) {
             // We can only proceed check if mapping exists, i.e. that editableCellSelection binding is used
             if (selectionMapping) {
                 // Find all selection mappings for selection, excluding the one for the current table
-                var tableMappings = ko.utils.arrayFilter(selectionMappings, function (tuple) {
+                var tableMappings = selectionMappings.filter(function (tuple) {
                     return tuple[0]() === selectionMapping[0]() && tuple[1] !== targetTable;
                 });
 
-                var tables = ko.utils.arrayMap(tableMappings, function (tuple) { return tuple[1]; });
-                var beforeTables = ko.utils.arrayFilter(tables, function (t) { return t.offsetTop + t.offsetHeight <= table.offsetTop; });
-                var afterTables = ko.utils.arrayFilter(tables, function (t) { return t.offsetTop >= table.offsetTop + table.offsetHeight; });
+                var tables = tableMappings.map(function (tuple) { return tuple[1]; });
+                var beforeTables = tables.filter(function (t) { return t.offsetTop + t.offsetHeight <= table.offsetTop; });
+                var afterTables = tables.filter(function (t) { return t.offsetTop >= table.offsetTop + table.offsetHeight; });
 
                 // Moving upwards
                 if (index === -1 && beforeTables.length) {
@@ -439,9 +451,9 @@ function Selection (table, selectionMappings) {
         }
     }
     function getSelectionMappingForTable (table) {
-        return ko.utils.arrayFirst(selectionMappings, function (tuple) {
+        return selectionMappings.filter(function (tuple) {
                 return tuple[1] === table;
-        });
+        })[0];
     }
     self.onCellMouseDown = function (cell, shiftKey) {
         if (shiftKey) {
@@ -514,7 +526,7 @@ function Selection (table, selectionMappings) {
             lines = [],
             i = 0;
 
-        ko.utils.arrayForEach(cells, function (cell) {
+        cells.forEach(function (cell) {
             var lineIndex = i % rows,
                 rowIndex = Math.floor(i / rows);
 
@@ -524,14 +536,14 @@ function Selection (table, selectionMappings) {
             i++;
         });
 
-        return ko.utils.arrayMap(lines, function (line) {
+        return lines.map(function (line) {
             return line.join('\t');
         }).join('\r\n');
     };
     self.onPaste = function (text) {
         var selStart = self.range.getCells()[0],
             cells,
-            values = ko.utils.arrayMap(text.trim().split(/\r?\n/), function (line) { return line.split('\t'); }),
+            values = text.trim().split(/\r?\n/).map(function (line) { return line.split('\t'); }),
             row = values.length,
             col = values[0].length,
             rows = 1,
@@ -562,236 +574,267 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
+},{"./selectionRange":9,"./polyfill":3,"./selectionView":10}],11:[function(require,module,exports){
+// shim for using process in browser
 
-},{"./selectionView":3,"./selectionRange":4}],3:[function(require,module,exports){
-module.exports = SelectionView;
+var process = module.exports = {};
 
-// #### <a name="view"></a> `SelectionView`
-//
-// The `SelectionView` is used internally to represent the selection view, that is the
-// visual selection of either one or more cells.
-function SelectionView (table, selection) {
-    var self = this,
-        html = document.getElementsByTagName('html')[0];
+process.nextTick = (function () {
+    var canSetImmediate = typeof window !== 'undefined'
+    && window.setImmediate;
+    var canPost = typeof window !== 'undefined'
+    && window.postMessage && window.addEventListener
+    ;
 
-    self.viewport = {};
-
-    self.element = document.createElement('div');
-    self.element.className = 'editable-cell-selection';
-    self.element.style.position = 'absolute';
-    self.element.style.display = 'none';
-    self.element.tabIndex = -1;
-
-    self.inputElement = document.createElement('input');
-    self.inputElement.className = 'editable-cell-input';
-    self.inputElement.style.position = 'absolute';
-    self.inputElement.style.display = 'none';
-
-    self.copyPasteElement = document.createElement('textarea');
-    self.copyPasteElement.style.position = 'absolute';
-    self.copyPasteElement.style.opacity = '0.0';
-    self.copyPasteElement.style.display = 'none';
-
-    table.parentNode.insertBefore(self.element, table.nextSibling);
-    table.parentNode.insertBefore(self.inputElement, table.nextSibling);
-    table.appendChild(self.copyPasteElement);
-
-    self.destroy = function () {
-        self.element.removeEventListener('mousedown', self.onMouseDown);
-        self.element.removeEventListener('dblclick', self.onDblClick);
-        self.element.removeEventListener('keypress', self.onKeyPress);
-        self.element.removeEventListener('keydown', self.onKeyDown);
-
-        self.inputElement.removeEventListener('keydown', self.onInputKeydown);
-        self.inputElement.removeEventListener('blur', self.onInputBlur);
-
-        $(html).unbind('mouseup', self.onMouseUp);
-
-        table.parentNode.removeChild(self.element);
-        table.parentNode.removeChild(self.inputElement);
-        table.removeChild(self.copyPasteElement);
-    };
-    self.show = function () {
-        self.element.style.display = 'block';
-        self.element.focus();
-
-        var margin = 10,
-            viewportTop = resolve(self.viewport.top) || 0,
-            viewportBottom = resolve(self.viewport.bottom) || window.innerHeight,
-            rect = selection.range.end.getBoundingClientRect(),
-            topOffset = rect.top - margin - viewportTop,
-            bottomOffset = viewportBottom - rect.bottom - margin;
-
-        if (topOffset < 0) {
-            document.documentElement.scrollTop += topOffset;
-        }
-        else if (bottomOffset < 0) {
-            document.documentElement.scrollTop -= bottomOffset;
-        }
-    };
-    
-    function resolve (value) {
-        if (typeof value === 'function') {
-            return value();
-        }
-
-        return value;
+    if (canSetImmediate) {
+        return function (f) { return window.setImmediate(f) };
     }
 
-    self.hide = function () {
-        self.element.style.display = 'none';
-    };
-    self.focus = function () {
-        self.element.focus();
-    };
-    self.update = function (start, end) {
-        var top = Math.min(start.offsetTop, end.offsetTop),
-            left = Math.min(start.offsetLeft, end.offsetLeft),
-            bottom = Math.max(start.offsetTop + start.offsetHeight,
-                            end.offsetTop + end.offsetHeight),
-            right = Math.max(start.offsetLeft + start.offsetWidth,
-                            end.offsetLeft + end.offsetWidth);
-
-        self.element.style.top = table.offsetTop + top + 1 + 'px';
-        self.element.style.left = table.offsetLeft + left + 1 + 'px';
-        self.element.style.height = bottom - top - 1 + 'px';
-        self.element.style.width = right - left - 1 + 'px';
-        self.element.style.backgroundColor = 'rgba(245, 142, 00, 0.15)';
-
-        self.show();
-    };
-    self.beginDrag = function () {
-        self.canDrag = true;
-        ko.utils.registerEventHandler(self.element, 'mousemove', self.doBeginDrag);
-    };
-    self.doBeginDrag = function () {
-        self.element.removeEventListener('mousemove', self.doBeginDrag);
-
-        if (!self.canDrag) {
-            return;
-        }
-
-        self.isDragging = true;
-        self.element.style.pointerEvents = 'none';
-    };
-    self.endDrag = function () {
-        self.element.removeEventListener('mousemove', self.doBeginDrag);
-        self.isDragging = false;
-        self.canDrag = false;
-        self.element.style.pointerEvents = 'inherit';
-    };
-
-    self.onMouseUp = function (event) {
-        self.endDrag();
-    };
-    self.onMouseDown = function (event) {
-        if (event.button !== 0) {
-            return;
-        }
-
-        self.hide();
-
-        var cell = event.view.document.elementFromPoint(event.clientX, event.clientY);
-        selection.onCellMouseDown(cell, event.shiftKey);
-
-        event.preventDefault();
-    };
-    self.onDblClick = function (event) {
-        selection.startLockedEditing();
-    };
-    self.onKeyPress = function (event) {
-        selection.startEditing();
-    };
-    self.onKeyDown = function (event) {
-        if (event.keyCode === 13) {
-            selection.onReturn(event);
-        } else if ([37, 38, 39, 40].indexOf(event.keyCode) !== -1) {
-            selection.onArrows(event);
-        } else if (event.keyCode === 86 && event.ctrlKey) {
-            self.copyPasteElement.value = '';
-            self.copyPasteElement.style.display = 'block';
-            self.copyPasteElement.focus();
-            setTimeout(function () {
-                selection.onPaste(self.copyPasteElement.value);
-                self.copyPasteElement.style.display = 'none';
-                self.focus();
-            }, 0);
-        } else if (event.keyCode === 67 && event.ctrlKey) {
-            self.copyPasteElement.value = selection.onCopy();
-            self.copyPasteElement.style.display = 'block';
-            self.copyPasteElement.focus();
-            document.execCommand('selectAll', false, null);
-            setTimeout(function () {
-                self.copyPasteElement.style.display = 'none';
-                self.focus();
-            }, 0);
-        } else if (event.keyCode === 9) {
-            selection.onTab(event);
-        }
-    };
-    self.onInputKeydown = function (event) {
-        var cell = selection.range.start;
-
-        if (event.keyCode === 13) { // Return
-            var value = selection.endEditingCell(cell);
-
-            if (event.ctrlKey) {
-                ko.utils.arrayForEach(selection.range.getCells(), function (cellInSelection) {
-                if (cellInSelection !== cell) {
-                    selection.updateCellValue(cellInSelection, value);
+    if (canPost) {
+        var queue = [];
+        window.addEventListener('message', function (ev) {
+            var source = ev.source;
+            if ((source === window || source === null) && ev.data === 'process-tick') {
+                ev.stopPropagation();
+                if (queue.length > 0) {
+                    var fn = queue.shift();
+                    fn();
                 }
-                });
-          }
-
-            selection.onReturn(event, event.ctrlKey);
-            self.focus();
-            event.preventDefault();
-        }
-        else if (event.keyCode === 27) { // Escape
-            selection.cancelEditingCell(cell);
-            self.focus();
-        }
-        else if ([37, 38, 39, 40].indexOf(event.keyCode) !== -1) { // Arrows
-            if(!self.isLockedToCell) {
-                self.focus();
-                selection.onArrows(event);
-                event.preventDefault();
             }
-        }
+        }, true);
+
+        return function nextTick(fn) {
+            queue.push(fn);
+            window.postMessage('process-tick', '*');
+        };
+    }
+
+    return function nextTick(fn) {
+        setTimeout(fn, 0);
     };
-    self.onInputBlur = function (event) {
-        if (!selection.isEditingCell()) {
-            return;
-        }
-        selection.endEditingCell(selection.range.start);
-    };
+})();
 
-    ko.utils.registerEventHandler(self.element, "mousedown", self.onMouseDown);
-    ko.utils.registerEventHandler(self.element, "dblclick", self.onDblClick);
-    ko.utils.registerEventHandler(self.element, "keypress", self.onKeyPress);
-    ko.utils.registerEventHandler(self.element, "keydown", self.onKeyDown);
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
 
-    ko.utils.registerEventHandler(self.inputElement, "keydown", self.onInputKeydown);
-    ko.utils.registerEventHandler(self.inputElement, "blur", self.onInputBlur);
-
-    ko.utils.registerEventHandler(html, "mouseup", self.onMouseUp);
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
 }
 
-},{}],4:[function(require,module,exports){
+// TODO(shtylman)
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+
+},{}],12:[function(require,module,exports){
+(function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
+
+var EventEmitter = exports.EventEmitter = process.EventEmitter;
+var isArray = typeof Array.isArray === 'function'
+    ? Array.isArray
+    : function (xs) {
+        return Object.prototype.toString.call(xs) === '[object Array]'
+    }
+;
+function indexOf (xs, x) {
+    if (xs.indexOf) return xs.indexOf(x);
+    for (var i = 0; i < xs.length; i++) {
+        if (x === xs[i]) return i;
+    }
+    return -1;
+}
+
+// By default EventEmitters will print a warning if more than
+// 10 listeners are added to it. This is a useful default which
+// helps finding memory leaks.
+//
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+var defaultMaxListeners = 10;
+EventEmitter.prototype.setMaxListeners = function(n) {
+  if (!this._events) this._events = {};
+  this._events.maxListeners = n;
+};
+
+
+EventEmitter.prototype.emit = function(type) {
+  // If there is no 'error' event listener then throw.
+  if (type === 'error') {
+    if (!this._events || !this._events.error ||
+        (isArray(this._events.error) && !this._events.error.length))
+    {
+      if (arguments[1] instanceof Error) {
+        throw arguments[1]; // Unhandled 'error' event
+      } else {
+        throw new Error("Uncaught, unspecified 'error' event.");
+      }
+      return false;
+    }
+  }
+
+  if (!this._events) return false;
+  var handler = this._events[type];
+  if (!handler) return false;
+
+  if (typeof handler == 'function') {
+    switch (arguments.length) {
+      // fast cases
+      case 1:
+        handler.call(this);
+        break;
+      case 2:
+        handler.call(this, arguments[1]);
+        break;
+      case 3:
+        handler.call(this, arguments[1], arguments[2]);
+        break;
+      // slower
+      default:
+        var args = Array.prototype.slice.call(arguments, 1);
+        handler.apply(this, args);
+    }
+    return true;
+
+  } else if (isArray(handler)) {
+    var args = Array.prototype.slice.call(arguments, 1);
+
+    var listeners = handler.slice();
+    for (var i = 0, l = listeners.length; i < l; i++) {
+      listeners[i].apply(this, args);
+    }
+    return true;
+
+  } else {
+    return false;
+  }
+};
+
+// EventEmitter is defined in src/node_events.cc
+// EventEmitter.prototype.emit() is also defined there.
+EventEmitter.prototype.addListener = function(type, listener) {
+  if ('function' !== typeof listener) {
+    throw new Error('addListener only takes instances of Function');
+  }
+
+  if (!this._events) this._events = {};
+
+  // To avoid recursion in the case that type == "newListeners"! Before
+  // adding it to the listeners, first emit "newListeners".
+  this.emit('newListener', type, listener);
+
+  if (!this._events[type]) {
+    // Optimize the case of one listener. Don't need the extra array object.
+    this._events[type] = listener;
+  } else if (isArray(this._events[type])) {
+
+    // Check for listener leak
+    if (!this._events[type].warned) {
+      var m;
+      if (this._events.maxListeners !== undefined) {
+        m = this._events.maxListeners;
+      } else {
+        m = defaultMaxListeners;
+      }
+
+      if (m && m > 0 && this._events[type].length > m) {
+        this._events[type].warned = true;
+        console.error('(node) warning: possible EventEmitter memory ' +
+                      'leak detected. %d listeners added. ' +
+                      'Use emitter.setMaxListeners() to increase limit.',
+                      this._events[type].length);
+        console.trace();
+      }
+    }
+
+    // If we've already got an array, just append.
+    this._events[type].push(listener);
+  } else {
+    // Adding the second element, need to change to array.
+    this._events[type] = [this._events[type], listener];
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.once = function(type, listener) {
+  var self = this;
+  self.on(type, function g() {
+    self.removeListener(type, g);
+    listener.apply(this, arguments);
+  });
+
+  return this;
+};
+
+EventEmitter.prototype.removeListener = function(type, listener) {
+  if ('function' !== typeof listener) {
+    throw new Error('removeListener only takes instances of Function');
+  }
+
+  // does not use listeners(), so no side effect of creating _events[type]
+  if (!this._events || !this._events[type]) return this;
+
+  var list = this._events[type];
+
+  if (isArray(list)) {
+    var i = indexOf(list, listener);
+    if (i < 0) return this;
+    list.splice(i, 1);
+    if (list.length == 0)
+      delete this._events[type];
+  } else if (this._events[type] === listener) {
+    delete this._events[type];
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.removeAllListeners = function(type) {
+  if (arguments.length === 0) {
+    this._events = {};
+    return this;
+  }
+
+  // does not use listeners(), so no side effect of creating _events[type]
+  if (type && this._events && this._events[type]) this._events[type] = null;
+  return this;
+};
+
+EventEmitter.prototype.listeners = function(type) {
+  if (!this._events) this._events = {};
+  if (!this._events[type]) this._events[type] = [];
+  if (!isArray(this._events[type])) {
+    this._events[type] = [this._events[type]];
+  }
+  return this._events[type];
+};
+
+})(require("__browserify_process"))
+},{"__browserify_process":11}],9:[function(require,module,exports){
+var EventEmitter = require('events').EventEmitter,
+    polyfill = require('./polyfill');
+
 module.exports = SelectionRange;
 
-// #### <a name="range"></a> `SelectionRange`
-//
-// The `SelectionRange` is used internally to hold the current selection, represented by a start and an end cell.
-// In addition, it has functionality for moving and extending the selection inside the table.
+SelectionRange.prototype = new EventEmitter();
+
 function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
     var self = this;
 
     self.start = undefined;
     self.end = undefined;
-    self.selection = ko.observableArray();
+    self.selection = [];
 
-    // `moveInDirection` drops the current selection and makes the single cell in the specified `direction` the new selection.
+    function setSelection (cells) {
+        self.selection = cells;
+        self.emit('change', cells);
+    }
+
     self.moveInDirection = function (direction) {
         var newStart = self.getSelectableCellInDirection(self.start, direction),
             startChanged = newStart !== self.start,
@@ -806,7 +849,6 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         }
     };
 
-    // `extendIndirection` keeps the current selection and extends it in the specified `direction`.
     self.extendInDirection = function (direction) {
         var newEnd = self.getCellInDirection(self.end, direction),
             endChanged = newEnd && newEnd !== self.end;
@@ -820,22 +862,25 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         }
     };
 
-    // `getCells` returnes the cells contained in the current selection.
     self.getCells = function () {
         return self.getCellsInArea(self.start, self.end);
     };
 
-    // `clear` clears the current selection.
     self.clear = function () {
         self.start = undefined;
         self.end = undefined;
-        self.selection([]);
+        setSelection([]);
+    };
+
+    self.destroy = function () {
+        self.removeAllListeners('change');
+        self.clear();
     };
 
     self.setStart = function (element) {
         self.start = element;
         self.end = element;
-        self.selection(self.getCells());
+        setSelection(self.getCells());
     };
     self.setEnd = function (element) {
         if (element === self.end) {
@@ -846,7 +891,7 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         var cellsInArea = self.getCellsInArea(self.start, element),
             allEditable = true;
 
-        ko.utils.arrayForEach(cellsInArea, function (cell) {
+        cellsInArea.forEach(function (cell) {
             allEditable = allEditable && cellIsSelectable(cell);
         });
 
@@ -855,7 +900,7 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         }
 
         self.end = element;
-        self.selection(self.getCells());
+        setSelection(self.getCells());
     };
     self.getCellInDirection = function (originCell, direction) {
 
@@ -954,5 +999,216 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         return colSpanSum;
     }
 }
-},{}]},{},[1])
+},{"events":12,"./polyfill":3}],10:[function(require,module,exports){
+var polyfill = require('./polyfill');
+
+module.exports = SelectionView;
+
+function SelectionView (table, selection) {
+    var self = this,
+        html = document.getElementsByTagName('html')[0];
+
+    self.viewport = {};
+
+    self.element = document.createElement('div');
+    self.element.className = 'editable-cell-selection';
+    self.element.style.position = 'absolute';
+    self.element.style.display = 'none';
+    self.element.tabIndex = -1;
+
+    self.inputElement = document.createElement('input');
+    self.inputElement.className = 'editable-cell-input';
+    self.inputElement.style.position = 'absolute';
+    self.inputElement.style.display = 'none';
+
+    self.copyPasteElement = document.createElement('textarea');
+    self.copyPasteElement.style.position = 'absolute';
+    self.copyPasteElement.style.opacity = '0.0';
+    self.copyPasteElement.style.display = 'none';
+
+    table.parentNode.insertBefore(self.element, table.nextSibling);
+    table.parentNode.insertBefore(self.inputElement, table.nextSibling);
+    table.appendChild(self.copyPasteElement);
+
+    self.destroy = function () {
+        self.element.removeEventListener('mousedown', self.onMouseDown);
+        self.element.removeEventListener('dblclick', self.onDblClick);
+        self.element.removeEventListener('keypress', self.onKeyPress);
+        self.element.removeEventListener('keydown', self.onKeyDown);
+
+        self.inputElement.removeEventListener('keydown', self.onInputKeydown);
+        self.inputElement.removeEventListener('blur', self.onInputBlur);
+
+        html.removeEventListener('mouseup', self.onMouseUp);
+
+        table.parentNode.removeChild(self.element);
+        table.parentNode.removeChild(self.inputElement);
+        table.removeChild(self.copyPasteElement);
+    };
+    self.show = function () {
+        self.element.style.display = 'block';
+        self.element.focus();
+
+        var margin = 10,
+            viewportTop = resolve(self.viewport.top) || 0,
+            viewportBottom = resolve(self.viewport.bottom) || window.innerHeight,
+            rect = selection.range.end.getBoundingClientRect(),
+            topOffset = rect.top - margin - viewportTop,
+            bottomOffset = viewportBottom - rect.bottom - margin;
+
+        if (topOffset < 0) {
+            document.body.scrollTop += topOffset;
+        }
+        else if (bottomOffset < 0) {
+            document.body.scrollTop -= bottomOffset;
+        }
+    };
+    
+    function resolve (value) {
+        if (typeof value === 'function') {
+            return value();
+        }
+
+        return value;
+    }
+
+    self.hide = function () {
+        self.element.style.display = 'none';
+    };
+    self.focus = function () {
+        self.element.focus();
+    };
+    self.update = function (start, end) {
+        var top = Math.min(start.offsetTop, end.offsetTop),
+            left = Math.min(start.offsetLeft, end.offsetLeft),
+            bottom = Math.max(start.offsetTop + start.offsetHeight,
+                            end.offsetTop + end.offsetHeight),
+            right = Math.max(start.offsetLeft + start.offsetWidth,
+                            end.offsetLeft + end.offsetWidth);
+
+        self.element.style.top = table.offsetTop + top + 1 + 'px';
+        self.element.style.left = table.offsetLeft + left + 1 + 'px';
+        self.element.style.height = bottom - top - 1 + 'px';
+        self.element.style.width = right - left - 1 + 'px';
+        self.element.style.backgroundColor = 'rgba(245, 142, 00, 0.15)';
+
+        self.show();
+    };
+    self.beginDrag = function () {
+        self.canDrag = true;
+        self.element.addEventListener('mousemove', self.doBeginDrag);
+    };
+    self.doBeginDrag = function () {
+        self.element.removeEventListener('mousemove', self.doBeginDrag);
+
+        if (!self.canDrag) {
+            return;
+        }
+
+        self.isDragging = true;
+        self.element.style.pointerEvents = 'none';
+    };
+    self.endDrag = function () {
+        self.element.removeEventListener('mousemove', self.doBeginDrag);
+        self.isDragging = false;
+        self.canDrag = false;
+        self.element.style.pointerEvents = 'inherit';
+    };
+
+    self.onMouseUp = function (event) {
+        self.endDrag();
+    };
+    self.onMouseDown = function (event) {
+        if (event.button !== 0) {
+            return;
+        }
+
+        self.hide();
+
+        var cell = event.view.document.elementFromPoint(event.clientX, event.clientY);
+        selection.onCellMouseDown(cell, event.shiftKey);
+
+        event.preventDefault();
+    };
+    self.onDblClick = function (event) {
+        selection.startLockedEditing();
+    };
+    self.onKeyPress = function (event) {
+        selection.startEditing();
+    };
+    self.onKeyDown = function (event) {
+        if (event.keyCode === 13) {
+            selection.onReturn(event);
+        } else if ([37, 38, 39, 40].indexOf(event.keyCode) !== -1) {
+            selection.onArrows(event);
+        } else if (event.keyCode === 86 && event.ctrlKey) {
+            self.copyPasteElement.value = '';
+            self.copyPasteElement.style.display = 'block';
+            self.copyPasteElement.focus();
+            setTimeout(function () {
+                selection.onPaste(self.copyPasteElement.value);
+                self.copyPasteElement.style.display = 'none';
+                self.focus();
+            }, 0);
+        } else if (event.keyCode === 67 && event.ctrlKey) {
+            self.copyPasteElement.value = selection.onCopy();
+            self.copyPasteElement.style.display = 'block';
+            self.copyPasteElement.focus();
+            document.execCommand('selectAll', false, null);
+            setTimeout(function () {
+                self.copyPasteElement.style.display = 'none';
+                self.focus();
+            }, 0);
+        } else if (event.keyCode === 9) {
+            selection.onTab(event);
+        }
+    };
+    self.onInputKeydown = function (event) {
+        var cell = selection.range.start;
+
+        if (event.keyCode === 13) { // Return
+            var value = selection.endEditingCell(cell);
+
+            if (event.ctrlKey) {
+                selection.range.selection.forEach(function (cellInSelection) {
+                    if (cellInSelection !== cell) {
+                        selection.updateCellValue(cellInSelection, value);
+                    }
+                });
+            }
+
+            selection.onReturn(event, event.ctrlKey);
+            self.focus();
+            event.preventDefault();
+        }
+        else if (event.keyCode === 27) { // Escape
+            selection.cancelEditingCell(cell);
+            self.focus();
+        }
+        else if ([37, 38, 39, 40].indexOf(event.keyCode) !== -1) { // Arrows
+            if(!self.isLockedToCell) {
+                self.focus();
+                selection.onArrows(event);
+                event.preventDefault();
+            }
+        }
+    };
+    self.onInputBlur = function (event) {
+        if (!selection.isEditingCell()) {
+            return;
+        }
+        selection.endEditingCell(selection.range.start);
+    };
+
+    self.element.addEventListener("mousedown", self.onMouseDown);
+    self.element.addEventListener("dblclick", self.onDblClick);
+    self.element.addEventListener("keypress", self.onKeyPress);
+    self.element.addEventListener("keydown", self.onKeyDown);
+
+    self.inputElement.addEventListener("keydown", self.onInputKeydown);
+    self.inputElement.addEventListener("blur", self.onInputBlur);
+
+    html.addEventListener("mouseup", self.onMouseUp);
+}
+},{"./polyfill":3}]},{},[1])
 ;

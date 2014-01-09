@@ -1,21 +1,16 @@
 var SelectionView = require('./selectionView'),
-    SelectionRange = require('./selectionRange');
+    SelectionRange = require('./selectionRange'),
+    polyfill = require('./polyfill');
 
 module.exports = Selection;
 
-// #### <a name="selection"></a> `Selection`
-//
-// The `Selection` is used internally to represent the selection for a single table,
-// comprising a [view](#view) and a [range](#range), as well as functionality for handling table cell
-// operations like selecting, editing and copy and paste.
 function Selection (table, selectionMappings) {
-    var self = this,
-        selectionSubscription;
+    var self = this;
 
     self.view = new SelectionView(table, self);
     self.range = new SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible);
 
-    selectionSubscription = self.range.selection.subscribe(function (newSelection) {
+    self.range.on('change', function (newSelection) {
         if (newSelection.length === 0) {
             self.view.hide();
             return;
@@ -23,14 +18,12 @@ function Selection (table, selectionMappings) {
         self.view.update(newSelection[0], newSelection[newSelection.length - 1]);
     });
 
-    ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
-        selectionSubscription.dispose();
-
+    self.destroy = function () {
         self.view.destroy();
-        self.range.clear();
+        self.range.destroy();
 
         table._cellSelection = null;
-    });
+    };
 
     self.focus = self.view.focus;
 
@@ -39,9 +32,9 @@ function Selection (table, selectionMappings) {
     };
 
     self.registerCell = function (cell) {
-        ko.utils.registerEventHandler(cell, "mousedown", self.onMouseDown);
-        ko.utils.registerEventHandler(cell, "mouseover", self.onCellMouseOver);
-        ko.utils.registerEventHandler(cell, "focus", self.onCellFocus);
+        cell.addEventListener("mousedown", self.onMouseDown);
+        cell.addEventListener("mouseover", self.onCellMouseOver);
+        cell.addEventListener("focus", self.onCellFocus);
     };
 
     self.unregisterCell = function (cell) {
@@ -139,13 +132,13 @@ function Selection (table, selectionMappings) {
             // We can only proceed check if mapping exists, i.e. that editableCellSelection binding is used
             if (selectionMapping) {
                 // Find all selection mappings for selection, excluding the one for the current table
-                var tableMappings = ko.utils.arrayFilter(selectionMappings, function (tuple) {
+                var tableMappings = selectionMappings.filter(function (tuple) {
                     return tuple[0]() === selectionMapping[0]() && tuple[1] !== targetTable;
                 });
 
-                var tables = ko.utils.arrayMap(tableMappings, function (tuple) { return tuple[1]; });
-                var beforeTables = ko.utils.arrayFilter(tables, function (t) { return t.offsetTop + t.offsetHeight <= table.offsetTop; });
-                var afterTables = ko.utils.arrayFilter(tables, function (t) { return t.offsetTop >= table.offsetTop + table.offsetHeight; });
+                var tables = tableMappings.map(function (tuple) { return tuple[1]; });
+                var beforeTables = tables.filter(function (t) { return t.offsetTop + t.offsetHeight <= table.offsetTop; });
+                var afterTables = tables.filter(function (t) { return t.offsetTop >= table.offsetTop + table.offsetHeight; });
 
                 // Moving upwards
                 if (index === -1 && beforeTables.length) {
@@ -177,9 +170,9 @@ function Selection (table, selectionMappings) {
         }
     }
     function getSelectionMappingForTable (table) {
-        return ko.utils.arrayFirst(selectionMappings, function (tuple) {
+        return selectionMappings.filter(function (tuple) {
                 return tuple[1] === table;
-        });
+        })[0];
     }
     self.onCellMouseDown = function (cell, shiftKey) {
         if (shiftKey) {
@@ -252,7 +245,7 @@ function Selection (table, selectionMappings) {
             lines = [],
             i = 0;
 
-        ko.utils.arrayForEach(cells, function (cell) {
+        cells.forEach(function (cell) {
             var lineIndex = i % rows,
                 rowIndex = Math.floor(i / rows);
 
@@ -262,14 +255,14 @@ function Selection (table, selectionMappings) {
             i++;
         });
 
-        return ko.utils.arrayMap(lines, function (line) {
+        return lines.map(function (line) {
             return line.join('\t');
         }).join('\r\n');
     };
     self.onPaste = function (text) {
         var selStart = self.range.getCells()[0],
             cells,
-            values = ko.utils.arrayMap(text.trim().split(/\r?\n/), function (line) { return line.split('\t'); }),
+            values = text.trim().split(/\r?\n/).map(function (line) { return line.split('\t'); }),
             row = values.length,
             col = values[0].length,
             rows = 1,
