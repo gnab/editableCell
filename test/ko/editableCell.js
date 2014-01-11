@@ -3,44 +3,57 @@ describe('editableCell binding', function () {
         ko.bindingHandlers.should.have.property('editableCell');
     });
 
-    describe('cell content', function () {
-        it('should be set from constant', function () {
-            var cell = createCell();
-            cell.setAttribute('data-bind', "editableCell: 'some text'");
+    describe('cell contents', function () {
+        it('should be set from constant value', function () {
+            var cell = createCell("editableCell: 'value'");
 
             ko.applyBindings({}, cell);
 
-            cell.innerText.should.equal('some text');
+            cell.innerHTML.should.equal('value');
         });
 
-        it('should be set from variable', function () {
-            var cell = createCell();
-            cell.setAttribute('data-bind', "editableCell: variable");
+        it('should be set from variable value', function () {
+            var cell = createCell("editableCell: variable");
 
-            ko.applyBindings({variable: 'some text'}, cell);
+            ko.applyBindings({variable: 'value'}, cell);
 
-            cell.innerText.should.equal('some text');
+            cell.innerHTML.should.equal('value');
         });
 
-        it('should be set from observable', function () {
-            var cell = createCell();
-            cell.setAttribute('data-bind', "editableCell: observable");
+        it('should be set from observable value', function () {
+            var cell = createCell("editableCell: observable");
 
-            ko.applyBindings({observable: ko.observable('some text')}, cell);
+            ko.applyBindings({observable: ko.observable('value')}, cell);
 
-            cell.innerText.should.equal('some text');
+            cell.innerHTML.should.equal('value');
         });
 
-        it('should be updated from observable', function () {
-            var cell = createCell();
-            cell.setAttribute('data-bind', "editableCell: observable");
-
-            var observable = ko.observable('some text');
+        it('should be updated from observable value', function () {
+            var cell = createCell("editableCell: observable");
+            var observable = ko.observable('value');
 
             ko.applyBindings({observable: observable}, cell);
 
-            observable('some more text');
-            cell.innerText.should.equal('some more text');
+            observable('updated value');
+            cell.innerHTML.should.equal('updated value');
+        });
+
+        it('should be overridden by cellText helper binding', function () {
+            var cell = createCell("editableCell: 'value', cellText: 'text'");
+
+            ko.applyBindings({}, cell);
+
+            cell.innerHTML.should.equal('text');
+        });
+
+        it('should be overridden by template', function () {
+            var cell = createCell("editableCell: 'value'");
+            cell.appendChild(createElement('span', "text: 'template'"));
+
+            ko.applyBindings({}, cell);
+
+            cell.innerHTML.should.equal(
+                '<span data-bind="text: \'template\'">template</span>');
         });
     });
 });
@@ -51,12 +64,12 @@ describe('editableCellSelection binding handler', function () {
     });
 });
 
-function createCell () {
+function createCell (dataBind) {
     var container = document.createElement('div'),
         table = document.createElement('table'),
         tbody = document.createElement('tbody'),
         tr = document.createElement('tr'),
-        td = document.createElement('td');
+        td = createElement('td', dataBind);
 
     container.appendChild(table);
     table.appendChild(tbody);
@@ -64,4 +77,12 @@ function createCell () {
     tr.appendChild(td);
 
     return td;
+}
+
+function createElement(tag, dataBind) {
+    var element = document.createElement(tag);
+
+    element.setAttribute('data-bind', dataBind);
+
+    return element;
 }
