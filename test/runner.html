@@ -6,6 +6,7 @@
   <body>
     <div id="mocha"></div>
     <script src="../node_modules/mocha/mocha.js"></script>
+    <script src="../node_modules/jquery/dist/jquery.js"></script>
     <script src="../node_modules/knockout/build/output/knockout-latest.js"></script>
     <!--script src="chai.js"></script-->
     <script>
@@ -13,8 +14,8 @@
       mocha.reporter('html');
       //expect = chai.expect;
     </script>
-    <script src="../editableCell.js"></script>
-    <script src="bundle.js"></script>
+    <script src="../out/editableCell.js"></script>
+    <script src="../out/tests.js"></script>
     <script>
       if (window.mochaPhantomJS) { mochaPhantomJS.run(); }
       else { mocha.run(); }
