@@ -34,10 +34,10 @@ function createElement (tag, dataBind) {
 }
 },{}],3:[function(require,module,exports){
 require('should');
-require('./test/ko/editableCellSelectionTest.js');
-require('./test/ko/editableCellTest.js');
+require('./test/ko/editableCellBindingTest.js');
+require('./test/ko/editableCellSelectionBindingTest.js');
 require('./test/utils.js');
-},{"./test/ko/editableCellSelectionTest.js":1,"./test/ko/editableCellTest.js":4,"./test/utils.js":2,"should":5}],4:[function(require,module,exports){
+},{"./test/ko/editableCellBindingTest.js":4,"./test/ko/editableCellSelectionBindingTest.js":1,"./test/utils.js":2,"should":5}],4:[function(require,module,exports){
 var editableCell = require('../../src/editableCell');
 var utils = require('../utils');
 
@@ -7538,7 +7538,7 @@ if (typeof ko !== 'undefined') {
         ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
     }
 }
-},{"../polyfill":21,"./editableCellBinding":22,"./editableCellSelectionBinding":23,"./editableCellViewportBinding":24}],21:[function(require,module,exports){
+},{"./editableCellBinding":21,"./editableCellSelectionBinding":22,"./editableCellViewportBinding":23,"../polyfill":24}],24:[function(require,module,exports){
 function forEach (list, f) {
   var i;
 
@@ -7767,7 +7767,7 @@ module.exports = function(cb) {
 module.exports.ConcatStream = ConcatStream
 
 })(require("__browserify_buffer").Buffer)
-},{"stream":17,"util":7,"__browserify_buffer":15}],22:[function(require,module,exports){
+},{"stream":17,"util":7,"__browserify_buffer":15}],21:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCell = {
@@ -7829,7 +7829,7 @@ var editableCell = {
 };
 
 module.exports = editableCell;
-},{"./utils":26}],23:[function(require,module,exports){
+},{"./utils":26}],22:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellSelection = {
@@ -7915,7 +7915,7 @@ var editableCellSelection = {
 };
 
 module.exports = editableCellSelection;
-},{"./utils":26}],24:[function(require,module,exports){
+},{"./utils":26}],23:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellViewport = {
@@ -8282,7 +8282,7 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"./selectionView":28,"./selectionRange":29,"./polyfill":21}],28:[function(require,module,exports){
+},{"./selectionView":28,"./selectionRange":29,"./polyfill":24}],28:[function(require,module,exports){
 var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
@@ -8493,7 +8493,7 @@ function SelectionView (table, selection) {
 
     html.addEventListener("mouseup", self.onMouseUp);
 }
-},{"./polyfill":21}],29:[function(require,module,exports){
+},{"./polyfill":24}],29:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill');
 
@@ -8677,5 +8677,5 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         return colSpanSum;
     }
 }
-},{"events":8,"./polyfill":21}]},{},[3])
+},{"events":8,"./polyfill":24}]},{},[3])
 ;

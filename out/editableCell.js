@@ -29,7 +29,7 @@ if (typeof ko !== 'undefined') {
         ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
     }
 }
-},{"../polyfill":4,"./editableCellBinding":5,"./editableCellSelectionBinding":6,"./editableCellViewportBinding":7}],4:[function(require,module,exports){
+},{"./editableCellBinding":4,"./editableCellSelectionBinding":5,"../polyfill":6,"./editableCellViewportBinding":7}],6:[function(require,module,exports){
 function forEach (list, f) {
   var i;
 
@@ -73,7 +73,7 @@ function extend (object) {
     return result;
   };
 }
-},{}],5:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCell = {
@@ -135,7 +135,7 @@ var editableCell = {
 };
 
 module.exports = editableCell;
-},{"./utils":8}],6:[function(require,module,exports){
+},{"./utils":8}],5:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellSelection = {
@@ -588,7 +588,7 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"./selectionView":10,"./selectionRange":11,"./polyfill":4}],12:[function(require,module,exports){
+},{"./selectionView":10,"./polyfill":6,"./selectionRange":11}],12:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -1040,7 +1040,7 @@ function SelectionView (table, selection) {
 
     html.addEventListener("mouseup", self.onMouseUp);
 }
-},{"./polyfill":4}],11:[function(require,module,exports){
+},{"./polyfill":6}],11:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill');
 
@@ -1224,5 +1224,5 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         return colSpanSum;
     }
 }
-},{"events":13,"./polyfill":4}]},{},[1])
+},{"events":13,"./polyfill":6}]},{},[1])
 ;
