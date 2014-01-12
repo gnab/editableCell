@@ -201,6 +201,7 @@ function Selection (table, selectionMappings) {
         }
     };
     self.onCellFocus = function (event) {
+        console.log('focus');
         if (event.target === self.range.start) {
             return;
         }

@@ -2,9 +2,9 @@ var polyfill = require('../polyfill');
 
 // Knockout binding handlers
 var bindingHandlers = {
-    editableCell: require('./editableCell'),
-    editableCellSelection: require('./editableCellSelection'),
-    editableCellViewport: require('./editableCellViewport'),
+    editableCell: require('./editableCellBinding'),
+    editableCellSelection: require('./editableCellSelectionBinding'),
+    editableCellViewport: require('./editableCellViewportBinding'),
 };
 
 // Register Knockout binding handlers if Knockout is loaded
