@@ -17,8 +17,8 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         self.emit('change', cells);
     }
 
-    self.moveInDirection = function (direction) {
-        var newStart = self.getSelectableCellInDirection(self.start, direction),
+    self.moveInDirection = function (direction, toEnd) {
+        var newStart = toEnd ? self.getLastSelectableCellInDirection(self.start, direction) : self.getSelectableCellInDirection(self.start, direction),
             startChanged = newStart !== self.start,
             belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== self.start.parentNode.parentNode.parentNode;
 
@@ -31,8 +31,8 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         }
     };
 
-    self.extendInDirection = function (direction) {
-        var newEnd = self.getCellInDirection(self.end, direction),
+    self.extendInDirection = function (direction, toEnd) {
+        var newEnd = toEnd ? self.getLastSelectableCellInDirection(self.end, direction) : self.getCellInDirection(self.end, direction),
             endChanged = newEnd && newEnd !== self.end;
 
         if (newEnd) {
@@ -121,6 +121,15 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         }
 
         return originCell;
+    };
+    self.getLastSelectableCellInDirection = function (originCell, direction) {
+        var nextCell = originCell;
+        do {
+            cell = nextCell;
+            nextCell = self.getSelectableCellInDirection(cell, direction);
+        } while(nextCell !== cell);
+
+        return cell;
     };
     self.getCellsInArea = function (startCell, endCell) {
         var startX = Math.min(getCellIndex(startCell), getCellIndex(endCell)),
