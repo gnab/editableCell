@@ -1,16 +1,20 @@
 var SelectionView = require('./selectionView'),
     SelectionRange = require('./selectionRange'),
+    EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill');
 
 module.exports = Selection;
 
+Selection.prototype = new EventEmitter();
+
 function Selection (table, selectionMappings) {
-    var self = this;
+    var self = this,
+        range = new SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible);
 
     self.view = new SelectionView(table, self);
-    self.range = new SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible);
 
-    self.range.on('change', function (newSelection) {
+    range.on('change', function (newSelection) {
+        self.emit('change', newSelection);
         if (newSelection.length === 0) {
             self.view.hide();
             return;
@@ -18,9 +22,28 @@ function Selection (table, selectionMappings) {
         self.view.update(newSelection[0], newSelection[newSelection.length - 1]);
     });
 
+    self.setRange = function (start, end) {
+        range.setStart(start);
+        range.setEnd(end);
+    };
+
+    self.getRange = function () {
+        return {
+            start: range.start,
+            end: range.end
+        };
+    };
+
+    self.clear = range.clear;
+
+    self.getCells = function () {
+        return range.selection;
+    };
+
     self.destroy = function () {
         self.view.destroy();
-        self.range.destroy();
+        range.destroy();
+        self.removeAllListeners();
 
         table._cellSelection = null;
     };
@@ -72,11 +95,11 @@ function Selection (table, selectionMappings) {
     };
 
     self.startEditing = function () {
-        self.startEditingCell(self.range.start);
+        self.startEditingCell(range.start);
     };
 
     self.startLockedEditing = function () {
-        self.startEditingCell(self.range.start, true);
+        self.startEditingCell(range.start, true);
     };
 
     self.startEditingCell = function (cell, isLockedToCell) {
@@ -84,8 +107,8 @@ function Selection (table, selectionMappings) {
             return;
         }
 
-        if (self.range.start !== cell) {
-            self.range.setStart(cell);
+        if (range.start !== cell) {
+            range.setStart(cell);
         }
 
         self.view.inputElement.style.top = table.offsetTop + cell.offsetTop + 'px';
@@ -187,10 +210,10 @@ function Selection (table, selectionMappings) {
     }
     self.onCellMouseDown = function (cell, shiftKey) {
         if (shiftKey) {
-            self.range.setEnd(cell);
+            range.setEnd(cell);
         }
         else {
-            self.range.setStart(cell);
+            range.setStart(cell);
         }
 
         self.view.beginDrag();
@@ -207,23 +230,23 @@ function Selection (table, selectionMappings) {
             cell = cell.parentNode;
         }
 
-        if (cell && cell !== self.range.end) {
-            self.range.setEnd(cell);
+        if (cell && cell !== range.end) {
+            range.setEnd(cell);
         }
     };
     self.onCellFocus = function (event) {
         console.log('focus');
-        if (event.target === self.range.start) {
+        if (event.target === range.start) {
             return;
         }
 
         setTimeout(function () {
-            self.range.setStart(event.target);
+            range.setStart(event.target);
         }, 0);
     };
     self.onReturn = function (event, preventMove) {
         if (preventMove !== true) {
-            self.range.moveInDirection('Down');
+            range.moveInDirection('Down');
         }
         event.preventDefault();
     };
@@ -231,10 +254,10 @@ function Selection (table, selectionMappings) {
         var newStartOrEnd, newTable;
 
         if (event.shiftKey && !event.ctrlKey) {
-            newStartOrEnd = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode]);
+            newStartOrEnd = range.extendInDirection(self.keyCodeIdentifier[event.keyCode]);
         }
         else if (!event.ctrlKey) {
-            newStartOrEnd = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode]);
+            newStartOrEnd = range.moveInDirection(self.keyCodeIdentifier[event.keyCode]);
             newTable = newStartOrEnd && newStartOrEnd.parentNode && newStartOrEnd.parentNode.parentNode.parentNode;
 
             updateSelectionMapping(newStartOrEnd);
@@ -255,7 +278,7 @@ function Selection (table, selectionMappings) {
         }
     };
     self.onCopy = function () {
-        var cells = self.range.getCells(),
+        var cells = range.getCells(),
             cols = cells[cells.length - 1].cellIndex - cells[0].cellIndex + 1,
             rows = cells.length / cols,
             lines = [],
@@ -276,7 +299,7 @@ function Selection (table, selectionMappings) {
         }).join('\r\n');
     };
     self.onPaste = function (text) {
-        var selStart = self.range.getCells()[0],
+        var selStart = range.getCells()[0],
             cells,
             values = text.trim().split(/\r?\n/).map(function (line) { return line.split('\t'); }),
             row = values.length,
@@ -285,12 +308,12 @@ function Selection (table, selectionMappings) {
             cols = 1,
             i = 0;
 
-        self.range.setStart(selStart);
+        range.setStart(selStart);
 
-        while (row-- > 1 && self.range.extendInDirection('Down')) { rows++; }
-        while (col-- > 1 && self.range.extendInDirection('Right')) { cols++; }
+        while (row-- > 1 && range.extendInDirection('Down')) { rows++; }
+        while (col-- > 1 && range.extendInDirection('Right')) { cols++; }
 
-        cells = self.range.getCells();
+        cells = range.getCells();
 
         for (col = 0; col < cols; col++) {
             for (row = 0; row < rows; row++) {
@@ -300,7 +323,7 @@ function Selection (table, selectionMappings) {
         }
     };
     self.onTab = function (event) {
-        self.range.start.focus();
+        range.start.focus();
     };
     self.keyCodeIdentifier = {
         37: 'Left',

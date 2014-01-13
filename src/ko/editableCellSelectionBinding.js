@@ -12,7 +12,7 @@ var editableCellSelection = {
             selection = utils.initializeSelection(table);
 
         // Update supplied observable array when selection range changes
-        selection.range.on('change', rangeChanged);
+        selection.on('change', rangeChanged);
 
         function rangeChanged (newSelection) {
             newSelection = ko.utils.arrayMap(newSelection, function (cell) {
@@ -38,7 +38,7 @@ var editableCellSelection = {
             ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
 
             // Remove event listener
-            selection.range.removeListener('change', rangeChanged);
+            selection.removeListener('change', rangeChanged);
         });
     },
     update: function (element, valueAccessor, allBindingsAccessor) {
@@ -48,7 +48,7 @@ var editableCellSelection = {
 
         // Empty selection, so simply clear it out
         if (newSelection.length === 0) {
-            selection.range.clear();
+            selection.clear();
             return;
         }
 
@@ -76,8 +76,7 @@ var editableCellSelection = {
 
         // Programmatic update of selection, i.e. selection([startCell, endCell]);
         if (isDirectUpdate) {
-            selection.range.setStart(start);
-            selection.range.setEnd(end);
+            selection.setRange(start, end);
         }
     }
 };

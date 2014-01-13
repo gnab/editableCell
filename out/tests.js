@@ -1,10 +1,4 @@
 ;(function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0].call(u.exports,function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({1:[function(require,module,exports){
-describe('editableCellSelection binding', function () {
-    it('should be registered with Knockout', function () {
-        ko.bindingHandlers.should.have.property('editableCellSelection');
-    });
-});
-},{}],2:[function(require,module,exports){
 module.exports = {
     createCell: createCell,
     createElement: createElement
@@ -32,12 +26,12 @@ function createElement (tag, dataBind) {
 
     return element;
 }
-},{}],3:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 require('should');
 require('./test/ko/editableCellBindingTest.js');
 require('./test/ko/editableCellSelectionBindingTest.js');
 require('./test/utils.js');
-},{"./test/ko/editableCellBindingTest.js":4,"./test/ko/editableCellSelectionBindingTest.js":1,"./test/utils.js":2,"should":5}],4:[function(require,module,exports){
+},{"./test/ko/editableCellBindingTest.js":3,"./test/ko/editableCellSelectionBindingTest.js":4,"./test/utils.js":1,"should":5}],3:[function(require,module,exports){
 var editableCell = require('../../src/editableCell');
 var utils = require('../utils');
 
@@ -113,7 +107,59 @@ describe('editableCell binding', function () {
         });
     });
 });
-},{"../../src/editableCell":6,"../utils":2}],7:[function(require,module,exports){
+},{"../../src/editableCell":6,"../utils":1}],4:[function(require,module,exports){
+var editableCell = require('../../src/editableCell');
+var utils = require('../utils');
+
+describe('editableCellSelection binding', function () {
+    it('should be registered with Knockout', function () {
+        ko.bindingHandlers.should.have.property('editableCellSelection');
+    });
+
+    describe('selection synchronization', function () {
+        it('should be empty initially', function () {
+            var cell = utils.createCell("editableCell: 'value'");
+            var table = cell.parentNode.parentNode.parentNode;
+            var selection = ko.observableArray();
+
+            table.setAttribute('data-bind', 'editableCellSelection: selection');
+            ko.applyBindings({selection: selection}, table);
+
+            selection().should.eql([]);
+        });
+
+        it('should contain cell when selected', function () {
+            var cell = utils.createCell("editableCell: 'value'");
+            var table = cell.parentNode.parentNode.parentNode;
+            var selection = ko.observableArray();
+
+            table.setAttribute('data-bind', 'editableCellSelection: selection');
+            ko.applyBindings({selection: selection}, table);
+
+            editableCell.selectCell(cell);
+
+            selection().should.eql([{
+                cell: cell,
+                value: 'value',
+                text: 'value'
+            }]);
+        });
+
+        it('should select cell when updated', function () {
+            var cell = utils.createCell("editableCell: 'value'");
+            var table = cell.parentNode.parentNode.parentNode;
+            var selection = ko.observableArray();
+
+            table.setAttribute('data-bind', 'editableCellSelection: selection');
+            ko.applyBindings({selection: selection}, table);
+
+            selection([cell]);
+
+            editableCell.getTableSelection(table).getCells().should.eql([cell]);
+        });
+    });
+});
+},{"../../src/editableCell":6,"../utils":1}],7:[function(require,module,exports){
 var events = require('events');
 
 exports.isArray = isArray;
@@ -5782,6 +5828,19 @@ function objEquiv (a, b) {
 },{"__browserify_buffer":15}],6:[function(require,module,exports){
 var koBindingHandlers = require('./ko');
 
+exports.selectCell = function (cell) {
+    var table = cell.parentNode.parentNode.parentNode,
+        selection = table._cellSelection;
+
+    selection.setRange(cell, cell);
+};
+
+exports.getTableSelection = function (table) {
+    var selection = table._cellSelection;
+
+    return selection;
+};
+
 exports.setCellValue = function (cell, value) {
     var table = cell.parentNode.parentNode.parentNode,
         selection = table._cellSelection;
@@ -5789,6 +5848,92 @@ exports.setCellValue = function (cell, value) {
     selection.updateCellValue(cell, value);
 };
 },{"./ko":16}],17:[function(require,module,exports){
+exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
+  var e, m,
+      eLen = nBytes * 8 - mLen - 1,
+      eMax = (1 << eLen) - 1,
+      eBias = eMax >> 1,
+      nBits = -7,
+      i = isBE ? 0 : (nBytes - 1),
+      d = isBE ? 1 : -1,
+      s = buffer[offset + i];
+
+  i += d;
+
+  e = s & ((1 << (-nBits)) - 1);
+  s >>= (-nBits);
+  nBits += eLen;
+  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8);
+
+  m = e & ((1 << (-nBits)) - 1);
+  e >>= (-nBits);
+  nBits += mLen;
+  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8);
+
+  if (e === 0) {
+    e = 1 - eBias;
+  } else if (e === eMax) {
+    return m ? NaN : ((s ? -1 : 1) * Infinity);
+  } else {
+    m = m + Math.pow(2, mLen);
+    e = e - eBias;
+  }
+  return (s ? -1 : 1) * m * Math.pow(2, e - mLen);
+};
+
+exports.writeIEEE754 = function(buffer, value, offset, isBE, mLen, nBytes) {
+  var e, m, c,
+      eLen = nBytes * 8 - mLen - 1,
+      eMax = (1 << eLen) - 1,
+      eBias = eMax >> 1,
+      rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0),
+      i = isBE ? (nBytes - 1) : 0,
+      d = isBE ? -1 : 1,
+      s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0;
+
+  value = Math.abs(value);
+
+  if (isNaN(value) || value === Infinity) {
+    m = isNaN(value) ? 1 : 0;
+    e = eMax;
+  } else {
+    e = Math.floor(Math.log(value) / Math.LN2);
+    if (value * (c = Math.pow(2, -e)) < 1) {
+      e--;
+      c *= 2;
+    }
+    if (e + eBias >= 1) {
+      value += rt / c;
+    } else {
+      value += rt * Math.pow(2, 1 - eBias);
+    }
+    if (value * c >= 2) {
+      e++;
+      c /= 2;
+    }
+
+    if (e + eBias >= eMax) {
+      m = 0;
+      e = eMax;
+    } else if (e + eBias >= 1) {
+      m = (value * c - 1) * Math.pow(2, mLen);
+      e = e + eBias;
+    } else {
+      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen);
+      e = 0;
+    }
+  }
+
+  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8);
+
+  e = (e << mLen) | m;
+  eLen += mLen;
+  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8);
+
+  buffer[offset + i - d] |= s * 128;
+};
+
+},{}],18:[function(require,module,exports){
 var events = require('events');
 var util = require('util');
 
@@ -5909,93 +6054,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":8,"util":7}],18:[function(require,module,exports){
-exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
-  var e, m,
-      eLen = nBytes * 8 - mLen - 1,
-      eMax = (1 << eLen) - 1,
-      eBias = eMax >> 1,
-      nBits = -7,
-      i = isBE ? 0 : (nBytes - 1),
-      d = isBE ? 1 : -1,
-      s = buffer[offset + i];
-
-  i += d;
-
-  e = s & ((1 << (-nBits)) - 1);
-  s >>= (-nBits);
-  nBits += eLen;
-  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8);
-
-  m = e & ((1 << (-nBits)) - 1);
-  e >>= (-nBits);
-  nBits += mLen;
-  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8);
-
-  if (e === 0) {
-    e = 1 - eBias;
-  } else if (e === eMax) {
-    return m ? NaN : ((s ? -1 : 1) * Infinity);
-  } else {
-    m = m + Math.pow(2, mLen);
-    e = e - eBias;
-  }
-  return (s ? -1 : 1) * m * Math.pow(2, e - mLen);
-};
-
-exports.writeIEEE754 = function(buffer, value, offset, isBE, mLen, nBytes) {
-  var e, m, c,
-      eLen = nBytes * 8 - mLen - 1,
-      eMax = (1 << eLen) - 1,
-      eBias = eMax >> 1,
-      rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0),
-      i = isBE ? (nBytes - 1) : 0,
-      d = isBE ? -1 : 1,
-      s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0;
-
-  value = Math.abs(value);
-
-  if (isNaN(value) || value === Infinity) {
-    m = isNaN(value) ? 1 : 0;
-    e = eMax;
-  } else {
-    e = Math.floor(Math.log(value) / Math.LN2);
-    if (value * (c = Math.pow(2, -e)) < 1) {
-      e--;
-      c *= 2;
-    }
-    if (e + eBias >= 1) {
-      value += rt / c;
-    } else {
-      value += rt * Math.pow(2, 1 - eBias);
-    }
-    if (value * c >= 2) {
-      e++;
-      c /= 2;
-    }
-
-    if (e + eBias >= eMax) {
-      m = 0;
-      e = eMax;
-    } else if (e + eBias >= 1) {
-      m = (value * c - 1) * Math.pow(2, mLen);
-      e = e + eBias;
-    } else {
-      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen);
-      e = 0;
-    }
-  }
-
-  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8);
-
-  e = (e << mLen) | m;
-  eLen += mLen;
-  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8);
-
-  buffer[offset + i - d] |= s * 128;
-};
-
-},{}],10:[function(require,module,exports){
+},{"events":8,"util":7}],10:[function(require,module,exports){
 (function(){function SlowBuffer (size) {
     this.length = size;
 };
@@ -7315,7 +7374,7 @@ SlowBuffer.prototype.writeDoubleLE = Buffer.prototype.writeDoubleLE;
 SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 
 })()
-},{"assert":9,"./buffer_ieee754":18,"base64-js":19}],19:[function(require,module,exports){
+},{"assert":9,"./buffer_ieee754":17,"base64-js":19}],19:[function(require,module,exports){
 (function (exports) {
 	'use strict';
 
@@ -7522,7 +7581,7 @@ var isArray = Array.isArray || function (xs) {
     return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{"stream":17}],16:[function(require,module,exports){
+},{"stream":18}],16:[function(require,module,exports){
 var polyfill = require('../polyfill');
 
 // Knockout binding handlers
@@ -7538,7 +7597,7 @@ if (typeof ko !== 'undefined') {
         ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
     }
 }
-},{"./editableCellBinding":21,"./editableCellSelectionBinding":22,"./editableCellViewportBinding":23,"../polyfill":24}],24:[function(require,module,exports){
+},{"../polyfill":21,"./editableCellBinding":22,"./editableCellSelectionBinding":23,"./editableCellViewportBinding":24}],21:[function(require,module,exports){
 function forEach (list, f) {
   var i;
 
@@ -7716,58 +7775,7 @@ var indexOf = function (xs, x) {
 };
 
 })()
-},{"stream":17,"buffer":10,"./response":20,"concat-stream":25}],25:[function(require,module,exports){
-(function(Buffer){var stream = require('stream')
-var util = require('util')
-
-function ConcatStream(cb) {
-  stream.Stream.call(this)
-  this.writable = true
-  if (cb) this.cb = cb
-  this.body = []
-  if (this.cb) this.on('error', cb)
-}
-
-util.inherits(ConcatStream, stream.Stream)
-
-ConcatStream.prototype.write = function(chunk) {
-  this.body.push(chunk)
-}
-
-ConcatStream.prototype.arrayConcat = function(arrs) {
-  if (arrs.length === 0) return []
-  if (arrs.length === 1) return arrs[0]
-  return arrs.reduce(function (a, b) { return a.concat(b) })
-}
-
-ConcatStream.prototype.isArray = function(arr) {
-  var isArray = Array.isArray(arr)
-  var isTypedArray = arr.toString().match(/Array/)
-  return isArray || isTypedArray
-}
-
-ConcatStream.prototype.getBody = function () {
-  if (this.body.length === 0) return
-  if (typeof(this.body[0]) === "string") return this.body.join('')
-  if (this.isArray(this.body[0])) return this.arrayConcat(this.body)
-  if (typeof(Buffer) !== "undefined" && Buffer.isBuffer(this.body[0])) {
-    return Buffer.concat(this.body)
-  }
-  return this.body
-}
-
-ConcatStream.prototype.end = function() {
-  if (this.cb) this.cb(false, this.getBody())
-}
-
-module.exports = function(cb) {
-  return new ConcatStream(cb)
-}
-
-module.exports.ConcatStream = ConcatStream
-
-})(require("__browserify_buffer").Buffer)
-},{"stream":17,"util":7,"__browserify_buffer":15}],21:[function(require,module,exports){
+},{"stream":18,"buffer":10,"./response":20,"concat-stream":25}],22:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCell = {
@@ -7829,7 +7837,7 @@ var editableCell = {
 };
 
 module.exports = editableCell;
-},{"./utils":26}],22:[function(require,module,exports){
+},{"./utils":26}],23:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellSelection = {
@@ -7844,7 +7852,7 @@ var editableCellSelection = {
             selection = utils.initializeSelection(table);
 
         // Update supplied observable array when selection range changes
-        selection.range.on('change', rangeChanged);
+        selection.on('change', rangeChanged);
 
         function rangeChanged (newSelection) {
             newSelection = ko.utils.arrayMap(newSelection, function (cell) {
@@ -7870,7 +7878,7 @@ var editableCellSelection = {
             ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
 
             // Remove event listener
-            selection.range.removeListener('change', rangeChanged);
+            selection.removeListener('change', rangeChanged);
         });
     },
     update: function (element, valueAccessor, allBindingsAccessor) {
@@ -7880,7 +7888,7 @@ var editableCellSelection = {
 
         // Empty selection, so simply clear it out
         if (newSelection.length === 0) {
-            selection.range.clear();
+            selection.clear();
             return;
         }
 
@@ -7908,14 +7916,13 @@ var editableCellSelection = {
 
         // Programmatic update of selection, i.e. selection([startCell, endCell]);
         if (isDirectUpdate) {
-            selection.range.setStart(start);
-            selection.range.setEnd(end);
+            selection.setRange(start, end);
         }
     }
 };
 
 module.exports = editableCellSelection;
-},{"./utils":26}],23:[function(require,module,exports){
+},{"./utils":26}],24:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellViewport = {
@@ -7936,7 +7943,58 @@ var editableCellViewport = {
 };
 
 module.exports = editableCellViewport;
-},{"./utils":26}],26:[function(require,module,exports){
+},{"./utils":26}],25:[function(require,module,exports){
+(function(Buffer){var stream = require('stream')
+var util = require('util')
+
+function ConcatStream(cb) {
+  stream.Stream.call(this)
+  this.writable = true
+  if (cb) this.cb = cb
+  this.body = []
+  if (this.cb) this.on('error', cb)
+}
+
+util.inherits(ConcatStream, stream.Stream)
+
+ConcatStream.prototype.write = function(chunk) {
+  this.body.push(chunk)
+}
+
+ConcatStream.prototype.arrayConcat = function(arrs) {
+  if (arrs.length === 0) return []
+  if (arrs.length === 1) return arrs[0]
+  return arrs.reduce(function (a, b) { return a.concat(b) })
+}
+
+ConcatStream.prototype.isArray = function(arr) {
+  var isArray = Array.isArray(arr)
+  var isTypedArray = arr.toString().match(/Array/)
+  return isArray || isTypedArray
+}
+
+ConcatStream.prototype.getBody = function () {
+  if (this.body.length === 0) return
+  if (typeof(this.body[0]) === "string") return this.body.join('')
+  if (this.isArray(this.body[0])) return this.arrayConcat(this.body)
+  if (typeof(Buffer) !== "undefined" && Buffer.isBuffer(this.body[0])) {
+    return Buffer.concat(this.body)
+  }
+  return this.body
+}
+
+ConcatStream.prototype.end = function() {
+  if (this.cb) this.cb(false, this.getBody())
+}
+
+module.exports = function(cb) {
+  return new ConcatStream(cb)
+}
+
+module.exports.ConcatStream = ConcatStream
+
+})(require("__browserify_buffer").Buffer)
+},{"stream":18,"util":7,"__browserify_buffer":15}],26:[function(require,module,exports){
 var Selection = require('../selection');
 
 module.exports = {
@@ -7988,17 +8046,21 @@ function cloneNodes (nodesArray, shouldCleanNodes) {
 },{"../selection":27}],27:[function(require,module,exports){
 var SelectionView = require('./selectionView'),
     SelectionRange = require('./selectionRange'),
+    EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill');
 
 module.exports = Selection;
 
+Selection.prototype = new EventEmitter();
+
 function Selection (table, selectionMappings) {
-    var self = this;
+    var self = this,
+        range = new SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible);
 
     self.view = new SelectionView(table, self);
-    self.range = new SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible);
 
-    self.range.on('change', function (newSelection) {
+    range.on('change', function (newSelection) {
+        self.emit('change', newSelection);
         if (newSelection.length === 0) {
             self.view.hide();
             return;
@@ -8006,9 +8068,28 @@ function Selection (table, selectionMappings) {
         self.view.update(newSelection[0], newSelection[newSelection.length - 1]);
     });
 
+    self.setRange = function (start, end) {
+        range.setStart(start);
+        range.setEnd(end);
+    };
+
+    self.getRange = function () {
+        return {
+            start: range.start,
+            end: range.end
+        };
+    };
+
+    self.clear = range.clear;
+
+    self.getCells = function () {
+        return range.selection;
+    };
+
     self.destroy = function () {
         self.view.destroy();
-        self.range.destroy();
+        range.destroy();
+        self.removeAllListeners();
 
         table._cellSelection = null;
     };
@@ -8060,11 +8141,11 @@ function Selection (table, selectionMappings) {
     };
 
     self.startEditing = function () {
-        self.startEditingCell(self.range.start);
+        self.startEditingCell(range.start);
     };
 
     self.startLockedEditing = function () {
-        self.startEditingCell(self.range.start, true);
+        self.startEditingCell(range.start, true);
     };
 
     self.startEditingCell = function (cell, isLockedToCell) {
@@ -8072,8 +8153,8 @@ function Selection (table, selectionMappings) {
             return;
         }
 
-        if (self.range.start !== cell) {
-            self.range.setStart(cell);
+        if (range.start !== cell) {
+            range.setStart(cell);
         }
 
         self.view.inputElement.style.top = table.offsetTop + cell.offsetTop + 'px';
@@ -8162,12 +8243,23 @@ function Selection (table, selectionMappings) {
                 return tuple[1] === table;
         })[0];
     }
+    function updateSelectionMapping(newStartOrEnd) {
+        var newTable = newStartOrEnd && newStartOrEnd.parentNode && newStartOrEnd.parentNode.parentNode.parentNode;
+
+        if (newTable !== table) {
+            var mapping = getSelectionMappingForTable(newTable);
+            if (mapping) {
+                var selection = mapping[0]();
+                selection([newStartOrEnd]);
+            }
+        }
+    }
     self.onCellMouseDown = function (cell, shiftKey) {
         if (shiftKey) {
-            self.range.setEnd(cell);
+            range.setEnd(cell);
         }
         else {
-            self.range.setStart(cell);
+            range.setStart(cell);
         }
 
         self.view.beginDrag();
@@ -8184,23 +8276,23 @@ function Selection (table, selectionMappings) {
             cell = cell.parentNode;
         }
 
-        if (cell && cell !== self.range.end) {
-            self.range.setEnd(cell);
+        if (cell && cell !== range.end) {
+            range.setEnd(cell);
         }
     };
     self.onCellFocus = function (event) {
         console.log('focus');
-        if (event.target === self.range.start) {
+        if (event.target === range.start) {
             return;
         }
 
         setTimeout(function () {
-            self.range.setStart(event.target);
+            range.setStart(event.target);
         }, 0);
     };
     self.onReturn = function (event, preventMove) {
         if (preventMove !== true) {
-            self.range.moveInDirection('Down');
+            range.moveInDirection('Down');
         }
         event.preventDefault();
     };
@@ -8208,18 +8300,22 @@ function Selection (table, selectionMappings) {
         var newStartOrEnd, newTable;
 
         if (event.shiftKey && !event.ctrlKey) {
-            newStartOrEnd = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode]);
+            newStartOrEnd = range.extendInDirection(self.keyCodeIdentifier[event.keyCode]);
         }
         else if (!event.ctrlKey) {
-            newStartOrEnd = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode]);
+            newStartOrEnd = range.moveInDirection(self.keyCodeIdentifier[event.keyCode]);
             newTable = newStartOrEnd && newStartOrEnd.parentNode && newStartOrEnd.parentNode.parentNode.parentNode;
 
-            if (newTable !== table) {
-                var mapping = getSelectionMappingForTable(newTable);
-                if (mapping) {
-                    var selection = mapping[0]();
-                    selection([newStartOrEnd]);
-                }
+            updateSelectionMapping(newStartOrEnd);
+        } else if(event.ctrlKey) {
+            if(event.shiftKey){
+                // Extend selection all the way to the end.
+                newStartOrEnd = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode], true);
+            }
+            else {
+                // Move selection all the way to the end.
+                newStartOrEnd = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode], true);
+                updateSelectionMapping(newStartOrEnd);
             }
         }
 
@@ -8228,7 +8324,7 @@ function Selection (table, selectionMappings) {
         }
     };
     self.onCopy = function () {
-        var cells = self.range.getCells(),
+        var cells = range.getCells(),
             cols = cells[cells.length - 1].cellIndex - cells[0].cellIndex + 1,
             rows = cells.length / cols,
             lines = [],
@@ -8249,7 +8345,7 @@ function Selection (table, selectionMappings) {
         }).join('\r\n');
     };
     self.onPaste = function (text) {
-        var selStart = self.range.getCells()[0],
+        var selStart = range.getCells()[0],
             cells,
             values = text.trim().split(/\r?\n/).map(function (line) { return line.split('\t'); }),
             row = values.length,
@@ -8258,12 +8354,12 @@ function Selection (table, selectionMappings) {
             cols = 1,
             i = 0;
 
-        self.range.setStart(selStart);
+        range.setStart(selStart);
 
-        while (row-- > 1 && self.range.extendInDirection('Down')) { rows++; }
-        while (col-- > 1 && self.range.extendInDirection('Right')) { cols++; }
+        while (row-- > 1 && range.extendInDirection('Down')) { rows++; }
+        while (col-- > 1 && range.extendInDirection('Right')) { cols++; }
 
-        cells = self.range.getCells();
+        cells = range.getCells();
 
         for (col = 0; col < cols; col++) {
             for (row = 0; row < rows; row++) {
@@ -8273,7 +8369,7 @@ function Selection (table, selectionMappings) {
         }
     };
     self.onTab = function (event) {
-        self.range.start.focus();
+        range.start.focus();
     };
     self.keyCodeIdentifier = {
         37: 'Left',
@@ -8282,7 +8378,200 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"./selectionView":28,"./selectionRange":29,"./polyfill":24}],28:[function(require,module,exports){
+},{"events":8,"./selectionRange":28,"./polyfill":21,"./selectionView":29}],28:[function(require,module,exports){
+var EventEmitter = require('events').EventEmitter,
+    polyfill = require('./polyfill');
+
+module.exports = SelectionRange;
+
+SelectionRange.prototype = new EventEmitter();
+
+function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
+    var self = this;
+
+    self.start = undefined;
+    self.end = undefined;
+    self.selection = [];
+
+    function setSelection (cells) {
+        self.selection = cells;
+        self.emit('change', cells);
+    }
+
+    self.moveInDirection = function (direction, toEnd) {
+        var newStart = toEnd ? self.getLastSelectableCellInDirection(self.start, direction) : self.getSelectableCellInDirection(self.start, direction),
+            startChanged = newStart !== self.start,
+            belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== self.start.parentNode.parentNode.parentNode;
+
+        if (!belongingToOtherTable && (startChanged || self.start !== self.end)) {
+            self.setStart(newStart);
+        }
+
+        if (startChanged) {
+            return newStart;
+        }
+    };
+
+    self.extendInDirection = function (direction, toEnd) {
+        var newEnd = toEnd ? self.getLastSelectableCellInDirection(self.end, direction) : self.getCellInDirection(self.end, direction),
+            endChanged = newEnd && newEnd !== self.end;
+
+        if (newEnd) {
+            self.setEnd(newEnd);    
+        }
+
+        if (endChanged) {
+            return newEnd;
+        }
+    };
+
+    self.getCells = function () {
+        return self.getCellsInArea(self.start, self.end);
+    };
+
+    self.clear = function () {
+        self.start = undefined;
+        self.end = undefined;
+        setSelection([]);
+    };
+
+    self.destroy = function () {
+        self.removeAllListeners('change');
+        self.clear();
+    };
+
+    self.setStart = function (element) {
+        self.start = element;
+        self.end = element;
+        setSelection(self.getCells());
+    };
+    self.setEnd = function (element) {
+        if (element === self.end) {
+            return;
+        }
+        self.start = self.start || element;
+
+        var cellsInArea = self.getCellsInArea(self.start, element),
+            allEditable = true;
+
+        cellsInArea.forEach(function (cell) {
+            allEditable = allEditable && cellIsSelectable(cell);
+        });
+
+        if (!allEditable) {
+            return;
+        }
+
+        self.end = element;
+        setSelection(self.getCells());
+    };
+    self.getCellInDirection = function (originCell, direction) {
+
+        var rowIndex = originCell.parentNode.rowIndex;
+        var cellIndex = getCellIndex(originCell);
+
+        var table = originCell.parentNode.parentNode.parentNode,
+            row = getRowByIndex(rowIndex + getDirectionYDelta(direction), table),
+            cell = row && getCellByIndex(row, cellIndex + getDirectionXDelta(direction, originCell));
+
+        if (direction === 'Left' && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+        if (direction === 'Up' && row && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+        if (direction === 'Right' && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+        if (direction === 'Down' && row && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+
+        return undefined;
+    };
+    self.getSelectableCellInDirection = function (originCell, direction) {
+        var lastCell,
+            cell = originCell;
+
+        while (cell) {
+            cell = self.getCellInDirection(cell, direction);
+
+            if (cell && cellIsSelectable(cell)) {
+                return cell;
+            }
+        }
+
+        return originCell;
+    };
+    self.getLastSelectableCellInDirection = function (originCell, direction) {
+        var nextCell = originCell;
+        do {
+            cell = nextCell;
+            nextCell = self.getSelectableCellInDirection(cell, direction);
+        } while(nextCell !== cell);
+
+        return cell;
+    };
+    self.getCellsInArea = function (startCell, endCell) {
+        var startX = Math.min(getCellIndex(startCell), getCellIndex(endCell)),
+            startY = Math.min(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
+            endX = Math.max(getCellIndex(startCell), getCellIndex(endCell)),
+            endY = Math.max(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
+            x, y,
+            cell,
+            cells = [];
+
+        for (x = startX; x <= endX; ++x) {
+            for (y = startY; y <= endY; ++y) {
+                cell = getCellByIndex(getRowByIndex(y), x);
+                cells.push(cell || {});
+            }
+        }
+
+        return cells;
+    };
+    
+    function getDirectionXDelta (direction, cell) {
+        if (direction === 'Left') {
+            return -1;
+        }
+
+        if (direction === 'Right') {
+            return cell.colSpan;
+        }
+
+        return 0;
+    }
+
+    function getDirectionYDelta (direction) {
+        if (direction === 'Up') {
+            return -1;
+        }
+
+        if (direction === 'Down') {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    function getCellIndex (cell) {
+        var row = cell.parentNode,
+            colSpanSum = 0,
+            i;
+
+        for (i = 0; i < row.children.length; i++) {
+            if (row.children[i] === cell) {
+                break;
+            }
+
+            colSpanSum += row.children[i].colSpan;
+        }
+
+        return colSpanSum;
+    }
+}
+},{"events":8,"./polyfill":21}],29:[function(require,module,exports){
 var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
@@ -8335,7 +8624,7 @@ function SelectionView (table, selection) {
         var margin = 10,
             viewportTop = resolve(self.viewport.top) || 0,
             viewportBottom = resolve(self.viewport.bottom) || window.innerHeight,
-            rect = selection.range.end.getBoundingClientRect(),
+            rect = selection.getRange().end.getBoundingClientRect(),
             topOffset = rect.top - margin - viewportTop,
             bottomOffset = viewportBottom - rect.bottom - margin;
 
@@ -8447,13 +8736,13 @@ function SelectionView (table, selection) {
         }
     };
     self.onInputKeydown = function (event) {
-        var cell = selection.range.start;
+        var cell = selection.getRange().start;
 
         if (event.keyCode === 13) { // Return
             var value = selection.endEditingCell(cell);
 
             if (event.ctrlKey) {
-                selection.range.selection.forEach(function (cellInSelection) {
+                selection.getCells().forEach(function (cellInSelection) {
                     if (cellInSelection !== cell) {
                         selection.updateCellValue(cellInSelection, value);
                     }
@@ -8480,7 +8769,7 @@ function SelectionView (table, selection) {
         if (!selection.isEditingCell()) {
             return;
         }
-        selection.endEditingCell(selection.range.start);
+        selection.endEditingCell(selection.getRange().start);
     };
 
     self.element.addEventListener("mousedown", self.onMouseDown);
@@ -8493,189 +8782,5 @@ function SelectionView (table, selection) {
 
     html.addEventListener("mouseup", self.onMouseUp);
 }
-},{"./polyfill":24}],29:[function(require,module,exports){
-var EventEmitter = require('events').EventEmitter,
-    polyfill = require('./polyfill');
-
-module.exports = SelectionRange;
-
-SelectionRange.prototype = new EventEmitter();
-
-function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
-    var self = this;
-
-    self.start = undefined;
-    self.end = undefined;
-    self.selection = [];
-
-    function setSelection (cells) {
-        self.selection = cells;
-        self.emit('change', cells);
-    }
-
-    self.moveInDirection = function (direction) {
-        var newStart = self.getSelectableCellInDirection(self.start, direction),
-            startChanged = newStart !== self.start,
-            belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== self.start.parentNode.parentNode.parentNode;
-
-        if (!belongingToOtherTable && (startChanged || self.start !== self.end)) {
-            self.setStart(newStart);
-        }
-
-        if (startChanged) {
-            return newStart;
-        }
-    };
-
-    self.extendInDirection = function (direction) {
-        var newEnd = self.getCellInDirection(self.end, direction),
-            endChanged = newEnd && newEnd !== self.end;
-
-        if (newEnd) {
-            self.setEnd(newEnd);    
-        }
-
-        if (endChanged) {
-            return newEnd;
-        }
-    };
-
-    self.getCells = function () {
-        return self.getCellsInArea(self.start, self.end);
-    };
-
-    self.clear = function () {
-        self.start = undefined;
-        self.end = undefined;
-        setSelection([]);
-    };
-
-    self.destroy = function () {
-        self.removeAllListeners('change');
-        self.clear();
-    };
-
-    self.setStart = function (element) {
-        self.start = element;
-        self.end = element;
-        setSelection(self.getCells());
-    };
-    self.setEnd = function (element) {
-        if (element === self.end) {
-            return;
-        }
-        self.start = self.start || element;
-
-        var cellsInArea = self.getCellsInArea(self.start, element),
-            allEditable = true;
-
-        cellsInArea.forEach(function (cell) {
-            allEditable = allEditable && cellIsSelectable(cell);
-        });
-
-        if (!allEditable) {
-            return;
-        }
-
-        self.end = element;
-        setSelection(self.getCells());
-    };
-    self.getCellInDirection = function (originCell, direction) {
-
-        var rowIndex = originCell.parentNode.rowIndex;
-        var cellIndex = getCellIndex(originCell);
-
-        var table = originCell.parentNode.parentNode.parentNode,
-            row = getRowByIndex(rowIndex + getDirectionYDelta(direction), table),
-            cell = row && getCellByIndex(row, cellIndex + getDirectionXDelta(direction, originCell));
-
-        if (direction === 'Left' && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-        if (direction === 'Up' && row && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-        if (direction === 'Right' && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-        if (direction === 'Down' && row && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-
-        return undefined;
-    };
-    self.getSelectableCellInDirection = function (originCell, direction) {
-        var lastCell,
-            cell = originCell;
-
-        while (cell) {
-            cell = self.getCellInDirection(cell, direction);
-
-            if (cell && cellIsSelectable(cell)) {
-                return cell;
-            }
-        }
-
-        return originCell;
-    };
-    self.getCellsInArea = function (startCell, endCell) {
-        var startX = Math.min(getCellIndex(startCell), getCellIndex(endCell)),
-            startY = Math.min(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
-            endX = Math.max(getCellIndex(startCell), getCellIndex(endCell)),
-            endY = Math.max(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
-            x, y,
-            cell,
-            cells = [];
-
-        for (x = startX; x <= endX; ++x) {
-            for (y = startY; y <= endY; ++y) {
-                cell = getCellByIndex(getRowByIndex(y), x);
-                cells.push(cell || {});
-            }
-        }
-
-        return cells;
-    };
-    
-    function getDirectionXDelta (direction, cell) {
-        if (direction === 'Left') {
-            return -1;
-        }
-
-        if (direction === 'Right') {
-            return cell.colSpan;
-        }
-
-        return 0;
-    }
-
-    function getDirectionYDelta (direction) {
-        if (direction === 'Up') {
-            return -1;
-        }
-
-        if (direction === 'Down') {
-            return 1;
-        }
-
-        return 0;
-    }
-
-    function getCellIndex (cell) {
-        var row = cell.parentNode,
-            colSpanSum = 0,
-            i;
-
-        for (i = 0; i < row.children.length; i++) {
-            if (row.children[i] === cell) {
-                break;
-            }
-
-            colSpanSum += row.children[i].colSpan;
-        }
-
-        return colSpanSum;
-    }
-}
-},{"events":8,"./polyfill":24}]},{},[3])
+},{"./polyfill":21}]},{},[2])
 ;

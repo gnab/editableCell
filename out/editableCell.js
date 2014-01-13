@@ -1,11 +1,19 @@
-;(function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0].call(u.exports,function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({1:[function(require,module,exports){
-(function(){var editableCell = require('./editableCell');
-
-// Expose global variable
-window.editableCell = editableCell;
-})()
-},{"./editableCell":2}],2:[function(require,module,exports){
+(function(e){if("function"==typeof bootstrap)bootstrap("editablecell",e);else if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else if("undefined"!=typeof ses){if(!ses.ok())return;ses.makeEditableCell=e}else"undefined"!=typeof window?window.editableCell=e():global.editableCell=e()})(function(){var define,ses,bootstrap,module,exports;
+return (function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0].call(u.exports,function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({1:[function(require,module,exports){
 var koBindingHandlers = require('./ko');
+
+exports.selectCell = function (cell) {
+    var table = cell.parentNode.parentNode.parentNode,
+        selection = table._cellSelection;
+
+    selection.setRange(cell, cell);
+};
+
+exports.getTableSelection = function (table) {
+    var selection = table._cellSelection;
+
+    return selection;
+};
 
 exports.setCellValue = function (cell, value) {
     var table = cell.parentNode.parentNode.parentNode,
@@ -13,7 +21,7 @@ exports.setCellValue = function (cell, value) {
 
     selection.updateCellValue(cell, value);
 };
-},{"./ko":3}],3:[function(require,module,exports){
+},{"./ko":2}],2:[function(require,module,exports){
 var polyfill = require('../polyfill');
 
 // Knockout binding handlers
@@ -29,7 +37,7 @@ if (typeof ko !== 'undefined') {
         ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
     }
 }
-},{"../polyfill":4,"./editableCellBinding":5,"./editableCellSelectionBinding":6,"./editableCellViewportBinding":7}],4:[function(require,module,exports){
+},{"../polyfill":3,"./editableCellBinding":4,"./editableCellSelectionBinding":5,"./editableCellViewportBinding":6}],3:[function(require,module,exports){
 function forEach (list, f) {
   var i;
 
@@ -73,7 +81,7 @@ function extend (object) {
     return result;
   };
 }
-},{}],5:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCell = {
@@ -135,7 +143,7 @@ var editableCell = {
 };
 
 module.exports = editableCell;
-},{"./utils":8}],6:[function(require,module,exports){
+},{"./utils":7}],5:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellSelection = {
@@ -150,7 +158,7 @@ var editableCellSelection = {
             selection = utils.initializeSelection(table);
 
         // Update supplied observable array when selection range changes
-        selection.range.on('change', rangeChanged);
+        selection.on('change', rangeChanged);
 
         function rangeChanged (newSelection) {
             newSelection = ko.utils.arrayMap(newSelection, function (cell) {
@@ -176,7 +184,7 @@ var editableCellSelection = {
             ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
 
             // Remove event listener
-            selection.range.removeListener('change', rangeChanged);
+            selection.removeListener('change', rangeChanged);
         });
     },
     update: function (element, valueAccessor, allBindingsAccessor) {
@@ -186,7 +194,7 @@ var editableCellSelection = {
 
         // Empty selection, so simply clear it out
         if (newSelection.length === 0) {
-            selection.range.clear();
+            selection.clear();
             return;
         }
 
@@ -214,14 +222,13 @@ var editableCellSelection = {
 
         // Programmatic update of selection, i.e. selection([startCell, endCell]);
         if (isDirectUpdate) {
-            selection.range.setStart(start);
-            selection.range.setEnd(end);
+            selection.setRange(start, end);
         }
     }
 };
 
 module.exports = editableCellSelection;
-},{"./utils":8}],7:[function(require,module,exports){
+},{"./utils":7}],6:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellViewport = {
@@ -242,7 +249,7 @@ var editableCellViewport = {
 };
 
 module.exports = editableCellViewport;
-},{"./utils":8}],8:[function(require,module,exports){
+},{"./utils":7}],7:[function(require,module,exports){
 var Selection = require('../selection');
 
 module.exports = {
@@ -291,319 +298,7 @@ function cloneNodes (nodesArray, shouldCleanNodes) {
     }
     return newNodesArray;
 }
-},{"../selection":9}],9:[function(require,module,exports){
-var SelectionView = require('./selectionView'),
-    SelectionRange = require('./selectionRange'),
-    polyfill = require('./polyfill');
-
-module.exports = Selection;
-
-function Selection (table, selectionMappings) {
-    var self = this;
-
-    self.view = new SelectionView(table, self);
-    self.range = new SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible);
-
-    self.range.on('change', function (newSelection) {
-        if (newSelection.length === 0) {
-            self.view.hide();
-            return;
-        }
-        self.view.update(newSelection[0], newSelection[newSelection.length - 1]);
-    });
-
-    self.destroy = function () {
-        self.view.destroy();
-        self.range.destroy();
-
-        table._cellSelection = null;
-    };
-
-    self.focus = self.view.focus;
-
-    self.setViewport = function (viewport) {
-        self.view.viewport = viewport;
-    };
-
-    self.registerCell = function (cell) {
-        cell.addEventListener("mousedown", self.onMouseDown);
-        cell.addEventListener("mouseover", self.onCellMouseOver);
-        cell.addEventListener("focus", self.onCellFocus);
-    };
-
-    self.unregisterCell = function (cell) {
-        cell.removeEventListener('mousedown', self.onMouseDown);
-        cell.removeEventListener('mouseover', self.onCellMouseOver);
-        cell.removeEventListener('focus', self.onCellFocus);
-    };
-
-    self.onMouseDown = function (event) {
-        if (self.isEditingCell()) {
-            return;
-        }
-
-        self.onCellMouseDown(this, event.shiftKey);
-        event.preventDefault();
-    };
-
-    self.updateCellValue = function (cell, newValue) {
-        var value;
-
-        if (!cellIsEditable(cell)) {
-            return undefined;
-        }
-
-        if (newValue === undefined) {
-            value = self.view.inputElement.value;
-        }
-        else {
-            value = newValue;
-        }
-
-        cell._cellValueUpdater(value);
-
-        return value;
-    };
-
-    self.startEditing = function () {
-        self.startEditingCell(self.range.start);
-    };
-
-    self.startLockedEditing = function () {
-        self.startEditingCell(self.range.start, true);
-    };
-
-    self.startEditingCell = function (cell, isLockedToCell) {
-        if (!cellIsEditable(cell)) {
-            return;
-        }
-
-        if (self.range.start !== cell) {
-            self.range.setStart(cell);
-        }
-
-        self.view.inputElement.style.top = table.offsetTop + cell.offsetTop + 'px';
-        self.view.inputElement.style.left = table.offsetLeft + cell.offsetLeft + 'px';
-        self.view.inputElement.style.width = cell.offsetWidth + 'px';
-        self.view.inputElement.style.height = cell.offsetHeight + 'px';
-        self.view.inputElement.value = ko.utils.unwrapObservable(cell._cellValue());
-        self.view.inputElement.style.display = 'block';
-        self.view.inputElement.focus();
-        self.view.isLockedToCell = isLockedToCell;
-
-        document.execCommand('selectAll', false, null);
-        self.view.element.style.pointerEvents = 'none';
-    };
-    self.isEditingCell = function (cell) {
-        return self.view.inputElement.style.display === 'block';
-    };
-    self.cancelEditingCell = function (cell) {
-        self.view.inputElement.style.display = 'none';
-        self.view.element.style.pointerEvents = 'inherit';
-    };
-    self.endEditingCell = function (cell) {
-        self.view.inputElement.style.display = 'none';
-        self.view.element.style.pointerEvents = 'inherit';
-        return self.updateCellValue(cell);
-    };
-    function cellIsSelectable(cell) {
-        return cell._cellValue !== undefined;
-    }
-    function cellIsEditable(cell) {
-        return cell._cellReadOnly() !== true;
-    }
-    function cellIsVisible (cell) {
-        return cell && cell.offsetHeight !== 0;
-    }
-    function getRowByIndex (index, originTable) {
-        var targetTable = originTable || table;
-
-        // Check if we're moving out of table
-        if (index === -1 || index === targetTable.rows.length) {
-            // Find selection mapping for table
-            var selectionMapping = getSelectionMappingForTable(targetTable);
-
-            // We can only proceed check if mapping exists, i.e. that editableCellSelection binding is used
-            if (selectionMapping) {
-                // Find all selection mappings for selection, excluding the one for the current table
-                var tableMappings = selectionMappings.filter(function (tuple) {
-                    return tuple[0]() === selectionMapping[0]() && tuple[1] !== targetTable;
-                });
-
-                var tables = tableMappings.map(function (tuple) { return tuple[1]; });
-                var beforeTables = tables.filter(function (t) { return t.offsetTop + t.offsetHeight <= table.offsetTop; });
-                var afterTables = tables.filter(function (t) { return t.offsetTop >= table.offsetTop + table.offsetHeight; });
-
-                // Moving upwards
-                if (index === -1 && beforeTables.length) {
-                    targetTable = beforeTables[beforeTables.length - 1];
-                    index = targetTable.rows.length - 1;
-                }
-                // Moving downwards
-                else if (index === targetTable.rows.length && afterTables.length) {
-                    targetTable = afterTables[0];
-                    index = 0;
-                }
-            }
-        }
-        
-        return targetTable.rows[index];
-    }
-    function getCellByIndex (row, index) {
-        var i, colSpanSum = 0;
-
-        for (i = 0; i < row.children.length; i++) {
-            if (index < colSpanSum) {
-                return row.children[i - 1];
-            }
-            if (index === colSpanSum) {
-                return row.children[i];
-            }
-
-            colSpanSum += row.children[i].colSpan;
-        }
-    }
-    function getSelectionMappingForTable (table) {
-        return selectionMappings.filter(function (tuple) {
-                return tuple[1] === table;
-        })[0];
-    }
-    function updateSelectionMapping(newStartOrEnd) {
-        var newTable = newStartOrEnd && newStartOrEnd.parentNode && newStartOrEnd.parentNode.parentNode.parentNode;
-
-        if (newTable !== table) {
-            var mapping = getSelectionMappingForTable(newTable);
-            if (mapping) {
-                var selection = mapping[0]();
-                selection([newStartOrEnd]);
-            }
-        }
-    }
-    self.onCellMouseDown = function (cell, shiftKey) {
-        if (shiftKey) {
-            self.range.setEnd(cell);
-        }
-        else {
-            self.range.setStart(cell);
-        }
-
-        self.view.beginDrag();
-        event.preventDefault();
-    };
-    self.onCellMouseOver = function (event) {
-        var cell = event.target;
-
-        if (!self.view.isDragging) {
-            return;
-        }
-
-        while (cell && !(cell.tagName === 'TD' || cell.tagName === 'TH')) {
-            cell = cell.parentNode;
-        }
-
-        if (cell && cell !== self.range.end) {
-            self.range.setEnd(cell);
-        }
-    };
-    self.onCellFocus = function (event) {
-        console.log('focus');
-        if (event.target === self.range.start) {
-            return;
-        }
-
-        setTimeout(function () {
-            self.range.setStart(event.target);
-        }, 0);
-    };
-    self.onReturn = function (event, preventMove) {
-        if (preventMove !== true) {
-            self.range.moveInDirection('Down');
-        }
-        event.preventDefault();
-    };
-    self.onArrows = function (event) {
-        var newStartOrEnd, newTable;
-
-        if (event.shiftKey && !event.ctrlKey) {
-            newStartOrEnd = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode]);
-        }
-        else if (!event.ctrlKey) {
-            newStartOrEnd = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode]);
-            newTable = newStartOrEnd && newStartOrEnd.parentNode && newStartOrEnd.parentNode.parentNode.parentNode;
-
-            updateSelectionMapping(newStartOrEnd);
-        } else if(event.ctrlKey) {
-            if(event.shiftKey){
-                // Extend selection all the way to the end.
-                newStartOrEnd = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode], true);
-            }
-            else {
-                // Move selection all the way to the end.
-                newStartOrEnd = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode], true);
-                updateSelectionMapping(newStartOrEnd);
-            }
-        }
-
-        if (newStartOrEnd) {
-            event.preventDefault();
-        }
-    };
-    self.onCopy = function () {
-        var cells = self.range.getCells(),
-            cols = cells[cells.length - 1].cellIndex - cells[0].cellIndex + 1,
-            rows = cells.length / cols,
-            lines = [],
-            i = 0;
-
-        cells.forEach(function (cell) {
-            var lineIndex = i % rows,
-                rowIndex = Math.floor(i / rows);
-
-            lines[lineIndex] = lines[lineIndex] || [];
-            lines[lineIndex][rowIndex] = ko.utils.unwrapObservable(cell._cellValue());
-
-            i++;
-        });
-
-        return lines.map(function (line) {
-            return line.join('\t');
-        }).join('\r\n');
-    };
-    self.onPaste = function (text) {
-        var selStart = self.range.getCells()[0],
-            cells,
-            values = text.trim().split(/\r?\n/).map(function (line) { return line.split('\t'); }),
-            row = values.length,
-            col = values[0].length,
-            rows = 1,
-            cols = 1,
-            i = 0;
-
-        self.range.setStart(selStart);
-
-        while (row-- > 1 && self.range.extendInDirection('Down')) { rows++; }
-        while (col-- > 1 && self.range.extendInDirection('Right')) { cols++; }
-
-        cells = self.range.getCells();
-
-        for (col = 0; col < cols; col++) {
-            for (row = 0; row < rows; row++) {
-                self.updateCellValue(cells[i], values[row][col]);
-                i++;
-            }
-        }
-    };
-    self.onTab = function (event) {
-        self.range.start.focus();
-    };
-    self.keyCodeIdentifier = {
-        37: 'Left',
-        38: 'Up',
-        39: 'Right',
-        40: 'Down'
-    };
-}
-},{"./selectionView":10,"./selectionRange":11,"./polyfill":4}],12:[function(require,module,exports){
+},{"../selection":8}],9:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -622,7 +317,8 @@ process.nextTick = (function () {
     if (canPost) {
         var queue = [];
         window.addEventListener('message', function (ev) {
-            if (ev.source === window && ev.data === 'process-tick') {
+            var source = ev.source;
+            if ((source === window || source === null) && ev.data === 'process-tick') {
                 ev.stopPropagation();
                 if (queue.length > 0) {
                     var fn = queue.shift();
@@ -657,7 +353,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],13:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 (function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
 
 var EventEmitter = exports.EventEmitter = process.EventEmitter;
@@ -843,7 +539,342 @@ EventEmitter.prototype.listeners = function(type) {
 };
 
 })(require("__browserify_process"))
-},{"__browserify_process":12}],10:[function(require,module,exports){
+},{"__browserify_process":9}],8:[function(require,module,exports){
+var SelectionView = require('./selectionView'),
+    SelectionRange = require('./selectionRange'),
+    EventEmitter = require('events').EventEmitter,
+    polyfill = require('./polyfill');
+
+module.exports = Selection;
+
+Selection.prototype = new EventEmitter();
+
+function Selection (table, selectionMappings) {
+    var self = this,
+        range = new SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible);
+
+    self.view = new SelectionView(table, self);
+
+    range.on('change', function (newSelection) {
+        self.emit('change', newSelection);
+        if (newSelection.length === 0) {
+            self.view.hide();
+            return;
+        }
+        self.view.update(newSelection[0], newSelection[newSelection.length - 1]);
+    });
+
+    self.setRange = function (start, end) {
+        range.setStart(start);
+        range.setEnd(end);
+    };
+
+    self.getRange = function () {
+        return {
+            start: range.start,
+            end: range.end
+        };
+    };
+
+    self.clear = range.clear;
+
+    self.getCells = function () {
+        return range.selection;
+    };
+
+    self.destroy = function () {
+        self.view.destroy();
+        range.destroy();
+        self.removeAllListeners();
+
+        table._cellSelection = null;
+    };
+
+    self.focus = self.view.focus;
+
+    self.setViewport = function (viewport) {
+        self.view.viewport = viewport;
+    };
+
+    self.registerCell = function (cell) {
+        cell.addEventListener("mousedown", self.onMouseDown);
+        cell.addEventListener("mouseover", self.onCellMouseOver);
+        cell.addEventListener("focus", self.onCellFocus);
+    };
+
+    self.unregisterCell = function (cell) {
+        cell.removeEventListener('mousedown', self.onMouseDown);
+        cell.removeEventListener('mouseover', self.onCellMouseOver);
+        cell.removeEventListener('focus', self.onCellFocus);
+    };
+
+    self.onMouseDown = function (event) {
+        if (self.isEditingCell()) {
+            return;
+        }
+
+        self.onCellMouseDown(this, event.shiftKey);
+        event.preventDefault();
+    };
+
+    self.updateCellValue = function (cell, newValue) {
+        var value;
+
+        if (!cellIsEditable(cell)) {
+            return undefined;
+        }
+
+        if (newValue === undefined) {
+            value = self.view.inputElement.value;
+        }
+        else {
+            value = newValue;
+        }
+
+        cell._cellValueUpdater(value);
+
+        return value;
+    };
+
+    self.startEditing = function () {
+        self.startEditingCell(range.start);
+    };
+
+    self.startLockedEditing = function () {
+        self.startEditingCell(range.start, true);
+    };
+
+    self.startEditingCell = function (cell, isLockedToCell) {
+        if (!cellIsEditable(cell)) {
+            return;
+        }
+
+        if (range.start !== cell) {
+            range.setStart(cell);
+        }
+
+        self.view.inputElement.style.top = table.offsetTop + cell.offsetTop + 'px';
+        self.view.inputElement.style.left = table.offsetLeft + cell.offsetLeft + 'px';
+        self.view.inputElement.style.width = cell.offsetWidth + 'px';
+        self.view.inputElement.style.height = cell.offsetHeight + 'px';
+        self.view.inputElement.value = ko.utils.unwrapObservable(cell._cellValue());
+        self.view.inputElement.style.display = 'block';
+        self.view.inputElement.focus();
+        self.view.isLockedToCell = isLockedToCell;
+
+        document.execCommand('selectAll', false, null);
+        self.view.element.style.pointerEvents = 'none';
+    };
+    self.isEditingCell = function (cell) {
+        return self.view.inputElement.style.display === 'block';
+    };
+    self.cancelEditingCell = function (cell) {
+        self.view.inputElement.style.display = 'none';
+        self.view.element.style.pointerEvents = 'inherit';
+    };
+    self.endEditingCell = function (cell) {
+        self.view.inputElement.style.display = 'none';
+        self.view.element.style.pointerEvents = 'inherit';
+        return self.updateCellValue(cell);
+    };
+    function cellIsSelectable(cell) {
+        return cell._cellValue !== undefined;
+    }
+    function cellIsEditable(cell) {
+        return cell._cellReadOnly() !== true;
+    }
+    function cellIsVisible (cell) {
+        return cell && cell.offsetHeight !== 0;
+    }
+    function getRowByIndex (index, originTable) {
+        var targetTable = originTable || table;
+
+        // Check if we're moving out of table
+        if (index === -1 || index === targetTable.rows.length) {
+            // Find selection mapping for table
+            var selectionMapping = getSelectionMappingForTable(targetTable);
+
+            // We can only proceed check if mapping exists, i.e. that editableCellSelection binding is used
+            if (selectionMapping) {
+                // Find all selection mappings for selection, excluding the one for the current table
+                var tableMappings = selectionMappings.filter(function (tuple) {
+                    return tuple[0]() === selectionMapping[0]() && tuple[1] !== targetTable;
+                });
+
+                var tables = tableMappings.map(function (tuple) { return tuple[1]; });
+                var beforeTables = tables.filter(function (t) { return t.offsetTop + t.offsetHeight <= table.offsetTop; });
+                var afterTables = tables.filter(function (t) { return t.offsetTop >= table.offsetTop + table.offsetHeight; });
+
+                // Moving upwards
+                if (index === -1 && beforeTables.length) {
+                    targetTable = beforeTables[beforeTables.length - 1];
+                    index = targetTable.rows.length - 1;
+                }
+                // Moving downwards
+                else if (index === targetTable.rows.length && afterTables.length) {
+                    targetTable = afterTables[0];
+                    index = 0;
+                }
+            }
+        }
+        
+        return targetTable.rows[index];
+    }
+    function getCellByIndex (row, index) {
+        var i, colSpanSum = 0;
+
+        for (i = 0; i < row.children.length; i++) {
+            if (index < colSpanSum) {
+                return row.children[i - 1];
+            }
+            if (index === colSpanSum) {
+                return row.children[i];
+            }
+
+            colSpanSum += row.children[i].colSpan;
+        }
+    }
+    function getSelectionMappingForTable (table) {
+        return selectionMappings.filter(function (tuple) {
+                return tuple[1] === table;
+        })[0];
+    }
+    function updateSelectionMapping(newStartOrEnd) {
+        var newTable = newStartOrEnd && newStartOrEnd.parentNode && newStartOrEnd.parentNode.parentNode.parentNode;
+
+        if (newTable !== table) {
+            var mapping = getSelectionMappingForTable(newTable);
+            if (mapping) {
+                var selection = mapping[0]();
+                selection([newStartOrEnd]);
+            }
+        }
+    }
+    self.onCellMouseDown = function (cell, shiftKey) {
+        if (shiftKey) {
+            range.setEnd(cell);
+        }
+        else {
+            range.setStart(cell);
+        }
+
+        self.view.beginDrag();
+        event.preventDefault();
+    };
+    self.onCellMouseOver = function (event) {
+        var cell = event.target;
+
+        if (!self.view.isDragging) {
+            return;
+        }
+
+        while (cell && !(cell.tagName === 'TD' || cell.tagName === 'TH')) {
+            cell = cell.parentNode;
+        }
+
+        if (cell && cell !== range.end) {
+            range.setEnd(cell);
+        }
+    };
+    self.onCellFocus = function (event) {
+        console.log('focus');
+        if (event.target === range.start) {
+            return;
+        }
+
+        setTimeout(function () {
+            range.setStart(event.target);
+        }, 0);
+    };
+    self.onReturn = function (event, preventMove) {
+        if (preventMove !== true) {
+            range.moveInDirection('Down');
+        }
+        event.preventDefault();
+    };
+    self.onArrows = function (event) {
+        var newStartOrEnd, newTable;
+
+        if (event.shiftKey && !event.ctrlKey) {
+            newStartOrEnd = range.extendInDirection(self.keyCodeIdentifier[event.keyCode]);
+        }
+        else if (!event.ctrlKey) {
+            newStartOrEnd = range.moveInDirection(self.keyCodeIdentifier[event.keyCode]);
+            newTable = newStartOrEnd && newStartOrEnd.parentNode && newStartOrEnd.parentNode.parentNode.parentNode;
+
+            updateSelectionMapping(newStartOrEnd);
+        } else if(event.ctrlKey) {
+            if(event.shiftKey){
+                // Extend selection all the way to the end.
+                newStartOrEnd = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode], true);
+            }
+            else {
+                // Move selection all the way to the end.
+                newStartOrEnd = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode], true);
+                updateSelectionMapping(newStartOrEnd);
+            }
+        }
+
+        if (newStartOrEnd) {
+            event.preventDefault();
+        }
+    };
+    self.onCopy = function () {
+        var cells = range.getCells(),
+            cols = cells[cells.length - 1].cellIndex - cells[0].cellIndex + 1,
+            rows = cells.length / cols,
+            lines = [],
+            i = 0;
+
+        cells.forEach(function (cell) {
+            var lineIndex = i % rows,
+                rowIndex = Math.floor(i / rows);
+
+            lines[lineIndex] = lines[lineIndex] || [];
+            lines[lineIndex][rowIndex] = ko.utils.unwrapObservable(cell._cellValue());
+
+            i++;
+        });
+
+        return lines.map(function (line) {
+            return line.join('\t');
+        }).join('\r\n');
+    };
+    self.onPaste = function (text) {
+        var selStart = range.getCells()[0],
+            cells,
+            values = text.trim().split(/\r?\n/).map(function (line) { return line.split('\t'); }),
+            row = values.length,
+            col = values[0].length,
+            rows = 1,
+            cols = 1,
+            i = 0;
+
+        range.setStart(selStart);
+
+        while (row-- > 1 && range.extendInDirection('Down')) { rows++; }
+        while (col-- > 1 && range.extendInDirection('Right')) { cols++; }
+
+        cells = range.getCells();
+
+        for (col = 0; col < cols; col++) {
+            for (row = 0; row < rows; row++) {
+                self.updateCellValue(cells[i], values[row][col]);
+                i++;
+            }
+        }
+    };
+    self.onTab = function (event) {
+        range.start.focus();
+    };
+    self.keyCodeIdentifier = {
+        37: 'Left',
+        38: 'Up',
+        39: 'Right',
+        40: 'Down'
+    };
+}
+},{"events":10,"./selectionView":11,"./selectionRange":12,"./polyfill":3}],11:[function(require,module,exports){
 var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
@@ -896,7 +927,7 @@ function SelectionView (table, selection) {
         var margin = 10,
             viewportTop = resolve(self.viewport.top) || 0,
             viewportBottom = resolve(self.viewport.bottom) || window.innerHeight,
-            rect = selection.range.end.getBoundingClientRect(),
+            rect = selection.getRange().end.getBoundingClientRect(),
             topOffset = rect.top - margin - viewportTop,
             bottomOffset = viewportBottom - rect.bottom - margin;
 
@@ -1008,13 +1039,13 @@ function SelectionView (table, selection) {
         }
     };
     self.onInputKeydown = function (event) {
-        var cell = selection.range.start;
+        var cell = selection.getRange().start;
 
         if (event.keyCode === 13) { // Return
             var value = selection.endEditingCell(cell);
 
             if (event.ctrlKey) {
-                selection.range.selection.forEach(function (cellInSelection) {
+                selection.getCells().forEach(function (cellInSelection) {
                     if (cellInSelection !== cell) {
                         selection.updateCellValue(cellInSelection, value);
                     }
@@ -1041,7 +1072,7 @@ function SelectionView (table, selection) {
         if (!selection.isEditingCell()) {
             return;
         }
-        selection.endEditingCell(selection.range.start);
+        selection.endEditingCell(selection.getRange().start);
     };
 
     self.element.addEventListener("mousedown", self.onMouseDown);
@@ -1054,7 +1085,7 @@ function SelectionView (table, selection) {
 
     html.addEventListener("mouseup", self.onMouseUp);
 }
-},{"./polyfill":4}],11:[function(require,module,exports){
+},{"./polyfill":3}],12:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill');
 
@@ -1247,5 +1278,6 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         return colSpanSum;
     }
 }
-},{"events":13,"./polyfill":4}]},{},[1])
+},{"events":10,"./polyfill":3}]},{},[1])(1)
+});
 ;

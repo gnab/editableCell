@@ -50,7 +50,7 @@ function SelectionView (table, selection) {
         var margin = 10,
             viewportTop = resolve(self.viewport.top) || 0,
             viewportBottom = resolve(self.viewport.bottom) || window.innerHeight,
-            rect = selection.range.end.getBoundingClientRect(),
+            rect = selection.getRange().end.getBoundingClientRect(),
             topOffset = rect.top - margin - viewportTop,
             bottomOffset = viewportBottom - rect.bottom - margin;
 
@@ -162,13 +162,13 @@ function SelectionView (table, selection) {
         }
     };
     self.onInputKeydown = function (event) {
-        var cell = selection.range.start;
+        var cell = selection.getRange().start;
 
         if (event.keyCode === 13) { // Return
             var value = selection.endEditingCell(cell);
 
             if (event.ctrlKey) {
-                selection.range.selection.forEach(function (cellInSelection) {
+                selection.getCells().forEach(function (cellInSelection) {
                     if (cellInSelection !== cell) {
                         selection.updateCellValue(cellInSelection, value);
                     }
@@ -195,7 +195,7 @@ function SelectionView (table, selection) {
         if (!selection.isEditingCell()) {
             return;
         }
-        selection.endEditingCell(selection.range.start);
+        selection.endEditingCell(selection.getRange().start);
     };
 
     self.element.addEventListener("mousedown", self.onMouseDown);
