@@ -29,7 +29,7 @@ if (typeof ko !== 'undefined') {
         ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
     }
 }
-},{"./editableCellBinding":4,"./editableCellSelectionBinding":5,"../polyfill":6,"./editableCellViewportBinding":7}],6:[function(require,module,exports){
+},{"../polyfill":4,"./editableCellBinding":5,"./editableCellSelectionBinding":6,"./editableCellViewportBinding":7}],4:[function(require,module,exports){
 function forEach (list, f) {
   var i;
 
@@ -73,7 +73,7 @@ function extend (object) {
     return result;
   };
 }
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCell = {
@@ -135,7 +135,7 @@ var editableCell = {
 };
 
 module.exports = editableCell;
-},{"./utils":8}],5:[function(require,module,exports){
+},{"./utils":8}],6:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellSelection = {
@@ -468,6 +468,17 @@ function Selection (table, selectionMappings) {
                 return tuple[1] === table;
         })[0];
     }
+    function updateSelectionMapping(newStartOrEnd) {
+        var newTable = newStartOrEnd && newStartOrEnd.parentNode && newStartOrEnd.parentNode.parentNode.parentNode;
+
+        if (newTable !== table) {
+            var mapping = getSelectionMappingForTable(newTable);
+            if (mapping) {
+                var selection = mapping[0]();
+                selection([newStartOrEnd]);
+            }
+        }
+    }
     self.onCellMouseDown = function (cell, shiftKey) {
         if (shiftKey) {
             self.range.setEnd(cell);
@@ -520,12 +531,16 @@ function Selection (table, selectionMappings) {
             newStartOrEnd = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode]);
             newTable = newStartOrEnd && newStartOrEnd.parentNode && newStartOrEnd.parentNode.parentNode.parentNode;
 
-            if (newTable !== table) {
-                var mapping = getSelectionMappingForTable(newTable);
-                if (mapping) {
-                    var selection = mapping[0]();
-                    selection([newStartOrEnd]);
-                }
+            updateSelectionMapping(newStartOrEnd);
+        } else if(event.ctrlKey) {
+            if(event.shiftKey){
+                // Extend selection all the way to the end.
+                newStartOrEnd = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode], true);
+            }
+            else {
+                // Move selection all the way to the end.
+                newStartOrEnd = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode], true);
+                updateSelectionMapping(newStartOrEnd);
             }
         }
 
@@ -588,7 +603,7 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"./selectionView":10,"./polyfill":6,"./selectionRange":11}],12:[function(require,module,exports){
+},{"./selectionView":10,"./selectionRange":11,"./polyfill":4}],12:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -607,8 +622,7 @@ process.nextTick = (function () {
     if (canPost) {
         var queue = [];
         window.addEventListener('message', function (ev) {
-            var source = ev.source;
-            if ((source === window || source === null) && ev.data === 'process-tick') {
+            if (ev.source === window && ev.data === 'process-tick') {
                 ev.stopPropagation();
                 if (queue.length > 0) {
                     var fn = queue.shift();
@@ -1040,7 +1054,7 @@ function SelectionView (table, selection) {
 
     html.addEventListener("mouseup", self.onMouseUp);
 }
-},{"./polyfill":6}],11:[function(require,module,exports){
+},{"./polyfill":4}],11:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill');
 
@@ -1060,8 +1074,8 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         self.emit('change', cells);
     }
 
-    self.moveInDirection = function (direction) {
-        var newStart = self.getSelectableCellInDirection(self.start, direction),
+    self.moveInDirection = function (direction, toEnd) {
+        var newStart = toEnd ? self.getLastSelectableCellInDirection(self.start, direction) : self.getSelectableCellInDirection(self.start, direction),
             startChanged = newStart !== self.start,
             belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== self.start.parentNode.parentNode.parentNode;
 
@@ -1074,8 +1088,8 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         }
     };
 
-    self.extendInDirection = function (direction) {
-        var newEnd = self.getCellInDirection(self.end, direction),
+    self.extendInDirection = function (direction, toEnd) {
+        var newEnd = toEnd ? self.getLastSelectableCellInDirection(self.end, direction) : self.getCellInDirection(self.end, direction),
             endChanged = newEnd && newEnd !== self.end;
 
         if (newEnd) {
@@ -1165,6 +1179,15 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
 
         return originCell;
     };
+    self.getLastSelectableCellInDirection = function (originCell, direction) {
+        var nextCell = originCell;
+        do {
+            cell = nextCell;
+            nextCell = self.getSelectableCellInDirection(cell, direction);
+        } while(nextCell !== cell);
+
+        return cell;
+    };
     self.getCellsInArea = function (startCell, endCell) {
         var startX = Math.min(getCellIndex(startCell), getCellIndex(endCell)),
             startY = Math.min(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
@@ -1224,5 +1247,5 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         return colSpanSum;
     }
 }
-},{"events":13,"./polyfill":6}]},{},[1])
+},{"events":13,"./polyfill":4}]},{},[1])
 ;

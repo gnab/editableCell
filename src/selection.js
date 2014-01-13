@@ -174,6 +174,17 @@ function Selection (table, selectionMappings) {
                 return tuple[1] === table;
         })[0];
     }
+    function updateSelectionMapping(newStartOrEnd) {
+        var newTable = newStartOrEnd && newStartOrEnd.parentNode && newStartOrEnd.parentNode.parentNode.parentNode;
+
+        if (newTable !== table) {
+            var mapping = getSelectionMappingForTable(newTable);
+            if (mapping) {
+                var selection = mapping[0]();
+                selection([newStartOrEnd]);
+            }
+        }
+    }
     self.onCellMouseDown = function (cell, shiftKey) {
         if (shiftKey) {
             self.range.setEnd(cell);
@@ -226,12 +237,16 @@ function Selection (table, selectionMappings) {
             newStartOrEnd = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode]);
             newTable = newStartOrEnd && newStartOrEnd.parentNode && newStartOrEnd.parentNode.parentNode.parentNode;
 
-            if (newTable !== table) {
-                var mapping = getSelectionMappingForTable(newTable);
-                if (mapping) {
-                    var selection = mapping[0]();
-                    selection([newStartOrEnd]);
-                }
+            updateSelectionMapping(newStartOrEnd);
+        } else if(event.ctrlKey) {
+            if(event.shiftKey){
+                // Extend selection all the way to the end.
+                newStartOrEnd = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode], true);
+            }
+            else {
+                // Move selection all the way to the end.
+                newStartOrEnd = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode], true);
+                updateSelectionMapping(newStartOrEnd);
             }
         }
 
