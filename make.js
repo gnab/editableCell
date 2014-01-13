@@ -17,7 +17,7 @@ target.lint = function () {
 
 target.bundle = function () {
   console.log('Bundling...');
-  run('browserify src/standalone.js', {silent: true}).output.to('out/editableCell.js');
+  run('browserify -s editableCell src/editableCell.js', {silent: true}).output.to('out/editableCell.js');
 };
 
 target.minify = function () {
