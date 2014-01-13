@@ -16,7 +16,8 @@
     "phantomjs": "1.9.2-6",
     "should": "1.2.2",
     "jshint": "2.1.2",
-    "shelljs": "0.1.4"
+    "shelljs": "0.1.4",
+    "jquery": "2.1.0-beta3"
   },
   "scripts": {
     "test": "node make test"
