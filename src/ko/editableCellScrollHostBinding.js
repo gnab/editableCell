@@ -1,9 +1,9 @@
 var utils = require('./utils');
 
-var editableCellViewport = {
+var editableCellScrollHost = {
     init: function (element) {
         if (element.tagName !== 'TABLE') {
-            throw new Error('editableCellViewport binding can only be applied to tables');
+            throw new Error('editableCellScrollHost binding can only be applied to tables');
         }
 
         utils.initializeSelection(element);
@@ -11,10 +11,10 @@ var editableCellViewport = {
     update: function (element, valueAccessor) {
         var table = element,
             selection = table._cellSelection,
-            viewport = ko.utils.unwrapObservable(valueAccessor());
+            scrollHost = ko.utils.unwrapObservable(valueAccessor());
 
-        selection.setViewport(viewport);
+        selection.setScrollHost(scrollHost);
     }
 };
 
-module.exports = editableCellViewport;
+module.exports = editableCellScrollHost;

@@ -49,9 +49,9 @@ function Selection (table, selectionMappings) {
     };
 
     self.focus = self.view.focus;
-
-    self.setViewport = function (viewport) {
-        self.view.viewport = viewport;
+    
+    self.setScrollHost = function (scrollHost) {
+        self.view.scrollHost = scrollHost;
     };
 
     self.registerCell = function (cell) {

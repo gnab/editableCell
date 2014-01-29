@@ -6,8 +6,6 @@ function SelectionView (table, selection) {
     var self = this,
         html = document.getElementsByTagName('html')[0];
 
-    self.viewport = {};
-
     self.element = document.createElement('div');
     self.element.className = 'editable-cell-selection';
     self.element.style.position = 'absolute';
@@ -48,17 +46,17 @@ function SelectionView (table, selection) {
         self.element.focus();
 
         var margin = 10,
-            viewportTop = resolve(self.viewport.top) || 0,
-            viewportBottom = resolve(self.viewport.bottom) || window.innerHeight,
+            scrollHost = self.scrollHost || document.body,
+            viewport = scrollHost.getBoundingClientRect(),
             rect = selection.getRange().end.getBoundingClientRect(),
-            topOffset = rect.top - margin - viewportTop,
-            bottomOffset = viewportBottom - rect.bottom - margin;
+            topOffset = rect.top - margin - viewport.top,
+            bottomOffset = viewport.bottom - rect.bottom - margin;
 
         if (topOffset < 0) {
-            document.body.scrollTop += topOffset;
+            scrollHost.scrollTop += topOffset;
         }
         else if (bottomOffset < 0) {
-            document.body.scrollTop -= bottomOffset;
+            scrollHost.scrollTop -= bottomOffset;
         }
     };
     

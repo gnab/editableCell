@@ -28,7 +28,7 @@ var polyfill = require('../polyfill');
 var bindingHandlers = {
     editableCell: require('./editableCellBinding'),
     editableCellSelection: require('./editableCellSelectionBinding'),
-    editableCellViewport: require('./editableCellViewportBinding'),
+    editableCellScrollHost: require('./editableCellScrollHostBinding')
 };
 
 // Register Knockout binding handlers if Knockout is loaded
@@ -37,7 +37,7 @@ if (typeof ko !== 'undefined') {
         ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
     }
 }
-},{"../polyfill":3,"./editableCellBinding":4,"./editableCellSelectionBinding":5,"./editableCellViewportBinding":6}],3:[function(require,module,exports){
+},{"../polyfill":3,"./editableCellSelectionBinding":4,"./editableCellScrollHostBinding":5,"./editableCellBinding":6}],3:[function(require,module,exports){
 function forEach (list, f) {
   var i;
 
@@ -82,68 +82,6 @@ function extend (object) {
   };
 }
 },{}],4:[function(require,module,exports){
-var utils = require('./utils');
-
-var editableCell = {
-    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        var table = $(element).parents('table')[0],
-            selection = utils.initializeSelection(table),
-            valueBindingName = 'editableCell';
-
-        selection.registerCell(element);
-
-        if (allBindingsAccessor().cellValue) {
-            valueBindingName = 'cellValue';
-            valueAccessor = function () { return allBindingsAccessor().cellValue; };
-        }
-
-        element._cellTemplated = element.innerHTML.trim() !== '';
-        element._cellValue = valueAccessor;
-        element._cellText = function () { return allBindingsAccessor().cellText || this._cellValue(); };
-        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
-        element._cellValueUpdater = function (newValue) {
-            utils.updateBindingValue(valueBindingName, this._cellValue, allBindingsAccessor, newValue);
-
-            if (!ko.isObservable(this._cellValue())) {
-                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
-            }
-        };
-
-        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
-            selection.unregisterCell(element);
-
-            element._cellValue = null;
-            element._cellText = null;
-            element._cellReadOnly = null;
-            element._cellValueUpdater = null;
-        });
-
-        if (element._cellTemplated) {
-            ko.utils.domData.set(element, 'editableCellTemplate', {});
-            return { 'controlsDescendantBindings': true };
-        }
-    },
-    update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        if (element._cellTemplated) {
-            var template = ko.utils.domData.get(element, 'editableCellTemplate');
-
-            if (!template.savedNodes) {
-                template.savedNodes = utils.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
-            }
-            else {
-                ko.virtualElements.setDomNodeChildren(element, utils.cloneNodes(template.savedNodes));
-            }
-
-            ko.applyBindingsToDescendants(bindingContext.createChildContext(ko.utils.unwrapObservable(valueAccessor())), element);
-        }
-        else {
-            element.textContent = ko.utils.unwrapObservable(element._cellText());
-        }
-    }
-};
-
-module.exports = editableCell;
-},{"./utils":7}],5:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellSelection = {
@@ -228,13 +166,13 @@ var editableCellSelection = {
 };
 
 module.exports = editableCellSelection;
-},{"./utils":7}],6:[function(require,module,exports){
+},{"./utils":7}],5:[function(require,module,exports){
 var utils = require('./utils');
 
-var editableCellViewport = {
+var editableCellScrollHost = {
     init: function (element) {
         if (element.tagName !== 'TABLE') {
-            throw new Error('editableCellViewport binding can only be applied to tables');
+            throw new Error('editableCellScrollHost binding can only be applied to tables');
         }
 
         utils.initializeSelection(element);
@@ -242,13 +180,75 @@ var editableCellViewport = {
     update: function (element, valueAccessor) {
         var table = element,
             selection = table._cellSelection,
-            viewport = ko.utils.unwrapObservable(valueAccessor());
+            scrollHost = ko.utils.unwrapObservable(valueAccessor());
 
-        selection.setViewport(viewport);
+        selection.setScrollHost(scrollHost);
     }
 };
 
-module.exports = editableCellViewport;
+module.exports = editableCellScrollHost;
+},{"./utils":7}],6:[function(require,module,exports){
+var utils = require('./utils');
+
+var editableCell = {
+    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var table = $(element).parents('table')[0],
+            selection = utils.initializeSelection(table),
+            valueBindingName = 'editableCell';
+
+        selection.registerCell(element);
+
+        if (allBindingsAccessor().cellValue) {
+            valueBindingName = 'cellValue';
+            valueAccessor = function () { return allBindingsAccessor().cellValue; };
+        }
+
+        element._cellTemplated = element.innerHTML.trim() !== '';
+        element._cellValue = valueAccessor;
+        element._cellText = function () { return allBindingsAccessor().cellText || this._cellValue(); };
+        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
+        element._cellValueUpdater = function (newValue) {
+            utils.updateBindingValue(valueBindingName, this._cellValue, allBindingsAccessor, newValue);
+
+            if (!ko.isObservable(this._cellValue())) {
+                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
+            }
+        };
+
+        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
+            selection.unregisterCell(element);
+
+            element._cellValue = null;
+            element._cellText = null;
+            element._cellReadOnly = null;
+            element._cellValueUpdater = null;
+        });
+
+        if (element._cellTemplated) {
+            ko.utils.domData.set(element, 'editableCellTemplate', {});
+            return { 'controlsDescendantBindings': true };
+        }
+    },
+    update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        if (element._cellTemplated) {
+            var template = ko.utils.domData.get(element, 'editableCellTemplate');
+
+            if (!template.savedNodes) {
+                template.savedNodes = utils.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
+            }
+            else {
+                ko.virtualElements.setDomNodeChildren(element, utils.cloneNodes(template.savedNodes));
+            }
+
+            ko.applyBindingsToDescendants(bindingContext.createChildContext(ko.utils.unwrapObservable(valueAccessor())), element);
+        }
+        else {
+            element.textContent = ko.utils.unwrapObservable(element._cellText());
+        }
+    }
+};
+
+module.exports = editableCell;
 },{"./utils":7}],7:[function(require,module,exports){
 var Selection = require('../selection');
 
@@ -590,9 +590,9 @@ function Selection (table, selectionMappings) {
     };
 
     self.focus = self.view.focus;
-
-    self.setViewport = function (viewport) {
-        self.view.viewport = viewport;
+    
+    self.setScrollHost = function (scrollHost) {
+        self.view.scrollHost = scrollHost;
     };
 
     self.registerCell = function (cell) {
@@ -881,8 +881,6 @@ function SelectionView (table, selection) {
     var self = this,
         html = document.getElementsByTagName('html')[0];
 
-    self.viewport = {};
-
     self.element = document.createElement('div');
     self.element.className = 'editable-cell-selection';
     self.element.style.position = 'absolute';
@@ -923,17 +921,17 @@ function SelectionView (table, selection) {
         self.element.focus();
 
         var margin = 10,
-            viewportTop = resolve(self.viewport.top) || 0,
-            viewportBottom = resolve(self.viewport.bottom) || window.innerHeight,
+            scrollHost = self.scrollHost || document.body,
+            viewport = scrollHost.getBoundingClientRect(),
             rect = selection.getRange().end.getBoundingClientRect(),
-            topOffset = rect.top - margin - viewportTop,
-            bottomOffset = viewportBottom - rect.bottom - margin;
+            topOffset = rect.top - margin - viewport.top,
+            bottomOffset = viewport.bottom - rect.bottom - margin;
 
         if (topOffset < 0) {
-            document.body.scrollTop += topOffset;
+            scrollHost.scrollTop += topOffset;
         }
         else if (bottomOffset < 0) {
-            document.body.scrollTop -= bottomOffset;
+            scrollHost.scrollTop -= bottomOffset;
         }
     };
     

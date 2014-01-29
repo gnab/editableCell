@@ -38,7 +38,7 @@ require('should');
 require('./test/ko/editableCellBindingTest.js');
 require('./test/ko/editableCellSelectionBindingTest.js');
 require('./test/utils.js');
-},{"./test/ko/editableCellBindingTest.js":3,"./test/utils.js":1,"./test/ko/editableCellSelectionBindingTest.js":4,"should":5}],3:[function(require,module,exports){
+},{"./test/ko/editableCellBindingTest.js":3,"./test/ko/editableCellSelectionBindingTest.js":4,"./test/utils.js":1,"should":5}],3:[function(require,module,exports){
 var editableCell = require('../../src/editableCell');
 var utils = require('../utils');
 
@@ -7625,7 +7625,7 @@ var polyfill = require('../polyfill');
 var bindingHandlers = {
     editableCell: require('./editableCellBinding'),
     editableCellSelection: require('./editableCellSelectionBinding'),
-    editableCellViewport: require('./editableCellViewportBinding'),
+    editableCellScrollHost: require('./editableCellScrollHostBinding')
 };
 
 // Register Knockout binding handlers if Knockout is loaded
@@ -7634,7 +7634,7 @@ if (typeof ko !== 'undefined') {
         ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
     }
 }
-},{"./editableCellSelectionBinding":21,"./editableCellBinding":22,"../polyfill":23,"./editableCellViewportBinding":24}],23:[function(require,module,exports){
+},{"../polyfill":21,"./editableCellBinding":22,"./editableCellSelectionBinding":23,"./editableCellScrollHostBinding":24}],21:[function(require,module,exports){
 function forEach (list, f) {
   var i;
 
@@ -7812,92 +7812,7 @@ var indexOf = function (xs, x) {
 };
 
 })()
-},{"stream":17,"buffer":10,"./response":20,"concat-stream":25}],21:[function(require,module,exports){
-var utils = require('./utils');
-
-var editableCellSelection = {
-    _selectionMappings: [],
-
-    init: function (element, valueAccessor, allBindingsAccessor) {
-        if (element.tagName !== 'TABLE') {
-            throw new Error('editableCellSelection binding can only be applied to tables');
-        }
-
-        var table = element,
-            selection = utils.initializeSelection(table);
-
-        // Update supplied observable array when selection range changes
-        selection.on('change', rangeChanged);
-
-        function rangeChanged (newSelection) {
-            newSelection = ko.utils.arrayMap(newSelection, function (cell) {
-                return {
-                    cell: cell,
-                    value: cell._cellValue(),
-                    text: cell._cellText()
-                };
-            });
-
-            utils.updateBindingValue('editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
-        }
-
-        // Keep track of selections
-        ko.bindingHandlers.editableCellSelection._selectionMappings.push([valueAccessor, table]);
-
-        // Perform clean-up when table is removed from DOM
-        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
-            // Remove selection from list
-            var selectionIndex = ko.utils.arrayFirst(ko.bindingHandlers.editableCellSelection._selectionMappings, function (tuple) {
-                return tuple[0] === valueAccessor;
-            });
-            ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
-
-            // Remove event listener
-            selection.removeListener('change', rangeChanged);
-        });
-    },
-    update: function (element, valueAccessor, allBindingsAccessor) {
-        var table = element,
-            selection = table._cellSelection,
-            newSelection = ko.utils.unwrapObservable(valueAccessor()) || [];
-
-        // Empty selection, so simply clear it out
-        if (newSelection.length === 0) {
-            selection.clear();
-            return;
-        }
-
-        var start = newSelection[0],
-            end = newSelection[newSelection.length - 1];
-
-        var isDirectUpdate = start.tagName === 'TD' || start.tagName === 'TH';
-
-        // Notification of changed selection, either after programmatic  
-        // update or after changing current selection in user interface
-        if (!isDirectUpdate) {
-            start = start.cell;
-            end = end.cell;
-        }
-
-        // Make sure selected cells belongs to current table, or else hide selection
-        var parentRowHidden = !start.parentNode;
-        var belongingToOtherTable = start.parentNode && start.parentNode.parentNode.parentNode !== table;
-
-        if (parentRowHidden || belongingToOtherTable) {
-            // Selection cannot be cleared, since that will affect selection in other table
-            selection.view.hide();
-            return;
-        }
-
-        // Programmatic update of selection, i.e. selection([startCell, endCell]);
-        if (isDirectUpdate) {
-            selection.setRange(start, end);
-        }
-    }
-};
-
-module.exports = editableCellSelection;
-},{"./utils":26}],25:[function(require,module,exports){
+},{"stream":17,"buffer":10,"./response":20,"concat-stream":25}],25:[function(require,module,exports){
 (function(Buffer){var stream = require('stream')
 var util = require('util')
 
@@ -8010,13 +7925,98 @@ var editableCell = {
 };
 
 module.exports = editableCell;
+},{"./utils":26}],23:[function(require,module,exports){
+var utils = require('./utils');
+
+var editableCellSelection = {
+    _selectionMappings: [],
+
+    init: function (element, valueAccessor, allBindingsAccessor) {
+        if (element.tagName !== 'TABLE') {
+            throw new Error('editableCellSelection binding can only be applied to tables');
+        }
+
+        var table = element,
+            selection = utils.initializeSelection(table);
+
+        // Update supplied observable array when selection range changes
+        selection.on('change', rangeChanged);
+
+        function rangeChanged (newSelection) {
+            newSelection = ko.utils.arrayMap(newSelection, function (cell) {
+                return {
+                    cell: cell,
+                    value: cell._cellValue(),
+                    text: cell._cellText()
+                };
+            });
+
+            utils.updateBindingValue('editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
+        }
+
+        // Keep track of selections
+        ko.bindingHandlers.editableCellSelection._selectionMappings.push([valueAccessor, table]);
+
+        // Perform clean-up when table is removed from DOM
+        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
+            // Remove selection from list
+            var selectionIndex = ko.utils.arrayFirst(ko.bindingHandlers.editableCellSelection._selectionMappings, function (tuple) {
+                return tuple[0] === valueAccessor;
+            });
+            ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
+
+            // Remove event listener
+            selection.removeListener('change', rangeChanged);
+        });
+    },
+    update: function (element, valueAccessor, allBindingsAccessor) {
+        var table = element,
+            selection = table._cellSelection,
+            newSelection = ko.utils.unwrapObservable(valueAccessor()) || [];
+
+        // Empty selection, so simply clear it out
+        if (newSelection.length === 0) {
+            selection.clear();
+            return;
+        }
+
+        var start = newSelection[0],
+            end = newSelection[newSelection.length - 1];
+
+        var isDirectUpdate = start.tagName === 'TD' || start.tagName === 'TH';
+
+        // Notification of changed selection, either after programmatic  
+        // update or after changing current selection in user interface
+        if (!isDirectUpdate) {
+            start = start.cell;
+            end = end.cell;
+        }
+
+        // Make sure selected cells belongs to current table, or else hide selection
+        var parentRowHidden = !start.parentNode;
+        var belongingToOtherTable = start.parentNode && start.parentNode.parentNode.parentNode !== table;
+
+        if (parentRowHidden || belongingToOtherTable) {
+            // Selection cannot be cleared, since that will affect selection in other table
+            selection.view.hide();
+            return;
+        }
+
+        // Programmatic update of selection, i.e. selection([startCell, endCell]);
+        if (isDirectUpdate) {
+            selection.setRange(start, end);
+        }
+    }
+};
+
+module.exports = editableCellSelection;
 },{"./utils":26}],24:[function(require,module,exports){
 var utils = require('./utils');
 
-var editableCellViewport = {
+var editableCellScrollHost = {
     init: function (element) {
         if (element.tagName !== 'TABLE') {
-            throw new Error('editableCellViewport binding can only be applied to tables');
+            throw new Error('editableCellScrollHost binding can only be applied to tables');
         }
 
         utils.initializeSelection(element);
@@ -8024,13 +8024,13 @@ var editableCellViewport = {
     update: function (element, valueAccessor) {
         var table = element,
             selection = table._cellSelection,
-            viewport = ko.utils.unwrapObservable(valueAccessor());
+            scrollHost = ko.utils.unwrapObservable(valueAccessor());
 
-        selection.setViewport(viewport);
+        selection.setScrollHost(scrollHost);
     }
 };
 
-module.exports = editableCellViewport;
+module.exports = editableCellScrollHost;
 },{"./utils":26}],26:[function(require,module,exports){
 var Selection = require('../selection');
 
@@ -8132,9 +8132,9 @@ function Selection (table, selectionMappings) {
     };
 
     self.focus = self.view.focus;
-
-    self.setViewport = function (viewport) {
-        self.view.viewport = viewport;
+    
+    self.setScrollHost = function (scrollHost) {
+        self.view.scrollHost = scrollHost;
     };
 
     self.registerCell = function (cell) {
@@ -8414,7 +8414,7 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"events":8,"./selectionView":28,"./selectionRange":29,"./polyfill":23}],28:[function(require,module,exports){
+},{"events":8,"./selectionView":28,"./selectionRange":29,"./polyfill":21}],28:[function(require,module,exports){
 var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
@@ -8422,8 +8422,6 @@ module.exports = SelectionView;
 function SelectionView (table, selection) {
     var self = this,
         html = document.getElementsByTagName('html')[0];
-
-    self.viewport = {};
 
     self.element = document.createElement('div');
     self.element.className = 'editable-cell-selection';
@@ -8465,17 +8463,17 @@ function SelectionView (table, selection) {
         self.element.focus();
 
         var margin = 10,
-            viewportTop = resolve(self.viewport.top) || 0,
-            viewportBottom = resolve(self.viewport.bottom) || window.innerHeight,
+            scrollHost = self.scrollHost || document.body,
+            viewport = scrollHost.getBoundingClientRect(),
             rect = selection.getRange().end.getBoundingClientRect(),
-            topOffset = rect.top - margin - viewportTop,
-            bottomOffset = viewportBottom - rect.bottom - margin;
+            topOffset = rect.top - margin - viewport.top,
+            bottomOffset = viewport.bottom - rect.bottom - margin;
 
         if (topOffset < 0) {
-            document.body.scrollTop += topOffset;
+            scrollHost.scrollTop += topOffset;
         }
         else if (bottomOffset < 0) {
-            document.body.scrollTop -= bottomOffset;
+            scrollHost.scrollTop -= bottomOffset;
         }
     };
     
@@ -8625,7 +8623,7 @@ function SelectionView (table, selection) {
 
     html.addEventListener("mouseup", self.onMouseUp);
 }
-},{"./polyfill":23}],29:[function(require,module,exports){
+},{"./polyfill":21}],29:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill');
 
@@ -8820,5 +8818,5 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         return colSpanSum;
     }
 }
-},{"events":8,"./polyfill":23}]},{},[2])
+},{"events":8,"./polyfill":21}]},{},[2])
 ;

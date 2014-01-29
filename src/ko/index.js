@@ -4,7 +4,7 @@ var polyfill = require('../polyfill');
 var bindingHandlers = {
     editableCell: require('./editableCellBinding'),
     editableCellSelection: require('./editableCellSelectionBinding'),
-    editableCellViewport: require('./editableCellViewportBinding'),
+    editableCellScrollHost: require('./editableCellScrollHostBinding')
 };
 
 // Register Knockout binding handlers if Knockout is loaded
