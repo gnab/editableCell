@@ -143,7 +143,9 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         for (x = startX; x <= endX; ++x) {
             for (y = startY; y <= endY; ++y) {
                 cell = getCellByIndex(getRowByIndex(y), x);
-                cells.push(cell || {});
+                if(cellIsVisible(cell)) {
+                    cells.push(cell || {});
+                }
             }
         }
 

@@ -235,7 +235,6 @@ function Selection (table, selectionMappings) {
         }
     };
     self.onCellFocus = function (event) {
-        console.log('focus');
         if (event.target === range.start) {
             return;
         }
@@ -264,11 +263,11 @@ function Selection (table, selectionMappings) {
         } else if(event.ctrlKey) {
             if(event.shiftKey){
                 // Extend selection all the way to the end.
-                newStartOrEnd = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode], true);
+                newStartOrEnd = range.extendInDirection(self.keyCodeIdentifier[event.keyCode], true);
             }
             else {
                 // Move selection all the way to the end.
-                newStartOrEnd = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode], true);
+                newStartOrEnd = range.moveInDirection(self.keyCodeIdentifier[event.keyCode], true);
                 updateSelectionMapping(newStartOrEnd);
             }
         }
