@@ -38,7 +38,83 @@ require('should');
 require('./test/ko/editableCellBindingTest.js');
 require('./test/ko/editableCellSelectionBindingTest.js');
 require('./test/utils.js');
-},{"./test/ko/editableCellBindingTest.js":3,"./test/ko/editableCellSelectionBindingTest.js":4,"./test/utils.js":1,"should":5}],4:[function(require,module,exports){
+},{"./test/ko/editableCellBindingTest.js":3,"./test/utils.js":1,"./test/ko/editableCellSelectionBindingTest.js":4,"should":5}],3:[function(require,module,exports){
+var editableCell = require('../../src/editableCell');
+var utils = require('../utils');
+
+describe('editableCell binding', function () {
+    it('should be registered with Knockout', function () {
+        ko.bindingHandlers.should.have.property('editableCell');
+    });
+
+    describe('cell value initial assignment', function () {
+        it('should assign constant value', function () {
+            var cell = utils.createCell("editableCell: 'value'");
+
+            ko.applyBindings({}, cell);
+
+            cell.innerHTML.should.equal('value');
+        });
+
+        it('should assign variable value', function () {
+            var cell = utils.createCell("editableCell: variable");
+
+            ko.applyBindings({variable: 'value'}, cell);
+
+            cell.innerHTML.should.equal('value');
+        });
+
+        it('should assign observable value', function () {
+            var cell = utils.createCell("editableCell: observable");
+
+            ko.applyBindings({observable: ko.observable('value')}, cell);
+
+            cell.innerHTML.should.equal('value');
+        });
+
+        it('should prefer cellText helper binding', function () {
+            var cell = utils.createCell("editableCell: 'value', cellText: 'text'");
+
+            ko.applyBindings({}, cell);
+
+            cell.innerHTML.should.equal('text');
+        });
+
+        it('should prefer template', function () {
+            var cell = utils.createCell("editableCell: 'value'");
+            cell.appendChild(utils.createElement('span', "text: 'template'"));
+
+            ko.applyBindings({}, cell);
+
+            cell.innerHTML.should.equal(
+                '<span data-bind="text: \'template\'">template</span>');
+        });
+    });
+
+    describe('cell value synchronization', function () {
+        it('should reassign cell value when observable value changes', function () {
+            var cell = utils.createCell("editableCell: observable");
+            var observable = ko.observable('value');
+
+            ko.applyBindings({observable: observable}, cell);
+
+            observable('updated value');
+            cell.innerHTML.should.equal('updated value');
+        });
+
+        it('should update observable value when cell value changes', function () {
+            var cell = utils.createCell("editableCell: observable") ;
+            var observable = ko.observable('value');
+
+            ko.applyBindings({observable: observable}, cell);
+
+            editableCell.setCellValue(cell, 'updated value');
+
+            observable().should.equal('updated value');
+        });
+    });
+});
+},{"../../src/editableCell":6,"../utils":1}],4:[function(require,module,exports){
 var editableCell = require('../../src/editableCell');
 var utils = require('../utils');
 
@@ -121,83 +197,7 @@ describe('editableCellSelection binding', function () {
         });
     });
 });
-},{"../../src/editableCell":6,"../utils":1}],3:[function(require,module,exports){
-var editableCell = require('../../src/editableCell');
-var utils = require('../utils');
-
-describe('editableCell binding', function () {
-    it('should be registered with Knockout', function () {
-        ko.bindingHandlers.should.have.property('editableCell');
-    });
-
-    describe('cell value initial assignment', function () {
-        it('should assign constant value', function () {
-            var cell = utils.createCell("editableCell: 'value'");
-
-            ko.applyBindings({}, cell);
-
-            cell.innerHTML.should.equal('value');
-        });
-
-        it('should assign variable value', function () {
-            var cell = utils.createCell("editableCell: variable");
-
-            ko.applyBindings({variable: 'value'}, cell);
-
-            cell.innerHTML.should.equal('value');
-        });
-
-        it('should assign observable value', function () {
-            var cell = utils.createCell("editableCell: observable");
-
-            ko.applyBindings({observable: ko.observable('value')}, cell);
-
-            cell.innerHTML.should.equal('value');
-        });
-
-        it('should prefer cellText helper binding', function () {
-            var cell = utils.createCell("editableCell: 'value', cellText: 'text'");
-
-            ko.applyBindings({}, cell);
-
-            cell.innerHTML.should.equal('text');
-        });
-
-        it('should prefer template', function () {
-            var cell = utils.createCell("editableCell: 'value'");
-            cell.appendChild(utils.createElement('span', "text: 'template'"));
-
-            ko.applyBindings({}, cell);
-
-            cell.innerHTML.should.equal(
-                '<span data-bind="text: \'template\'">template</span>');
-        });
-    });
-
-    describe('cell value synchronization', function () {
-        it('should reassign cell value when observable value changes', function () {
-            var cell = utils.createCell("editableCell: observable");
-            var observable = ko.observable('value');
-
-            ko.applyBindings({observable: observable}, cell);
-
-            observable('updated value');
-            cell.innerHTML.should.equal('updated value');
-        });
-
-        it('should update observable value when cell value changes', function () {
-            var cell = utils.createCell("editableCell: observable") ;
-            var observable = ko.observable('value');
-
-            ko.applyBindings({observable: observable}, cell);
-
-            editableCell.setCellValue(cell, 'updated value');
-
-            observable().should.equal('updated value');
-        });
-    });
-});
-},{"../utils":1,"../../src/editableCell":6}],7:[function(require,module,exports){
+},{"../../src/editableCell":6,"../utils":1}],7:[function(require,module,exports){
 var events = require('events');
 
 exports.isArray = isArray;
@@ -5885,92 +5885,6 @@ exports.setCellValue = function (cell, value) {
     selection.updateCellValue(cell, value);
 };
 },{"./ko":16}],17:[function(require,module,exports){
-exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
-  var e, m,
-      eLen = nBytes * 8 - mLen - 1,
-      eMax = (1 << eLen) - 1,
-      eBias = eMax >> 1,
-      nBits = -7,
-      i = isBE ? 0 : (nBytes - 1),
-      d = isBE ? 1 : -1,
-      s = buffer[offset + i];
-
-  i += d;
-
-  e = s & ((1 << (-nBits)) - 1);
-  s >>= (-nBits);
-  nBits += eLen;
-  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8);
-
-  m = e & ((1 << (-nBits)) - 1);
-  e >>= (-nBits);
-  nBits += mLen;
-  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8);
-
-  if (e === 0) {
-    e = 1 - eBias;
-  } else if (e === eMax) {
-    return m ? NaN : ((s ? -1 : 1) * Infinity);
-  } else {
-    m = m + Math.pow(2, mLen);
-    e = e - eBias;
-  }
-  return (s ? -1 : 1) * m * Math.pow(2, e - mLen);
-};
-
-exports.writeIEEE754 = function(buffer, value, offset, isBE, mLen, nBytes) {
-  var e, m, c,
-      eLen = nBytes * 8 - mLen - 1,
-      eMax = (1 << eLen) - 1,
-      eBias = eMax >> 1,
-      rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0),
-      i = isBE ? (nBytes - 1) : 0,
-      d = isBE ? -1 : 1,
-      s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0;
-
-  value = Math.abs(value);
-
-  if (isNaN(value) || value === Infinity) {
-    m = isNaN(value) ? 1 : 0;
-    e = eMax;
-  } else {
-    e = Math.floor(Math.log(value) / Math.LN2);
-    if (value * (c = Math.pow(2, -e)) < 1) {
-      e--;
-      c *= 2;
-    }
-    if (e + eBias >= 1) {
-      value += rt / c;
-    } else {
-      value += rt * Math.pow(2, 1 - eBias);
-    }
-    if (value * c >= 2) {
-      e++;
-      c /= 2;
-    }
-
-    if (e + eBias >= eMax) {
-      m = 0;
-      e = eMax;
-    } else if (e + eBias >= 1) {
-      m = (value * c - 1) * Math.pow(2, mLen);
-      e = e + eBias;
-    } else {
-      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen);
-      e = 0;
-    }
-  }
-
-  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8);
-
-  e = (e << mLen) | m;
-  eLen += mLen;
-  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8);
-
-  buffer[offset + i - d] |= s * 128;
-};
-
-},{}],18:[function(require,module,exports){
 var events = require('events');
 var util = require('util');
 
@@ -6091,7 +6005,93 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":8,"util":7}],10:[function(require,module,exports){
+},{"events":8,"util":7}],18:[function(require,module,exports){
+exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
+  var e, m,
+      eLen = nBytes * 8 - mLen - 1,
+      eMax = (1 << eLen) - 1,
+      eBias = eMax >> 1,
+      nBits = -7,
+      i = isBE ? 0 : (nBytes - 1),
+      d = isBE ? 1 : -1,
+      s = buffer[offset + i];
+
+  i += d;
+
+  e = s & ((1 << (-nBits)) - 1);
+  s >>= (-nBits);
+  nBits += eLen;
+  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8);
+
+  m = e & ((1 << (-nBits)) - 1);
+  e >>= (-nBits);
+  nBits += mLen;
+  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8);
+
+  if (e === 0) {
+    e = 1 - eBias;
+  } else if (e === eMax) {
+    return m ? NaN : ((s ? -1 : 1) * Infinity);
+  } else {
+    m = m + Math.pow(2, mLen);
+    e = e - eBias;
+  }
+  return (s ? -1 : 1) * m * Math.pow(2, e - mLen);
+};
+
+exports.writeIEEE754 = function(buffer, value, offset, isBE, mLen, nBytes) {
+  var e, m, c,
+      eLen = nBytes * 8 - mLen - 1,
+      eMax = (1 << eLen) - 1,
+      eBias = eMax >> 1,
+      rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0),
+      i = isBE ? (nBytes - 1) : 0,
+      d = isBE ? -1 : 1,
+      s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0;
+
+  value = Math.abs(value);
+
+  if (isNaN(value) || value === Infinity) {
+    m = isNaN(value) ? 1 : 0;
+    e = eMax;
+  } else {
+    e = Math.floor(Math.log(value) / Math.LN2);
+    if (value * (c = Math.pow(2, -e)) < 1) {
+      e--;
+      c *= 2;
+    }
+    if (e + eBias >= 1) {
+      value += rt / c;
+    } else {
+      value += rt * Math.pow(2, 1 - eBias);
+    }
+    if (value * c >= 2) {
+      e++;
+      c /= 2;
+    }
+
+    if (e + eBias >= eMax) {
+      m = 0;
+      e = eMax;
+    } else if (e + eBias >= 1) {
+      m = (value * c - 1) * Math.pow(2, mLen);
+      e = e + eBias;
+    } else {
+      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen);
+      e = 0;
+    }
+  }
+
+  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8);
+
+  e = (e << mLen) | m;
+  eLen += mLen;
+  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8);
+
+  buffer[offset + i - d] |= s * 128;
+};
+
+},{}],10:[function(require,module,exports){
 (function(){function SlowBuffer (size) {
     this.length = size;
 };
@@ -7411,7 +7411,7 @@ SlowBuffer.prototype.writeDoubleLE = Buffer.prototype.writeDoubleLE;
 SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 
 })()
-},{"assert":9,"./buffer_ieee754":17,"base64-js":19}],19:[function(require,module,exports){
+},{"assert":9,"./buffer_ieee754":18,"base64-js":19}],19:[function(require,module,exports){
 (function (exports) {
 	'use strict';
 
@@ -7618,7 +7618,7 @@ var isArray = Array.isArray || function (xs) {
     return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{"stream":18}],16:[function(require,module,exports){
+},{"stream":17}],16:[function(require,module,exports){
 var polyfill = require('../polyfill');
 
 // Knockout binding handlers
@@ -7634,7 +7634,7 @@ if (typeof ko !== 'undefined') {
         ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
     }
 }
-},{"../polyfill":21,"./editableCellSelectionBinding":22,"./editableCellBinding":23,"./editableCellViewportBinding":24}],21:[function(require,module,exports){
+},{"./editableCellSelectionBinding":21,"./editableCellBinding":22,"../polyfill":23,"./editableCellViewportBinding":24}],23:[function(require,module,exports){
 function forEach (list, f) {
   var i;
 
@@ -7812,7 +7812,7 @@ var indexOf = function (xs, x) {
 };
 
 })()
-},{"stream":18,"buffer":10,"./response":20,"concat-stream":25}],22:[function(require,module,exports){
+},{"stream":17,"buffer":10,"./response":20,"concat-stream":25}],21:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellSelection = {
@@ -7897,28 +7897,58 @@ var editableCellSelection = {
 };
 
 module.exports = editableCellSelection;
-},{"./utils":26}],24:[function(require,module,exports){
-var utils = require('./utils');
+},{"./utils":26}],25:[function(require,module,exports){
+(function(Buffer){var stream = require('stream')
+var util = require('util')
 
-var editableCellViewport = {
-    init: function (element) {
-        if (element.tagName !== 'TABLE') {
-            throw new Error('editableCellViewport binding can only be applied to tables');
-        }
+function ConcatStream(cb) {
+  stream.Stream.call(this)
+  this.writable = true
+  if (cb) this.cb = cb
+  this.body = []
+  if (this.cb) this.on('error', cb)
+}
 
-        utils.initializeSelection(element);
-    },
-    update: function (element, valueAccessor) {
-        var table = element,
-            selection = table._cellSelection,
-            viewport = ko.utils.unwrapObservable(valueAccessor());
+util.inherits(ConcatStream, stream.Stream)
 
-        selection.setViewport(viewport);
-    }
-};
+ConcatStream.prototype.write = function(chunk) {
+  this.body.push(chunk)
+}
 
-module.exports = editableCellViewport;
-},{"./utils":26}],23:[function(require,module,exports){
+ConcatStream.prototype.arrayConcat = function(arrs) {
+  if (arrs.length === 0) return []
+  if (arrs.length === 1) return arrs[0]
+  return arrs.reduce(function (a, b) { return a.concat(b) })
+}
+
+ConcatStream.prototype.isArray = function(arr) {
+  var isArray = Array.isArray(arr)
+  var isTypedArray = arr.toString().match(/Array/)
+  return isArray || isTypedArray
+}
+
+ConcatStream.prototype.getBody = function () {
+  if (this.body.length === 0) return
+  if (typeof(this.body[0]) === "string") return this.body.join('')
+  if (this.isArray(this.body[0])) return this.arrayConcat(this.body)
+  if (typeof(Buffer) !== "undefined" && Buffer.isBuffer(this.body[0])) {
+    return Buffer.concat(this.body)
+  }
+  return this.body
+}
+
+ConcatStream.prototype.end = function() {
+  if (this.cb) this.cb(false, this.getBody())
+}
+
+module.exports = function(cb) {
+  return new ConcatStream(cb)
+}
+
+module.exports.ConcatStream = ConcatStream
+
+})(require("__browserify_buffer").Buffer)
+},{"stream":17,"util":7,"__browserify_buffer":15}],22:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCell = {
@@ -7980,58 +8010,28 @@ var editableCell = {
 };
 
 module.exports = editableCell;
-},{"./utils":26}],25:[function(require,module,exports){
-(function(Buffer){var stream = require('stream')
-var util = require('util')
+},{"./utils":26}],24:[function(require,module,exports){
+var utils = require('./utils');
 
-function ConcatStream(cb) {
-  stream.Stream.call(this)
-  this.writable = true
-  if (cb) this.cb = cb
-  this.body = []
-  if (this.cb) this.on('error', cb)
-}
+var editableCellViewport = {
+    init: function (element) {
+        if (element.tagName !== 'TABLE') {
+            throw new Error('editableCellViewport binding can only be applied to tables');
+        }
 
-util.inherits(ConcatStream, stream.Stream)
+        utils.initializeSelection(element);
+    },
+    update: function (element, valueAccessor) {
+        var table = element,
+            selection = table._cellSelection,
+            viewport = ko.utils.unwrapObservable(valueAccessor());
 
-ConcatStream.prototype.write = function(chunk) {
-  this.body.push(chunk)
-}
+        selection.setViewport(viewport);
+    }
+};
 
-ConcatStream.prototype.arrayConcat = function(arrs) {
-  if (arrs.length === 0) return []
-  if (arrs.length === 1) return arrs[0]
-  return arrs.reduce(function (a, b) { return a.concat(b) })
-}
-
-ConcatStream.prototype.isArray = function(arr) {
-  var isArray = Array.isArray(arr)
-  var isTypedArray = arr.toString().match(/Array/)
-  return isArray || isTypedArray
-}
-
-ConcatStream.prototype.getBody = function () {
-  if (this.body.length === 0) return
-  if (typeof(this.body[0]) === "string") return this.body.join('')
-  if (this.isArray(this.body[0])) return this.arrayConcat(this.body)
-  if (typeof(Buffer) !== "undefined" && Buffer.isBuffer(this.body[0])) {
-    return Buffer.concat(this.body)
-  }
-  return this.body
-}
-
-ConcatStream.prototype.end = function() {
-  if (this.cb) this.cb(false, this.getBody())
-}
-
-module.exports = function(cb) {
-  return new ConcatStream(cb)
-}
-
-module.exports.ConcatStream = ConcatStream
-
-})(require("__browserify_buffer").Buffer)
-},{"stream":18,"util":7,"__browserify_buffer":15}],26:[function(require,module,exports){
+module.exports = editableCellViewport;
+},{"./utils":26}],26:[function(require,module,exports){
 var Selection = require('../selection');
 
 module.exports = {
@@ -8346,11 +8346,11 @@ function Selection (table, selectionMappings) {
         } else if(event.ctrlKey) {
             if(event.shiftKey){
                 // Extend selection all the way to the end.
-                newStartOrEnd = self.range.extendInDirection(self.keyCodeIdentifier[event.keyCode], true);
+                newStartOrEnd = range.extendInDirection(self.keyCodeIdentifier[event.keyCode], true);
             }
             else {
                 // Move selection all the way to the end.
-                newStartOrEnd = self.range.moveInDirection(self.keyCodeIdentifier[event.keyCode], true);
+                newStartOrEnd = range.moveInDirection(self.keyCodeIdentifier[event.keyCode], true);
                 updateSelectionMapping(newStartOrEnd);
             }
         }
@@ -8414,7 +8414,7 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"events":8,"./selectionView":28,"./selectionRange":29,"./polyfill":21}],28:[function(require,module,exports){
+},{"events":8,"./selectionView":28,"./selectionRange":29,"./polyfill":23}],28:[function(require,module,exports){
 var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
@@ -8625,7 +8625,7 @@ function SelectionView (table, selection) {
 
     html.addEventListener("mouseup", self.onMouseUp);
 }
-},{"./polyfill":21}],29:[function(require,module,exports){
+},{"./polyfill":23}],29:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill');
 
@@ -8820,5 +8820,5 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         return colSpanSum;
     }
 }
-},{"events":8,"./polyfill":21}]},{},[2])
+},{"events":8,"./polyfill":23}]},{},[2])
 ;
