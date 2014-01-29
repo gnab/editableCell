@@ -317,8 +317,7 @@ process.nextTick = (function () {
     if (canPost) {
         var queue = [];
         window.addEventListener('message', function (ev) {
-            var source = ev.source;
-            if ((source === window || source === null) && ev.data === 'process-tick') {
+            if (ev.source === window && ev.data === 'process-tick') {
                 ev.stopPropagation();
                 if (queue.length > 0) {
                     var fn = queue.shift();
@@ -777,7 +776,6 @@ function Selection (table, selectionMappings) {
         }
     };
     self.onCellFocus = function (event) {
-        console.log('focus');
         if (event.target === range.start) {
             return;
         }
@@ -1231,7 +1229,9 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         for (x = startX; x <= endX; ++x) {
             for (y = startY; y <= endY; ++y) {
                 cell = getCellByIndex(getRowByIndex(y), x);
-                cells.push(cell || {});
+                if(cellIsVisible(cell)) {
+                    cells.push(cell || {});
+                }
             }
         }
 

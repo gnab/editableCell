@@ -1,14 +1,15 @@
 ;(function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0].call(u.exports,function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({1:[function(require,module,exports){
 module.exports = {
     createCell: createCell,
-    createElement: createElement
+    createElement: createElement,
+    addCell: addCell
 };
 
 function createCell (dataBind) {
     var container = document.createElement('div'),
         table = document.createElement('table'),
         tbody = document.createElement('tbody'),
-        tr = document.createElement('tr'),
+        tr =  document.createElement('tr'),
         td = createElement('td', dataBind);
 
     container.appendChild(table);
@@ -26,12 +27,101 @@ function createElement (tag, dataBind) {
 
     return element;
 }
+
+function addCell (parentRow, dataBind) {
+    var td = createElement('td', dataBind);
+    parentRow.appendChild(td);
+    return td;
+}
 },{}],2:[function(require,module,exports){
 require('should');
 require('./test/ko/editableCellBindingTest.js');
 require('./test/ko/editableCellSelectionBindingTest.js');
 require('./test/utils.js');
-},{"./test/ko/editableCellBindingTest.js":3,"./test/ko/editableCellSelectionBindingTest.js":4,"./test/utils.js":1,"should":5}],3:[function(require,module,exports){
+},{"./test/ko/editableCellBindingTest.js":3,"./test/ko/editableCellSelectionBindingTest.js":4,"./test/utils.js":1,"should":5}],4:[function(require,module,exports){
+var editableCell = require('../../src/editableCell');
+var utils = require('../utils');
+
+describe('editableCellSelection binding', function () {
+    it('should be registered with Knockout', function () {
+        ko.bindingHandlers.should.have.property('editableCellSelection');
+    });
+
+    describe('selection synchronization', function () {
+        it('should be empty initially', function () {
+            var cell = utils.createCell("editableCell: 'value'");
+            var table = cell.parentNode.parentNode.parentNode;
+            var selection = ko.observableArray();
+
+            table.setAttribute('data-bind', 'editableCellSelection: selection');
+            document.body.appendChild(table);
+            ko.applyBindings({selection: selection}, table);
+
+            selection().should.eql([]);
+        });
+
+        it('should contain cell when selected', function () {
+            var cell = utils.createCell("editableCell: 'value'");
+            var table = cell.parentNode.parentNode.parentNode;
+            var selection = ko.observableArray();
+
+            table.setAttribute('data-bind', 'editableCellSelection: selection');
+            document.body.appendChild(table);
+            ko.applyBindings({selection: selection}, table);
+
+            editableCell.selectCell(cell);
+
+            selection().should.eql([{
+                cell: cell,
+                value: 'value',
+                text: 'value'
+            }]);
+        });
+
+        it('should select cell when updated', function () {
+            var cell = utils.createCell("editableCell: 'value'");
+            var table = cell.parentNode.parentNode.parentNode;
+            var selection = ko.observableArray();
+
+            table.setAttribute('data-bind', 'editableCellSelection: selection');
+            document.body.appendChild(table);
+            ko.applyBindings({selection: selection}, table);
+
+            selection([cell]);
+
+            editableCell.getTableSelection(table).getCells().should.eql([cell]);
+        });
+
+        it('should not contain hidden cells', function () {
+            var aCell = utils.createCell("editableCell: 'a'");
+            var row = aCell.parentNode;
+            var table = row.parentNode.parentNode;
+            
+            var bCell = utils.addCell(row, "editableCell: 'b'");
+            var cCell = utils.addCell(row, "editableCell: 'c'");
+            bCell.style.display = 'none';
+
+            document.body.appendChild(table);
+
+            var selection = ko.observableArray();
+            table.setAttribute('data-bind', 'editableCellSelection: selection');
+            ko.applyBindings({selection: selection}, table);
+
+            selection([aCell, cCell]);
+
+            selection().should.eql([{
+                cell: aCell,
+                value: 'a',
+                text: 'a'
+            }, {
+                cell: cCell,
+                value: 'c',
+                text: 'c'
+            }]);
+        });
+    });
+});
+},{"../../src/editableCell":6,"../utils":1}],3:[function(require,module,exports){
 var editableCell = require('../../src/editableCell');
 var utils = require('../utils');
 
@@ -107,59 +197,7 @@ describe('editableCell binding', function () {
         });
     });
 });
-},{"../../src/editableCell":6,"../utils":1}],4:[function(require,module,exports){
-var editableCell = require('../../src/editableCell');
-var utils = require('../utils');
-
-describe('editableCellSelection binding', function () {
-    it('should be registered with Knockout', function () {
-        ko.bindingHandlers.should.have.property('editableCellSelection');
-    });
-
-    describe('selection synchronization', function () {
-        it('should be empty initially', function () {
-            var cell = utils.createCell("editableCell: 'value'");
-            var table = cell.parentNode.parentNode.parentNode;
-            var selection = ko.observableArray();
-
-            table.setAttribute('data-bind', 'editableCellSelection: selection');
-            ko.applyBindings({selection: selection}, table);
-
-            selection().should.eql([]);
-        });
-
-        it('should contain cell when selected', function () {
-            var cell = utils.createCell("editableCell: 'value'");
-            var table = cell.parentNode.parentNode.parentNode;
-            var selection = ko.observableArray();
-
-            table.setAttribute('data-bind', 'editableCellSelection: selection');
-            ko.applyBindings({selection: selection}, table);
-
-            editableCell.selectCell(cell);
-
-            selection().should.eql([{
-                cell: cell,
-                value: 'value',
-                text: 'value'
-            }]);
-        });
-
-        it('should select cell when updated', function () {
-            var cell = utils.createCell("editableCell: 'value'");
-            var table = cell.parentNode.parentNode.parentNode;
-            var selection = ko.observableArray();
-
-            table.setAttribute('data-bind', 'editableCellSelection: selection');
-            ko.applyBindings({selection: selection}, table);
-
-            selection([cell]);
-
-            editableCell.getTableSelection(table).getCells().should.eql([cell]);
-        });
-    });
-});
-},{"../../src/editableCell":6,"../utils":1}],7:[function(require,module,exports){
+},{"../utils":1,"../../src/editableCell":6}],7:[function(require,module,exports){
 var events = require('events');
 
 exports.isArray = isArray;
@@ -1580,8 +1618,7 @@ process.nextTick = (function () {
     if (canPost) {
         var queue = [];
         window.addEventListener('message', function (ev) {
-            var source = ev.source;
-            if ((source === window || source === null) && ev.data === 'process-tick') {
+            if (ev.source === window && ev.data === 'process-tick') {
                 ev.stopPropagation();
                 if (queue.length > 0) {
                     var fn = queue.shift();
@@ -7597,7 +7634,7 @@ if (typeof ko !== 'undefined') {
         ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
     }
 }
-},{"../polyfill":21,"./editableCellBinding":22,"./editableCellSelectionBinding":23,"./editableCellViewportBinding":24}],21:[function(require,module,exports){
+},{"../polyfill":21,"./editableCellSelectionBinding":22,"./editableCellBinding":23,"./editableCellViewportBinding":24}],21:[function(require,module,exports){
 function forEach (list, f) {
   var i;
 
@@ -7778,68 +7815,6 @@ var indexOf = function (xs, x) {
 },{"stream":18,"buffer":10,"./response":20,"concat-stream":25}],22:[function(require,module,exports){
 var utils = require('./utils');
 
-var editableCell = {
-    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        var table = $(element).parents('table')[0],
-            selection = utils.initializeSelection(table),
-            valueBindingName = 'editableCell';
-
-        selection.registerCell(element);
-
-        if (allBindingsAccessor().cellValue) {
-            valueBindingName = 'cellValue';
-            valueAccessor = function () { return allBindingsAccessor().cellValue; };
-        }
-
-        element._cellTemplated = element.innerHTML.trim() !== '';
-        element._cellValue = valueAccessor;
-        element._cellText = function () { return allBindingsAccessor().cellText || this._cellValue(); };
-        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
-        element._cellValueUpdater = function (newValue) {
-            utils.updateBindingValue(valueBindingName, this._cellValue, allBindingsAccessor, newValue);
-
-            if (!ko.isObservable(this._cellValue())) {
-                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
-            }
-        };
-
-        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
-            selection.unregisterCell(element);
-
-            element._cellValue = null;
-            element._cellText = null;
-            element._cellReadOnly = null;
-            element._cellValueUpdater = null;
-        });
-
-        if (element._cellTemplated) {
-            ko.utils.domData.set(element, 'editableCellTemplate', {});
-            return { 'controlsDescendantBindings': true };
-        }
-    },
-    update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        if (element._cellTemplated) {
-            var template = ko.utils.domData.get(element, 'editableCellTemplate');
-
-            if (!template.savedNodes) {
-                template.savedNodes = utils.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
-            }
-            else {
-                ko.virtualElements.setDomNodeChildren(element, utils.cloneNodes(template.savedNodes));
-            }
-
-            ko.applyBindingsToDescendants(bindingContext.createChildContext(ko.utils.unwrapObservable(valueAccessor())), element);
-        }
-        else {
-            element.textContent = ko.utils.unwrapObservable(element._cellText());
-        }
-    }
-};
-
-module.exports = editableCell;
-},{"./utils":26}],23:[function(require,module,exports){
-var utils = require('./utils');
-
 var editableCellSelection = {
     _selectionMappings: [],
 
@@ -7943,6 +7918,68 @@ var editableCellViewport = {
 };
 
 module.exports = editableCellViewport;
+},{"./utils":26}],23:[function(require,module,exports){
+var utils = require('./utils');
+
+var editableCell = {
+    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var table = $(element).parents('table')[0],
+            selection = utils.initializeSelection(table),
+            valueBindingName = 'editableCell';
+
+        selection.registerCell(element);
+
+        if (allBindingsAccessor().cellValue) {
+            valueBindingName = 'cellValue';
+            valueAccessor = function () { return allBindingsAccessor().cellValue; };
+        }
+
+        element._cellTemplated = element.innerHTML.trim() !== '';
+        element._cellValue = valueAccessor;
+        element._cellText = function () { return allBindingsAccessor().cellText || this._cellValue(); };
+        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
+        element._cellValueUpdater = function (newValue) {
+            utils.updateBindingValue(valueBindingName, this._cellValue, allBindingsAccessor, newValue);
+
+            if (!ko.isObservable(this._cellValue())) {
+                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
+            }
+        };
+
+        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
+            selection.unregisterCell(element);
+
+            element._cellValue = null;
+            element._cellText = null;
+            element._cellReadOnly = null;
+            element._cellValueUpdater = null;
+        });
+
+        if (element._cellTemplated) {
+            ko.utils.domData.set(element, 'editableCellTemplate', {});
+            return { 'controlsDescendantBindings': true };
+        }
+    },
+    update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        if (element._cellTemplated) {
+            var template = ko.utils.domData.get(element, 'editableCellTemplate');
+
+            if (!template.savedNodes) {
+                template.savedNodes = utils.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
+            }
+            else {
+                ko.virtualElements.setDomNodeChildren(element, utils.cloneNodes(template.savedNodes));
+            }
+
+            ko.applyBindingsToDescendants(bindingContext.createChildContext(ko.utils.unwrapObservable(valueAccessor())), element);
+        }
+        else {
+            element.textContent = ko.utils.unwrapObservable(element._cellText());
+        }
+    }
+};
+
+module.exports = editableCell;
 },{"./utils":26}],25:[function(require,module,exports){
 (function(Buffer){var stream = require('stream')
 var util = require('util')
@@ -8281,7 +8318,6 @@ function Selection (table, selectionMappings) {
         }
     };
     self.onCellFocus = function (event) {
-        console.log('focus');
         if (event.target === range.start) {
             return;
         }
@@ -8378,200 +8414,7 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"events":8,"./selectionRange":28,"./polyfill":21,"./selectionView":29}],28:[function(require,module,exports){
-var EventEmitter = require('events').EventEmitter,
-    polyfill = require('./polyfill');
-
-module.exports = SelectionRange;
-
-SelectionRange.prototype = new EventEmitter();
-
-function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
-    var self = this;
-
-    self.start = undefined;
-    self.end = undefined;
-    self.selection = [];
-
-    function setSelection (cells) {
-        self.selection = cells;
-        self.emit('change', cells);
-    }
-
-    self.moveInDirection = function (direction, toEnd) {
-        var newStart = toEnd ? self.getLastSelectableCellInDirection(self.start, direction) : self.getSelectableCellInDirection(self.start, direction),
-            startChanged = newStart !== self.start,
-            belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== self.start.parentNode.parentNode.parentNode;
-
-        if (!belongingToOtherTable && (startChanged || self.start !== self.end)) {
-            self.setStart(newStart);
-        }
-
-        if (startChanged) {
-            return newStart;
-        }
-    };
-
-    self.extendInDirection = function (direction, toEnd) {
-        var newEnd = toEnd ? self.getLastSelectableCellInDirection(self.end, direction) : self.getCellInDirection(self.end, direction),
-            endChanged = newEnd && newEnd !== self.end;
-
-        if (newEnd) {
-            self.setEnd(newEnd);    
-        }
-
-        if (endChanged) {
-            return newEnd;
-        }
-    };
-
-    self.getCells = function () {
-        return self.getCellsInArea(self.start, self.end);
-    };
-
-    self.clear = function () {
-        self.start = undefined;
-        self.end = undefined;
-        setSelection([]);
-    };
-
-    self.destroy = function () {
-        self.removeAllListeners('change');
-        self.clear();
-    };
-
-    self.setStart = function (element) {
-        self.start = element;
-        self.end = element;
-        setSelection(self.getCells());
-    };
-    self.setEnd = function (element) {
-        if (element === self.end) {
-            return;
-        }
-        self.start = self.start || element;
-
-        var cellsInArea = self.getCellsInArea(self.start, element),
-            allEditable = true;
-
-        cellsInArea.forEach(function (cell) {
-            allEditable = allEditable && cellIsSelectable(cell);
-        });
-
-        if (!allEditable) {
-            return;
-        }
-
-        self.end = element;
-        setSelection(self.getCells());
-    };
-    self.getCellInDirection = function (originCell, direction) {
-
-        var rowIndex = originCell.parentNode.rowIndex;
-        var cellIndex = getCellIndex(originCell);
-
-        var table = originCell.parentNode.parentNode.parentNode,
-            row = getRowByIndex(rowIndex + getDirectionYDelta(direction), table),
-            cell = row && getCellByIndex(row, cellIndex + getDirectionXDelta(direction, originCell));
-
-        if (direction === 'Left' && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-        if (direction === 'Up' && row && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-        if (direction === 'Right' && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-        if (direction === 'Down' && row && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-
-        return undefined;
-    };
-    self.getSelectableCellInDirection = function (originCell, direction) {
-        var lastCell,
-            cell = originCell;
-
-        while (cell) {
-            cell = self.getCellInDirection(cell, direction);
-
-            if (cell && cellIsSelectable(cell)) {
-                return cell;
-            }
-        }
-
-        return originCell;
-    };
-    self.getLastSelectableCellInDirection = function (originCell, direction) {
-        var nextCell = originCell;
-        do {
-            cell = nextCell;
-            nextCell = self.getSelectableCellInDirection(cell, direction);
-        } while(nextCell !== cell);
-
-        return cell;
-    };
-    self.getCellsInArea = function (startCell, endCell) {
-        var startX = Math.min(getCellIndex(startCell), getCellIndex(endCell)),
-            startY = Math.min(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
-            endX = Math.max(getCellIndex(startCell), getCellIndex(endCell)),
-            endY = Math.max(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
-            x, y,
-            cell,
-            cells = [];
-
-        for (x = startX; x <= endX; ++x) {
-            for (y = startY; y <= endY; ++y) {
-                cell = getCellByIndex(getRowByIndex(y), x);
-                cells.push(cell || {});
-            }
-        }
-
-        return cells;
-    };
-    
-    function getDirectionXDelta (direction, cell) {
-        if (direction === 'Left') {
-            return -1;
-        }
-
-        if (direction === 'Right') {
-            return cell.colSpan;
-        }
-
-        return 0;
-    }
-
-    function getDirectionYDelta (direction) {
-        if (direction === 'Up') {
-            return -1;
-        }
-
-        if (direction === 'Down') {
-            return 1;
-        }
-
-        return 0;
-    }
-
-    function getCellIndex (cell) {
-        var row = cell.parentNode,
-            colSpanSum = 0,
-            i;
-
-        for (i = 0; i < row.children.length; i++) {
-            if (row.children[i] === cell) {
-                break;
-            }
-
-            colSpanSum += row.children[i].colSpan;
-        }
-
-        return colSpanSum;
-    }
-}
-},{"events":8,"./polyfill":21}],29:[function(require,module,exports){
+},{"events":8,"./selectionView":28,"./selectionRange":29,"./polyfill":21}],28:[function(require,module,exports){
 var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
@@ -8782,5 +8625,200 @@ function SelectionView (table, selection) {
 
     html.addEventListener("mouseup", self.onMouseUp);
 }
-},{"./polyfill":21}]},{},[2])
+},{"./polyfill":21}],29:[function(require,module,exports){
+var EventEmitter = require('events').EventEmitter,
+    polyfill = require('./polyfill');
+
+module.exports = SelectionRange;
+
+SelectionRange.prototype = new EventEmitter();
+
+function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
+    var self = this;
+
+    self.start = undefined;
+    self.end = undefined;
+    self.selection = [];
+
+    function setSelection (cells) {
+        self.selection = cells;
+        self.emit('change', cells);
+    }
+
+    self.moveInDirection = function (direction, toEnd) {
+        var newStart = toEnd ? self.getLastSelectableCellInDirection(self.start, direction) : self.getSelectableCellInDirection(self.start, direction),
+            startChanged = newStart !== self.start,
+            belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== self.start.parentNode.parentNode.parentNode;
+
+        if (!belongingToOtherTable && (startChanged || self.start !== self.end)) {
+            self.setStart(newStart);
+        }
+
+        if (startChanged) {
+            return newStart;
+        }
+    };
+
+    self.extendInDirection = function (direction, toEnd) {
+        var newEnd = toEnd ? self.getLastSelectableCellInDirection(self.end, direction) : self.getCellInDirection(self.end, direction),
+            endChanged = newEnd && newEnd !== self.end;
+
+        if (newEnd) {
+            self.setEnd(newEnd);    
+        }
+
+        if (endChanged) {
+            return newEnd;
+        }
+    };
+
+    self.getCells = function () {
+        return self.getCellsInArea(self.start, self.end);
+    };
+
+    self.clear = function () {
+        self.start = undefined;
+        self.end = undefined;
+        setSelection([]);
+    };
+
+    self.destroy = function () {
+        self.removeAllListeners('change');
+        self.clear();
+    };
+
+    self.setStart = function (element) {
+        self.start = element;
+        self.end = element;
+        setSelection(self.getCells());
+    };
+    self.setEnd = function (element) {
+        if (element === self.end) {
+            return;
+        }
+        self.start = self.start || element;
+
+        var cellsInArea = self.getCellsInArea(self.start, element),
+            allEditable = true;
+
+        cellsInArea.forEach(function (cell) {
+            allEditable = allEditable && cellIsSelectable(cell);
+        });
+
+        if (!allEditable) {
+            return;
+        }
+
+        self.end = element;
+        setSelection(self.getCells());
+    };
+    self.getCellInDirection = function (originCell, direction) {
+
+        var rowIndex = originCell.parentNode.rowIndex;
+        var cellIndex = getCellIndex(originCell);
+
+        var table = originCell.parentNode.parentNode.parentNode,
+            row = getRowByIndex(rowIndex + getDirectionYDelta(direction), table),
+            cell = row && getCellByIndex(row, cellIndex + getDirectionXDelta(direction, originCell));
+
+        if (direction === 'Left' && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+        if (direction === 'Up' && row && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+        if (direction === 'Right' && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+        if (direction === 'Down' && row && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+
+        return undefined;
+    };
+    self.getSelectableCellInDirection = function (originCell, direction) {
+        var lastCell,
+            cell = originCell;
+
+        while (cell) {
+            cell = self.getCellInDirection(cell, direction);
+
+            if (cell && cellIsSelectable(cell)) {
+                return cell;
+            }
+        }
+
+        return originCell;
+    };
+    self.getLastSelectableCellInDirection = function (originCell, direction) {
+        var nextCell = originCell;
+        do {
+            cell = nextCell;
+            nextCell = self.getSelectableCellInDirection(cell, direction);
+        } while(nextCell !== cell);
+
+        return cell;
+    };
+    self.getCellsInArea = function (startCell, endCell) {
+        var startX = Math.min(getCellIndex(startCell), getCellIndex(endCell)),
+            startY = Math.min(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
+            endX = Math.max(getCellIndex(startCell), getCellIndex(endCell)),
+            endY = Math.max(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
+            x, y,
+            cell,
+            cells = [];
+
+        for (x = startX; x <= endX; ++x) {
+            for (y = startY; y <= endY; ++y) {
+                cell = getCellByIndex(getRowByIndex(y), x);
+                if(cellIsVisible(cell)) {
+                    cells.push(cell || {});
+                }
+            }
+        }
+
+        return cells;
+    };
+    
+    function getDirectionXDelta (direction, cell) {
+        if (direction === 'Left') {
+            return -1;
+        }
+
+        if (direction === 'Right') {
+            return cell.colSpan;
+        }
+
+        return 0;
+    }
+
+    function getDirectionYDelta (direction) {
+        if (direction === 'Up') {
+            return -1;
+        }
+
+        if (direction === 'Down') {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    function getCellIndex (cell) {
+        var row = cell.parentNode,
+            colSpanSum = 0,
+            i;
+
+        for (i = 0; i < row.children.length; i++) {
+            if (row.children[i] === cell) {
+                break;
+            }
+
+            colSpanSum += row.children[i].colSpan;
+        }
+
+        return colSpanSum;
+    }
+}
+},{"events":8,"./polyfill":21}]},{},[2])
 ;
