@@ -160,8 +160,8 @@ function Selection (table, selectionMappings) {
                 });
 
                 var tables = tableMappings.map(function (tuple) { return tuple[1]; });
-                var beforeTables = tables.filter(function (t) { return t.offsetTop + t.offsetHeight <= table.offsetTop; });
-                var afterTables = tables.filter(function (t) { return t.offsetTop >= table.offsetTop + table.offsetHeight; });
+                var beforeTables = tables.filter(function (t) { return t.getBoundingClientRect().bottom <= table.getBoundingClientRect().top; });
+                var afterTables = tables.filter(function (t) { return t.getBoundingClientRect().top >= table.getBoundingClientRect().bottom; });
 
                 // Moving upwards
                 if (index === -1 && beforeTables.length) {
