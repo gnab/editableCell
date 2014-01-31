@@ -2,6 +2,8 @@ var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
 
+SelectionView.prototype = {};
+
 function SelectionView (table, selection) {
     var self = this,
         html = document.getElementsByTagName('html')[0];
@@ -33,13 +35,15 @@ function SelectionView (table, selection) {
         self.element.removeEventListener('keydown', self.onKeyDown);
 
         self.inputElement.removeEventListener('keydown', self.onInputKeydown);
-        self.inputElement.removeEventListener('blur', self.onInputBlur);
+        self.inputElement.removeEventListener('blur', onInputBlur);
 
         html.removeEventListener('mouseup', self.onMouseUp);
 
         table.parentNode.removeChild(self.element);
         table.parentNode.removeChild(self.inputElement);
         table.removeChild(self.copyPasteElement);
+        
+        selection = null;
     };
     self.show = function () {
         self.element.style.display = 'block';
@@ -189,12 +193,12 @@ function SelectionView (table, selection) {
             }
         }
     };
-    self.onInputBlur = function (event) {
+    function onInputBlur (event) {
         if (!selection.isEditingCell()) {
             return;
         }
         selection.endEditingCell(selection.getRange().start);
-    };
+    }
 
     self.element.addEventListener("mousedown", self.onMouseDown);
     self.element.addEventListener("dblclick", self.onDblClick);
@@ -202,7 +206,7 @@ function SelectionView (table, selection) {
     self.element.addEventListener("keydown", self.onKeyDown);
 
     self.inputElement.addEventListener("keydown", self.onInputKeydown);
-    self.inputElement.addEventListener("blur", self.onInputBlur);
+    self.inputElement.addEventListener("blur", onInputBlur);
 
     html.addEventListener("mouseup", self.onMouseUp);
 }

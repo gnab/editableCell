@@ -56,7 +56,10 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
 
     self.destroy = function () {
         self.removeAllListeners('change');
-        self.clear();
+        self.start = undefined;
+        self.end = undefined;
+        self.selection = null;
+        self = null;
     };
 
     self.setStart = function (element) {
