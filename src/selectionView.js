@@ -2,6 +2,8 @@ var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
 
+SelectionView.prototype = {};
+
 function SelectionView (table, selection) {
     var self = this,
         html = document.getElementsByTagName('html')[0];
@@ -40,6 +42,15 @@ function SelectionView (table, selection) {
         table.parentNode.removeChild(self.element);
         table.parentNode.removeChild(self.inputElement);
         table.removeChild(self.copyPasteElement);
+        
+        html = null;
+        self.element = null;
+        self.inputElement = null;
+        self.copyPasteElement = null;
+        self.scrollHost = null;
+        self = null;
+        table = null;
+        selection = null;
     };
     self.show = function () {
         self.element.style.display = 'block';

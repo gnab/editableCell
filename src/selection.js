@@ -13,14 +13,14 @@ function Selection (table, selectionMappings) {
 
     self.view = new SelectionView(table, self);
 
-    range.on('change', function (newSelection) {
+/*    range.on('change', function (newSelection) {
         self.emit('change', newSelection);
         if (newSelection.length === 0) {
             self.view.hide();
             return;
         }
         self.view.update(newSelection[0], newSelection[newSelection.length - 1]);
-    });
+    });*/
 
     self.setRange = function (start, end) {
         range.setStart(start);
@@ -43,9 +43,14 @@ function Selection (table, selectionMappings) {
     self.destroy = function () {
         self.view.destroy();
         range.destroy();
+
         self.removeAllListeners();
 
         table._cellSelection = null;
+        self.view = null;
+        range = null;
+        self.focus = null;
+        self = null;
     };
 
     self.focus = self.view.focus;
@@ -55,25 +60,25 @@ function Selection (table, selectionMappings) {
     };
 
     self.registerCell = function (cell) {
-        cell.addEventListener("mousedown", self.onMouseDown);
-        cell.addEventListener("mouseover", self.onCellMouseOver);
-        cell.addEventListener("focus", self.onCellFocus);
+        cell.addEventListener("mousedown", onMouseDown);
+        cell.addEventListener("mouseover", onCellMouseOver);
+        cell.addEventListener("focus", onCellFocus);
     };
 
     self.unregisterCell = function (cell) {
-        cell.removeEventListener('mousedown', self.onMouseDown);
-        cell.removeEventListener('mouseover', self.onCellMouseOver);
-        cell.removeEventListener('focus', self.onCellFocus);
+        cell.removeEventListener('mousedown', onMouseDown);
+        cell.removeEventListener('mouseover', onCellMouseOver);
+        cell.removeEventListener('focus', onCellFocus);
     };
 
-    self.onMouseDown = function (event) {
+    function onMouseDown (event) {
         if (self.isEditingCell()) {
             return;
         }
 
         self.onCellMouseDown(this, event.shiftKey);
         event.preventDefault();
-    };
+    }
 
     self.updateCellValue = function (cell, newValue) {
         var value;
@@ -219,7 +224,7 @@ function Selection (table, selectionMappings) {
         self.view.beginDrag();
         event.preventDefault();
     };
-    self.onCellMouseOver = function (event) {
+    function onCellMouseOver (event) {
         var cell = event.target;
 
         if (!self.view.isDragging) {
@@ -233,8 +238,8 @@ function Selection (table, selectionMappings) {
         if (cell && cell !== range.end) {
             range.setEnd(cell);
         }
-    };
-    self.onCellFocus = function (event) {
+    }
+    function onCellFocus (event) {
         if (event.target === range.start) {
             return;
         }
@@ -242,7 +247,7 @@ function Selection (table, selectionMappings) {
         setTimeout(function () {
             range.setStart(event.target);
         }, 0);
-    };
+    }
     self.onReturn = function (event, preventMove) {
         if (preventMove !== true) {
             range.moveInDirection('Down');

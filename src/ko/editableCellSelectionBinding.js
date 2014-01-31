@@ -39,6 +39,9 @@ var editableCellSelection = {
 
             // Remove event listener
             selection.removeListener('change', rangeChanged);
+
+            table = null;
+            selection = null;
         });
     },
     update: function (element, valueAccessor, allBindingsAccessor) {
