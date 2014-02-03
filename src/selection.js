@@ -52,7 +52,7 @@ function Selection (table, selectionMappings) {
     };
 
     self.focus = function () {
-        self.view.focus;
+        self.view.focus();
     };
     
     self.setScrollHost = function (scrollHost) {
