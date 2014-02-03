@@ -49,6 +49,8 @@ function Selection (table, selectionMappings) {
         self.removeAllListeners();
 
         table._cellSelection = null;
+        table = null;
+        self = null;
     };
 
     self.focus = function () {

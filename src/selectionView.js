@@ -44,6 +44,7 @@ function SelectionView (table, selection) {
         table.removeChild(self.copyPasteElement);
         
         selection = null;
+        self = null;
     };
     self.show = function () {
         self.element.style.display = 'block';
