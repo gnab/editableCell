@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
+        <script type="text/javascript" src="http://knockoutjs.com/downloads/knockout-3.0.0.debug.js"></script>
+        <script type="text/javascript" src="out/editableCell.js"></script>
+        <style type="text/css">
+            @import url('http://getbootstrap.com/dist/css/bootstrap.css');
+
+            body    { padding: 30px; }
+            h3 code { font-size: 0.8em; }
+            input   { padding-left: 8px; }
+        </style>
+    </head>
+    <body>
+        <script type="text/javascript">
+            ko.bindingHandlers.tableColumns = {
+                init: function (element, valueAccessor) {
+                    var options = ko.unwrap(valueAccessor()),
+                        columnsObservableArray = options.columns,
+                        columns = ko.unwrap(columnsObservableArray),
+                        oldCount = ko.unwrap(options.count) || columns.length || 10,
+                        oldOffset = ko.unwrap(options.offset) || 0,
+                        cellTemplate = ko.unwrap(options.cellTemplate),
+                        templateContainer,
+                        templateCell;
+
+                    if (cellTemplate) {
+                        cellTemplate = document.getElementById(cellTemplate).innerHTML;
+                        templateContainer = document.createElement('tr');
+                        templateContainer.innerHTML = cellTemplate;
+                        templateCell = templateContainer.cells[0];
+                    }
+
+                    // Column changes
+                    // ==============
+                    columnsObservableArray.subscribe(function (changes) {
+                        var i, columns = ko.unwrap(columnsObservableArray);
+
+                        for (i = 0; i < changes.length; ++i) {
+                            if (changes[i].status === 'added') {
+                                ko.bindingHandlers.tableColumns.addColumn(element, changes[i].index, changes[i].value, oldOffset, oldCount, templateCell);
+                            }
+                            else if (changes[i].status === 'deleted') {
+                                ko.bindingHandlers.tableColumns.removeColumn(element, changes[i].index, oldOffset);
+
+                                if (changes[i].index <= oldOffset && changes[i].index + oldCount - 1 < columns.length) {
+                                    ko.bindingHandlers.tableColumns.showColumn(element, changes[i].index + oldCount - 1);
+                                }
+                            }
+
+                            console.log(changes[i]);
+                        }
+                    }, this, 'arrayChange');
+
+                    // Offset changes
+                    // ==============
+                    if (ko.isSubscribable(options.offset)) {
+                        // TODO: Clear subscription at some point
+                        options.offset.subscribe(function (newOffset) {
+                            columns = ko.unwrap(columnsObservableArray);
+                            ko.bindingHandlers.tableColumns.updateView(element, columns, newOffset, oldOffset, oldCount, oldCount)
+                        });
+                    }
+
+                    // Initial columns
+                    // ===============
+                    var i, display = element.style.display;
+
+                    console.time('Adding existing columns');
+                    for (i = 0; i < columns.length; ++i) {
+                        ko.bindingHandlers.tableColumns.addColumn(element, i, columns[i], oldOffset, oldCount, templateCell);
+                    }
+                    console.timeEnd('Adding existing columns');
+
+                    return { 'controlsDescendantBindings': true };
+                },
+                updateView: function (element, columns, newOffset, oldOffset, newCount, oldCount) {
+                    var i, toBeHidden, toBeShown;
+
+                    if (newOffset < 0 || newOffset + oldCount > columns.length) {
+                        return;
+                    }
+
+                    if (newOffset > oldOffset) {
+                        toBeHidden = ko.utils.range(oldOffset, newOffset);
+                        toBeHidden.pop();
+                        toBeShown = ko.utils.range(oldOffset + oldCount - 1, oldCount - 1 + newOffset);
+                        toBeShown.shift();
+                    }
+                    else if (newOffset < oldOffset) {
+                        toBeHidden = ko.utils.range(newOffset + oldCount, oldOffset + oldCount);
+                        toBeHidden.pop();
+                        toBeShown = ko.utils.range(newOffset, oldOffset);
+                        toBeShown.pop();
+                    }
+                    else {
+                        return;
+                    }
+
+                    for (i = 0; i < toBeHidden.length; ++i) {
+                        ko.bindingHandlers.tableColumns.hideColumn(element, toBeHidden[i]);
+                    }
+                    for (i = 0; i < toBeShown.length; ++i) {
+                        ko.bindingHandlers.tableColumns.showColumn(element, toBeShown[i]);
+                    }
+
+                    oldOffset = newOffset;
+                },
+                addColumn: function (element, index, cells, oldOffset, oldCount, templateCell) {
+                    var i, cell, row;
+
+                    for (i = 0; i < cells.length; ++i) {
+                        row = element.rows[i];
+
+                        if (!row) {
+                            row = document.createElement('tr');
+                            element.insertBefore(row, element.rows[i]);
+                        }
+
+                        if (templateCell) {
+                            cell = templateCell.cloneNode(true);
+                        }
+                        else {
+                            cell = document.createElement('td');
+                            cell.innerText = cells[i];    
+                        }
+                        
+                        if (index < oldOffset || index > oldOffset + oldCount - 1) {
+                            cell.style.display = 'none';
+                        }
+
+                        row.insertBefore(cell, row.cells[index]);
+
+                        if (templateCell) {
+                            ko.applyBindings({rowIndex: i, cellIndex: index}, cell);
+                        }
+                    }
+                },
+                removeColumn: function (element, index, oldOffset) {
+                    var rows = element.rows,
+                        i;
+
+                    for (i = 0; i < rows.length; ++i) {
+                        ko.removeNode(element.rows[i].cells[index]);
+                    }
+                },
+                showColumn: function (element, index) {
+                    var rows = element.rows,
+                        i;
+
+                    for (i = 0; i < rows.length; ++i) {
+                        element.rows[i].cells[index].style.display = 'table-cell';
+                    }
+                },
+                hideColumn: function (element, index) {
+                    var rows = element.rows,
+                        i;
+
+                    for (i = 0; i < rows.length; ++i) {
+                        element.rows[i].cells[index].style.display = 'none';
+                    }
+                }
+            };
+        </script>
+        <div id="container">
+            <h3><code>tableColumns</code> binding</h3>
+            <p><a href="./docs/knockout.editableCell.html">Documentation</a></p>
+            <table style="position: relative" class="table table-bordered table-condensed table-striped" data-bind="editableCellSelection: selection">
+                <!--thead>
+                    <tr>
+                        <th width="30%">Firstname (editable, non-observable)</th>
+                        <th width="30%">Surname (editable)</th>
+                        <th>Salary (read-only)</th>
+                        <th width="20%">Age (editable)</th>
+                    </tr>
+                </thead-->
+                <tbody data-bind="tableColumns: {columns: columns, offset: offset, count: count, cellTemplate: 'cell'}">
+                    <!-- ko2 foreach: entries 
+                    <tr>
+                        <td data-bind="editableCell: firstName" tabindex="0"></td>
+                        <td data-bind="editableCell: surName" tabindex="0"></td>
+                        <td data-bind="editableCell: 100, cellReadOnly: true" tabindex="0"></td>
+                        <td data-bind="editableCell: age" tabindex="0">
+                          <span data-bind="text: $data"></span> years
+                        </td>
+                    </tr>
+                    <!-- /ko -->
+                </tbody>
+            </table>
+            <p>Selection sum: <span data-bind="text: selectionSum"></span></p>
+        </div>
+        <script id="cell" type="text/html">
+            <td data-bind="editableCell: cellIndex + 1"></td>
+        </script>
+        <script type="text/javascript">
+            function ViewModel() {
+                var self = this;
+
+                var count = 0;
+                self.columns = ko.observableArray(ko.utils.range(1, 24).map(function () { return ko.utils.range(count++, count + 100); }));
+
+                self.addColumn = function () {
+                    self.columns.push(ko.utils.range(count++, count + 500));
+                };
+
+                self.moveRight = function () {
+                    self.offset(self.offset() + 1);
+                };
+
+                self.moveLeft = function () {
+                    self.offset(Math.max(0, self.offset() - 1));
+                };
+
+                self.offset = ko.observable(0);
+                self.count = ko.observable(24);
+
+                self.selection = ko.observableArray();
+
+                self.selectionSum = ko.computed(function () {
+                    return self.selection()
+                        .filter(function (cell) { return typeof ko.utils.unwrapObservable(cell.value) === 'number'; })
+                        .reduce(function (sum, cell) {
+                        return sum + ko.utils.unwrapObservable(cell.value);
+                    }, 0);
+                });
+            }
+
+            var viewModel = new ViewModel();
+
+            ko.applyBindings(viewModel);
+        </script>
+    </body>
+</html>
