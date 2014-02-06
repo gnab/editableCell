@@ -33,7 +33,7 @@ describe('editableCellSelection binding', function () {
             selection().should.eql([{
                 cell: cell,
                 value: 'value',
-                text: 'value'
+                content: 'value'
             }]);
         });
 
@@ -71,11 +71,11 @@ describe('editableCellSelection binding', function () {
             selection().should.eql([{
                 cell: aCell,
                 value: 'a',
-                text: 'a'
+                content: 'a'
             }, {
                 cell: cCell,
                 value: 'c',
-                text: 'c'
+                content: 'c'
             }]);
         });
     });

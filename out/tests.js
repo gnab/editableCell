@@ -38,90 +38,7 @@ require('should');
 require('./test/ko/editableCellBindingTest.js');
 require('./test/ko/editableCellSelectionBindingTest.js');
 require('./test/utils.js');
-},{"./test/ko/editableCellSelectionBindingTest.js":3,"./test/ko/editableCellBindingTest.js":4,"./test/utils.js":1,"should":5}],3:[function(require,module,exports){
-var editableCell = require('../../src/editableCell');
-var utils = require('../utils');
-
-describe('editableCellSelection binding', function () {
-    it('should be registered with Knockout', function () {
-        ko.bindingHandlers.should.have.property('editableCellSelection');
-    });
-
-    describe('selection synchronization', function () {
-        it('should be empty initially', function () {
-            var cell = utils.createCell("editableCell: 'value'");
-            var table = cell.parentNode.parentNode.parentNode;
-            var selection = ko.observableArray();
-
-            table.setAttribute('data-bind', 'editableCellSelection: selection');
-            document.body.appendChild(table);
-            ko.applyBindings({selection: selection}, table);
-
-            selection().should.eql([]);
-        });
-
-        it('should contain cell when selected', function () {
-            var cell = utils.createCell("editableCell: 'value'");
-            var table = cell.parentNode.parentNode.parentNode;
-            var selection = ko.observableArray();
-
-            table.setAttribute('data-bind', 'editableCellSelection: selection');
-            document.body.appendChild(table);
-            ko.applyBindings({selection: selection}, table);
-
-            editableCell.selectCell(cell);
-
-            selection().should.eql([{
-                cell: cell,
-                value: 'value',
-                text: 'value'
-            }]);
-        });
-
-        it('should select cell when updated', function () {
-            var cell = utils.createCell("editableCell: 'value'");
-            var table = cell.parentNode.parentNode.parentNode;
-            var selection = ko.observableArray();
-
-            table.setAttribute('data-bind', 'editableCellSelection: selection');
-            document.body.appendChild(table);
-            ko.applyBindings({selection: selection}, table);
-
-            selection([cell]);
-
-            editableCell.getTableSelection(table).getCells().should.eql([cell]);
-        });
-
-        it('should not contain hidden cells', function () {
-            var aCell = utils.createCell("editableCell: 'a'");
-            var row = aCell.parentNode;
-            var table = row.parentNode.parentNode;
-            
-            var bCell = utils.addCell(row, "editableCell: 'b'");
-            var cCell = utils.addCell(row, "editableCell: 'c'");
-            bCell.style.display = 'none';
-
-            document.body.appendChild(table);
-
-            var selection = ko.observableArray();
-            table.setAttribute('data-bind', 'editableCellSelection: selection');
-            ko.applyBindings({selection: selection}, table);
-
-            selection([aCell, cCell]);
-
-            selection().should.eql([{
-                cell: aCell,
-                value: 'a',
-                text: 'a'
-            }, {
-                cell: cCell,
-                value: 'c',
-                text: 'c'
-            }]);
-        });
-    });
-});
-},{"../../src/editableCell":6,"../utils":1}],4:[function(require,module,exports){
+},{"./test/ko/editableCellBindingTest.js":3,"./test/ko/editableCellSelectionBindingTest.js":4,"./test/utils.js":1,"should":5}],3:[function(require,module,exports){
 var editableCell = require('../../src/editableCell');
 var utils = require('../utils');
 
@@ -197,7 +114,407 @@ describe('editableCell binding', function () {
         });
     });
 });
+},{"../../src/editableCell":6,"../utils":1}],4:[function(require,module,exports){
+var editableCell = require('../../src/editableCell');
+var utils = require('../utils');
+
+describe('editableCellSelection binding', function () {
+    it('should be registered with Knockout', function () {
+        ko.bindingHandlers.should.have.property('editableCellSelection');
+    });
+
+    describe('selection synchronization', function () {
+        it('should be empty initially', function () {
+            var cell = utils.createCell("editableCell: 'value'");
+            var table = cell.parentNode.parentNode.parentNode;
+            var selection = ko.observableArray();
+
+            table.setAttribute('data-bind', 'editableCellSelection: selection');
+            document.body.appendChild(table);
+            ko.applyBindings({selection: selection}, table);
+
+            selection().should.eql([]);
+        });
+
+        it('should contain cell when selected', function () {
+            var cell = utils.createCell("editableCell: 'value'");
+            var table = cell.parentNode.parentNode.parentNode;
+            var selection = ko.observableArray();
+
+            table.setAttribute('data-bind', 'editableCellSelection: selection');
+            document.body.appendChild(table);
+            ko.applyBindings({selection: selection}, table);
+
+            editableCell.selectCell(cell);
+
+            selection().should.eql([{
+                cell: cell,
+                value: 'value',
+                content: 'value'
+            }]);
+        });
+
+        it('should select cell when updated', function () {
+            var cell = utils.createCell("editableCell: 'value'");
+            var table = cell.parentNode.parentNode.parentNode;
+            var selection = ko.observableArray();
+
+            table.setAttribute('data-bind', 'editableCellSelection: selection');
+            document.body.appendChild(table);
+            ko.applyBindings({selection: selection}, table);
+
+            selection([cell]);
+
+            editableCell.getTableSelection(table).getCells().should.eql([cell]);
+        });
+
+        it('should not contain hidden cells', function () {
+            var aCell = utils.createCell("editableCell: 'a'");
+            var row = aCell.parentNode;
+            var table = row.parentNode.parentNode;
+            
+            var bCell = utils.addCell(row, "editableCell: 'b'");
+            var cCell = utils.addCell(row, "editableCell: 'c'");
+            bCell.style.display = 'none';
+
+            document.body.appendChild(table);
+
+            var selection = ko.observableArray();
+            table.setAttribute('data-bind', 'editableCellSelection: selection');
+            ko.applyBindings({selection: selection}, table);
+
+            selection([aCell, cCell]);
+
+            selection().should.eql([{
+                cell: aCell,
+                value: 'a',
+                content: 'a'
+            }, {
+                cell: cCell,
+                value: 'c',
+                content: 'c'
+            }]);
+        });
+    });
+});
 },{"../../src/editableCell":6,"../utils":1}],7:[function(require,module,exports){
+(function(){// UTILITY
+var util = require('util');
+var Buffer = require("buffer").Buffer;
+var pSlice = Array.prototype.slice;
+
+function objectKeys(object) {
+  if (Object.keys) return Object.keys(object);
+  var result = [];
+  for (var name in object) {
+    if (Object.prototype.hasOwnProperty.call(object, name)) {
+      result.push(name);
+    }
+  }
+  return result;
+}
+
+// 1. The assert module provides functions that throw
+// AssertionError's when particular conditions are not met. The
+// assert module must conform to the following interface.
+
+var assert = module.exports = ok;
+
+// 2. The AssertionError is defined in assert.
+// new assert.AssertionError({ message: message,
+//                             actual: actual,
+//                             expected: expected })
+
+assert.AssertionError = function AssertionError(options) {
+  this.name = 'AssertionError';
+  this.message = options.message;
+  this.actual = options.actual;
+  this.expected = options.expected;
+  this.operator = options.operator;
+  var stackStartFunction = options.stackStartFunction || fail;
+
+  if (Error.captureStackTrace) {
+    Error.captureStackTrace(this, stackStartFunction);
+  }
+};
+util.inherits(assert.AssertionError, Error);
+
+function replacer(key, value) {
+  if (value === undefined) {
+    return '' + value;
+  }
+  if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) {
+    return value.toString();
+  }
+  if (typeof value === 'function' || value instanceof RegExp) {
+    return value.toString();
+  }
+  return value;
+}
+
+function truncate(s, n) {
+  if (typeof s == 'string') {
+    return s.length < n ? s : s.slice(0, n);
+  } else {
+    return s;
+  }
+}
+
+assert.AssertionError.prototype.toString = function() {
+  if (this.message) {
+    return [this.name + ':', this.message].join(' ');
+  } else {
+    return [
+      this.name + ':',
+      truncate(JSON.stringify(this.actual, replacer), 128),
+      this.operator,
+      truncate(JSON.stringify(this.expected, replacer), 128)
+    ].join(' ');
+  }
+};
+
+// assert.AssertionError instanceof Error
+
+assert.AssertionError.__proto__ = Error.prototype;
+
+// At present only the three keys mentioned above are used and
+// understood by the spec. Implementations or sub modules can pass
+// other keys to the AssertionError's constructor - they will be
+// ignored.
+
+// 3. All of the following functions must throw an AssertionError
+// when a corresponding condition is not met, with a message that
+// may be undefined if not provided.  All assertion methods provide
+// both the actual and expected values to the assertion error for
+// display purposes.
+
+function fail(actual, expected, message, operator, stackStartFunction) {
+  throw new assert.AssertionError({
+    message: message,
+    actual: actual,
+    expected: expected,
+    operator: operator,
+    stackStartFunction: stackStartFunction
+  });
+}
+
+// EXTENSION! allows for well behaved errors defined elsewhere.
+assert.fail = fail;
+
+// 4. Pure assertion tests whether a value is truthy, as determined
+// by !!guard.
+// assert.ok(guard, message_opt);
+// This statement is equivalent to assert.equal(true, guard,
+// message_opt);. To test strictly for the value true, use
+// assert.strictEqual(true, guard, message_opt);.
+
+function ok(value, message) {
+  if (!!!value) fail(value, true, message, '==', assert.ok);
+}
+assert.ok = ok;
+
+// 5. The equality assertion tests shallow, coercive equality with
+// ==.
+// assert.equal(actual, expected, message_opt);
+
+assert.equal = function equal(actual, expected, message) {
+  if (actual != expected) fail(actual, expected, message, '==', assert.equal);
+};
+
+// 6. The non-equality assertion tests for whether two objects are not equal
+// with != assert.notEqual(actual, expected, message_opt);
+
+assert.notEqual = function notEqual(actual, expected, message) {
+  if (actual == expected) {
+    fail(actual, expected, message, '!=', assert.notEqual);
+  }
+};
+
+// 7. The equivalence assertion tests a deep equality relation.
+// assert.deepEqual(actual, expected, message_opt);
+
+assert.deepEqual = function deepEqual(actual, expected, message) {
+  if (!_deepEqual(actual, expected)) {
+    fail(actual, expected, message, 'deepEqual', assert.deepEqual);
+  }
+};
+
+function _deepEqual(actual, expected) {
+  // 7.1. All identical values are equivalent, as determined by ===.
+  if (actual === expected) {
+    return true;
+
+  } else if (Buffer.isBuffer(actual) && Buffer.isBuffer(expected)) {
+    if (actual.length != expected.length) return false;
+
+    for (var i = 0; i < actual.length; i++) {
+      if (actual[i] !== expected[i]) return false;
+    }
+
+    return true;
+
+  // 7.2. If the expected value is a Date object, the actual value is
+  // equivalent if it is also a Date object that refers to the same time.
+  } else if (actual instanceof Date && expected instanceof Date) {
+    return actual.getTime() === expected.getTime();
+
+  // 7.3. Other pairs that do not both pass typeof value == 'object',
+  // equivalence is determined by ==.
+  } else if (typeof actual != 'object' && typeof expected != 'object') {
+    return actual == expected;
+
+  // 7.4. For all other Object pairs, including Array objects, equivalence is
+  // determined by having the same number of owned properties (as verified
+  // with Object.prototype.hasOwnProperty.call), the same set of keys
+  // (although not necessarily the same order), equivalent values for every
+  // corresponding key, and an identical 'prototype' property. Note: this
+  // accounts for both named and indexed properties on Arrays.
+  } else {
+    return objEquiv(actual, expected);
+  }
+}
+
+function isUndefinedOrNull(value) {
+  return value === null || value === undefined;
+}
+
+function isArguments(object) {
+  return Object.prototype.toString.call(object) == '[object Arguments]';
+}
+
+function objEquiv(a, b) {
+  if (isUndefinedOrNull(a) || isUndefinedOrNull(b))
+    return false;
+  // an identical 'prototype' property.
+  if (a.prototype !== b.prototype) return false;
+  //~~~I've managed to break Object.keys through screwy arguments passing.
+  //   Converting to array solves the problem.
+  if (isArguments(a)) {
+    if (!isArguments(b)) {
+      return false;
+    }
+    a = pSlice.call(a);
+    b = pSlice.call(b);
+    return _deepEqual(a, b);
+  }
+  try {
+    var ka = objectKeys(a),
+        kb = objectKeys(b),
+        key, i;
+  } catch (e) {//happens when one is a string literal and the other isn't
+    return false;
+  }
+  // having the same number of owned properties (keys incorporates
+  // hasOwnProperty)
+  if (ka.length != kb.length)
+    return false;
+  //the same set of keys (although not necessarily the same order),
+  ka.sort();
+  kb.sort();
+  //~~~cheap key test
+  for (i = ka.length - 1; i >= 0; i--) {
+    if (ka[i] != kb[i])
+      return false;
+  }
+  //equivalent values for every corresponding key, and
+  //~~~possibly expensive deep test
+  for (i = ka.length - 1; i >= 0; i--) {
+    key = ka[i];
+    if (!_deepEqual(a[key], b[key])) return false;
+  }
+  return true;
+}
+
+// 8. The non-equivalence assertion tests for any deep inequality.
+// assert.notDeepEqual(actual, expected, message_opt);
+
+assert.notDeepEqual = function notDeepEqual(actual, expected, message) {
+  if (_deepEqual(actual, expected)) {
+    fail(actual, expected, message, 'notDeepEqual', assert.notDeepEqual);
+  }
+};
+
+// 9. The strict equality assertion tests strict equality, as determined by ===.
+// assert.strictEqual(actual, expected, message_opt);
+
+assert.strictEqual = function strictEqual(actual, expected, message) {
+  if (actual !== expected) {
+    fail(actual, expected, message, '===', assert.strictEqual);
+  }
+};
+
+// 10. The strict non-equality assertion tests for strict inequality, as
+// determined by !==.  assert.notStrictEqual(actual, expected, message_opt);
+
+assert.notStrictEqual = function notStrictEqual(actual, expected, message) {
+  if (actual === expected) {
+    fail(actual, expected, message, '!==', assert.notStrictEqual);
+  }
+};
+
+function expectedException(actual, expected) {
+  if (!actual || !expected) {
+    return false;
+  }
+
+  if (expected instanceof RegExp) {
+    return expected.test(actual);
+  } else if (actual instanceof expected) {
+    return true;
+  } else if (expected.call({}, actual) === true) {
+    return true;
+  }
+
+  return false;
+}
+
+function _throws(shouldThrow, block, expected, message) {
+  var actual;
+
+  if (typeof expected === 'string') {
+    message = expected;
+    expected = null;
+  }
+
+  try {
+    block();
+  } catch (e) {
+    actual = e;
+  }
+
+  message = (expected && expected.name ? ' (' + expected.name + ').' : '.') +
+            (message ? ' ' + message : '.');
+
+  if (shouldThrow && !actual) {
+    fail('Missing expected exception' + message);
+  }
+
+  if (!shouldThrow && expectedException(actual, expected)) {
+    fail('Got unwanted exception' + message);
+  }
+
+  if ((shouldThrow && actual && expected &&
+      !expectedException(actual, expected)) || (!shouldThrow && actual)) {
+    throw actual;
+  }
+}
+
+// 11. Expected to throw an error:
+// assert.throws(block, Error_opt, message_opt);
+
+assert.throws = function(block, /*optional*/error, /*optional*/message) {
+  _throws.apply(this, [true].concat(pSlice.call(arguments)));
+};
+
+// EXTENSION! This is annoying to write outside this module.
+assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
+  _throws.apply(this, [false].concat(pSlice.call(arguments)));
+};
+
+assert.ifError = function(err) { if (err) {throw err;}};
+
+})()
+},{"util":8,"buffer":9}],8:[function(require,module,exports){
 var events = require('events');
 
 exports.isArray = isArray;
@@ -550,324 +867,7 @@ exports.format = function(f) {
   return str;
 };
 
-},{"events":8}],9:[function(require,module,exports){
-(function(){// UTILITY
-var util = require('util');
-var Buffer = require("buffer").Buffer;
-var pSlice = Array.prototype.slice;
-
-function objectKeys(object) {
-  if (Object.keys) return Object.keys(object);
-  var result = [];
-  for (var name in object) {
-    if (Object.prototype.hasOwnProperty.call(object, name)) {
-      result.push(name);
-    }
-  }
-  return result;
-}
-
-// 1. The assert module provides functions that throw
-// AssertionError's when particular conditions are not met. The
-// assert module must conform to the following interface.
-
-var assert = module.exports = ok;
-
-// 2. The AssertionError is defined in assert.
-// new assert.AssertionError({ message: message,
-//                             actual: actual,
-//                             expected: expected })
-
-assert.AssertionError = function AssertionError(options) {
-  this.name = 'AssertionError';
-  this.message = options.message;
-  this.actual = options.actual;
-  this.expected = options.expected;
-  this.operator = options.operator;
-  var stackStartFunction = options.stackStartFunction || fail;
-
-  if (Error.captureStackTrace) {
-    Error.captureStackTrace(this, stackStartFunction);
-  }
-};
-util.inherits(assert.AssertionError, Error);
-
-function replacer(key, value) {
-  if (value === undefined) {
-    return '' + value;
-  }
-  if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) {
-    return value.toString();
-  }
-  if (typeof value === 'function' || value instanceof RegExp) {
-    return value.toString();
-  }
-  return value;
-}
-
-function truncate(s, n) {
-  if (typeof s == 'string') {
-    return s.length < n ? s : s.slice(0, n);
-  } else {
-    return s;
-  }
-}
-
-assert.AssertionError.prototype.toString = function() {
-  if (this.message) {
-    return [this.name + ':', this.message].join(' ');
-  } else {
-    return [
-      this.name + ':',
-      truncate(JSON.stringify(this.actual, replacer), 128),
-      this.operator,
-      truncate(JSON.stringify(this.expected, replacer), 128)
-    ].join(' ');
-  }
-};
-
-// assert.AssertionError instanceof Error
-
-assert.AssertionError.__proto__ = Error.prototype;
-
-// At present only the three keys mentioned above are used and
-// understood by the spec. Implementations or sub modules can pass
-// other keys to the AssertionError's constructor - they will be
-// ignored.
-
-// 3. All of the following functions must throw an AssertionError
-// when a corresponding condition is not met, with a message that
-// may be undefined if not provided.  All assertion methods provide
-// both the actual and expected values to the assertion error for
-// display purposes.
-
-function fail(actual, expected, message, operator, stackStartFunction) {
-  throw new assert.AssertionError({
-    message: message,
-    actual: actual,
-    expected: expected,
-    operator: operator,
-    stackStartFunction: stackStartFunction
-  });
-}
-
-// EXTENSION! allows for well behaved errors defined elsewhere.
-assert.fail = fail;
-
-// 4. Pure assertion tests whether a value is truthy, as determined
-// by !!guard.
-// assert.ok(guard, message_opt);
-// This statement is equivalent to assert.equal(true, guard,
-// message_opt);. To test strictly for the value true, use
-// assert.strictEqual(true, guard, message_opt);.
-
-function ok(value, message) {
-  if (!!!value) fail(value, true, message, '==', assert.ok);
-}
-assert.ok = ok;
-
-// 5. The equality assertion tests shallow, coercive equality with
-// ==.
-// assert.equal(actual, expected, message_opt);
-
-assert.equal = function equal(actual, expected, message) {
-  if (actual != expected) fail(actual, expected, message, '==', assert.equal);
-};
-
-// 6. The non-equality assertion tests for whether two objects are not equal
-// with != assert.notEqual(actual, expected, message_opt);
-
-assert.notEqual = function notEqual(actual, expected, message) {
-  if (actual == expected) {
-    fail(actual, expected, message, '!=', assert.notEqual);
-  }
-};
-
-// 7. The equivalence assertion tests a deep equality relation.
-// assert.deepEqual(actual, expected, message_opt);
-
-assert.deepEqual = function deepEqual(actual, expected, message) {
-  if (!_deepEqual(actual, expected)) {
-    fail(actual, expected, message, 'deepEqual', assert.deepEqual);
-  }
-};
-
-function _deepEqual(actual, expected) {
-  // 7.1. All identical values are equivalent, as determined by ===.
-  if (actual === expected) {
-    return true;
-
-  } else if (Buffer.isBuffer(actual) && Buffer.isBuffer(expected)) {
-    if (actual.length != expected.length) return false;
-
-    for (var i = 0; i < actual.length; i++) {
-      if (actual[i] !== expected[i]) return false;
-    }
-
-    return true;
-
-  // 7.2. If the expected value is a Date object, the actual value is
-  // equivalent if it is also a Date object that refers to the same time.
-  } else if (actual instanceof Date && expected instanceof Date) {
-    return actual.getTime() === expected.getTime();
-
-  // 7.3. Other pairs that do not both pass typeof value == 'object',
-  // equivalence is determined by ==.
-  } else if (typeof actual != 'object' && typeof expected != 'object') {
-    return actual == expected;
-
-  // 7.4. For all other Object pairs, including Array objects, equivalence is
-  // determined by having the same number of owned properties (as verified
-  // with Object.prototype.hasOwnProperty.call), the same set of keys
-  // (although not necessarily the same order), equivalent values for every
-  // corresponding key, and an identical 'prototype' property. Note: this
-  // accounts for both named and indexed properties on Arrays.
-  } else {
-    return objEquiv(actual, expected);
-  }
-}
-
-function isUndefinedOrNull(value) {
-  return value === null || value === undefined;
-}
-
-function isArguments(object) {
-  return Object.prototype.toString.call(object) == '[object Arguments]';
-}
-
-function objEquiv(a, b) {
-  if (isUndefinedOrNull(a) || isUndefinedOrNull(b))
-    return false;
-  // an identical 'prototype' property.
-  if (a.prototype !== b.prototype) return false;
-  //~~~I've managed to break Object.keys through screwy arguments passing.
-  //   Converting to array solves the problem.
-  if (isArguments(a)) {
-    if (!isArguments(b)) {
-      return false;
-    }
-    a = pSlice.call(a);
-    b = pSlice.call(b);
-    return _deepEqual(a, b);
-  }
-  try {
-    var ka = objectKeys(a),
-        kb = objectKeys(b),
-        key, i;
-  } catch (e) {//happens when one is a string literal and the other isn't
-    return false;
-  }
-  // having the same number of owned properties (keys incorporates
-  // hasOwnProperty)
-  if (ka.length != kb.length)
-    return false;
-  //the same set of keys (although not necessarily the same order),
-  ka.sort();
-  kb.sort();
-  //~~~cheap key test
-  for (i = ka.length - 1; i >= 0; i--) {
-    if (ka[i] != kb[i])
-      return false;
-  }
-  //equivalent values for every corresponding key, and
-  //~~~possibly expensive deep test
-  for (i = ka.length - 1; i >= 0; i--) {
-    key = ka[i];
-    if (!_deepEqual(a[key], b[key])) return false;
-  }
-  return true;
-}
-
-// 8. The non-equivalence assertion tests for any deep inequality.
-// assert.notDeepEqual(actual, expected, message_opt);
-
-assert.notDeepEqual = function notDeepEqual(actual, expected, message) {
-  if (_deepEqual(actual, expected)) {
-    fail(actual, expected, message, 'notDeepEqual', assert.notDeepEqual);
-  }
-};
-
-// 9. The strict equality assertion tests strict equality, as determined by ===.
-// assert.strictEqual(actual, expected, message_opt);
-
-assert.strictEqual = function strictEqual(actual, expected, message) {
-  if (actual !== expected) {
-    fail(actual, expected, message, '===', assert.strictEqual);
-  }
-};
-
-// 10. The strict non-equality assertion tests for strict inequality, as
-// determined by !==.  assert.notStrictEqual(actual, expected, message_opt);
-
-assert.notStrictEqual = function notStrictEqual(actual, expected, message) {
-  if (actual === expected) {
-    fail(actual, expected, message, '!==', assert.notStrictEqual);
-  }
-};
-
-function expectedException(actual, expected) {
-  if (!actual || !expected) {
-    return false;
-  }
-
-  if (expected instanceof RegExp) {
-    return expected.test(actual);
-  } else if (actual instanceof expected) {
-    return true;
-  } else if (expected.call({}, actual) === true) {
-    return true;
-  }
-
-  return false;
-}
-
-function _throws(shouldThrow, block, expected, message) {
-  var actual;
-
-  if (typeof expected === 'string') {
-    message = expected;
-    expected = null;
-  }
-
-  try {
-    block();
-  } catch (e) {
-    actual = e;
-  }
-
-  message = (expected && expected.name ? ' (' + expected.name + ').' : '.') +
-            (message ? ' ' + message : '.');
-
-  if (shouldThrow && !actual) {
-    fail('Missing expected exception' + message);
-  }
-
-  if (!shouldThrow && expectedException(actual, expected)) {
-    fail('Got unwanted exception' + message);
-  }
-
-  if ((shouldThrow && actual && expected &&
-      !expectedException(actual, expected)) || (!shouldThrow && actual)) {
-    throw actual;
-  }
-}
-
-// 11. Expected to throw an error:
-// assert.throws(block, Error_opt, message_opt);
-
-assert.throws = function(block, /*optional*/error, /*optional*/message) {
-  _throws.apply(this, [true].concat(pSlice.call(arguments)));
-};
-
-// EXTENSION! This is annoying to write outside this module.
-assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
-  _throws.apply(this, [false].concat(pSlice.call(arguments)));
-};
-
-assert.ifError = function(err) { if (err) {throw err;}};
-
-})()
-},{"util":7,"buffer":10}],11:[function(require,module,exports){
+},{"events":10}],11:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -921,7 +921,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 (function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
 
 var EventEmitter = exports.EventEmitter = process.EventEmitter;
@@ -1839,7 +1839,7 @@ Assertion.prototype = {
 ('below', 'lessThan');
 
 
-},{"util":7,"http":12,"assert":9,"./eql":13}],12:[function(require,module,exports){
+},{"util":8,"http":12,"assert":7,"./eql":13}],12:[function(require,module,exports){
 var http = module.exports;
 var EventEmitter = require('events').EventEmitter;
 var Request = require('./lib/request');
@@ -1901,7 +1901,7 @@ var xhrHttp = (function () {
     }
 })();
 
-},{"events":8,"./lib/request":14}],15:[function(require,module,exports){
+},{"events":10,"./lib/request":14}],15:[function(require,module,exports){
 require=(function(e,t,n,r){function i(r){if(!n[r]){if(!t[r]){if(e)return e(r);throw new Error("Cannot find module '"+r+"'")}var s=n[r]={exports:{}};t[r][0](function(e){var n=t[r][1][e];return i(n?n:e)},s,s.exports)}return n[r].exports}for(var s=0;s<r.length;s++)i(r[s]);return i})(typeof require!=="undefined"&&require,{1:[function(require,module,exports){
 exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
   var e, m,
@@ -6091,7 +6091,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":8,"util":7}],10:[function(require,module,exports){
+},{"events":10,"util":8}],9:[function(require,module,exports){
 (function(){function SlowBuffer (size) {
     this.length = size;
 };
@@ -7411,7 +7411,7 @@ SlowBuffer.prototype.writeDoubleLE = Buffer.prototype.writeDoubleLE;
 SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 
 })()
-},{"assert":9,"./buffer_ieee754":17,"base64-js":19}],19:[function(require,module,exports){
+},{"assert":7,"./buffer_ieee754":17,"base64-js":19}],19:[function(require,module,exports){
 (function (exports) {
 	'use strict';
 
@@ -7812,58 +7812,7 @@ var indexOf = function (xs, x) {
 };
 
 })()
-},{"stream":18,"buffer":10,"./response":20,"concat-stream":25}],25:[function(require,module,exports){
-(function(Buffer){var stream = require('stream')
-var util = require('util')
-
-function ConcatStream(cb) {
-  stream.Stream.call(this)
-  this.writable = true
-  if (cb) this.cb = cb
-  this.body = []
-  if (this.cb) this.on('error', cb)
-}
-
-util.inherits(ConcatStream, stream.Stream)
-
-ConcatStream.prototype.write = function(chunk) {
-  this.body.push(chunk)
-}
-
-ConcatStream.prototype.arrayConcat = function(arrs) {
-  if (arrs.length === 0) return []
-  if (arrs.length === 1) return arrs[0]
-  return arrs.reduce(function (a, b) { return a.concat(b) })
-}
-
-ConcatStream.prototype.isArray = function(arr) {
-  var isArray = Array.isArray(arr)
-  var isTypedArray = arr.toString().match(/Array/)
-  return isArray || isTypedArray
-}
-
-ConcatStream.prototype.getBody = function () {
-  if (this.body.length === 0) return
-  if (typeof(this.body[0]) === "string") return this.body.join('')
-  if (this.isArray(this.body[0])) return this.arrayConcat(this.body)
-  if (typeof(Buffer) !== "undefined" && Buffer.isBuffer(this.body[0])) {
-    return Buffer.concat(this.body)
-  }
-  return this.body
-}
-
-ConcatStream.prototype.end = function() {
-  if (this.cb) this.cb(false, this.getBody())
-}
-
-module.exports = function(cb) {
-  return new ConcatStream(cb)
-}
-
-module.exports.ConcatStream = ConcatStream
-
-})(require("__browserify_buffer").Buffer)
-},{"stream":18,"util":7,"__browserify_buffer":15}],22:[function(require,module,exports){
+},{"stream":18,"buffer":9,"./response":20,"concat-stream":25}],22:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCell = {
@@ -7881,7 +7830,9 @@ var editableCell = {
 
         element._cellTemplated = element.innerHTML.trim() !== '';
         element._cellValue = valueAccessor;
-        element._cellText = function () { return allBindingsAccessor().cellText || this._cellValue(); };
+        element._cellContent = function () { return allBindingsAccessor().cellHTML || allBindingsAccessor().cellText || this._cellValue(); };
+        element._cellText = function () { return allBindingsAccessor().cellText; };
+        element._cellHTML = function () { return allBindingsAccessor().cellHTML; };
         element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
         element._cellValueUpdater = function (newValue) {
             utils.updateBindingValue(valueBindingName, this._cellValue, allBindingsAccessor, newValue);
@@ -7895,7 +7846,9 @@ var editableCell = {
             selection.unregisterCell(element);
 
             element._cellValue = null;
+            element._cellContent = null;
             element._cellText = null;
+            element._cellHTML = null;
             element._cellReadOnly = null;
             element._cellValueUpdater = null;
         });
@@ -7919,7 +7872,12 @@ var editableCell = {
             ko.applyBindingsToDescendants(bindingContext.createChildContext(ko.utils.unwrapObservable(valueAccessor())), element);
         }
         else {
-            element.textContent = ko.utils.unwrapObservable(element._cellText());
+            if (element._cellHTML()) {
+                element.innerHTML = ko.utils.unwrapObservable(element._cellHTML());
+            }
+            else {
+                element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
+            }
         }
     }
 };
@@ -7947,7 +7905,7 @@ var editableCellSelection = {
                 return {
                     cell: cell,
                     value: cell._cellValue(),
-                    text: cell._cellText()
+                    content: cell._cellContent()
                 };
             });
 
@@ -8031,7 +7989,58 @@ var editableCellScrollHost = {
 };
 
 module.exports = editableCellScrollHost;
-},{"./utils":26}],26:[function(require,module,exports){
+},{"./utils":26}],25:[function(require,module,exports){
+(function(Buffer){var stream = require('stream')
+var util = require('util')
+
+function ConcatStream(cb) {
+  stream.Stream.call(this)
+  this.writable = true
+  if (cb) this.cb = cb
+  this.body = []
+  if (this.cb) this.on('error', cb)
+}
+
+util.inherits(ConcatStream, stream.Stream)
+
+ConcatStream.prototype.write = function(chunk) {
+  this.body.push(chunk)
+}
+
+ConcatStream.prototype.arrayConcat = function(arrs) {
+  if (arrs.length === 0) return []
+  if (arrs.length === 1) return arrs[0]
+  return arrs.reduce(function (a, b) { return a.concat(b) })
+}
+
+ConcatStream.prototype.isArray = function(arr) {
+  var isArray = Array.isArray(arr)
+  var isTypedArray = arr.toString().match(/Array/)
+  return isArray || isTypedArray
+}
+
+ConcatStream.prototype.getBody = function () {
+  if (this.body.length === 0) return
+  if (typeof(this.body[0]) === "string") return this.body.join('')
+  if (this.isArray(this.body[0])) return this.arrayConcat(this.body)
+  if (typeof(Buffer) !== "undefined" && Buffer.isBuffer(this.body[0])) {
+    return Buffer.concat(this.body)
+  }
+  return this.body
+}
+
+ConcatStream.prototype.end = function() {
+  if (this.cb) this.cb(false, this.getBody())
+}
+
+module.exports = function(cb) {
+  return new ConcatStream(cb)
+}
+
+module.exports.ConcatStream = ConcatStream
+
+})(require("__browserify_buffer").Buffer)
+},{"stream":18,"util":8,"__browserify_buffer":15}],26:[function(require,module,exports){
 var Selection = require('../selection');
 
 module.exports = {
@@ -8421,7 +8430,205 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"events":8,"./selectionView":28,"./polyfill":21,"./selectionRange":29}],28:[function(require,module,exports){
+},{"events":10,"./polyfill":21,"./selectionRange":28,"./selectionView":29}],28:[function(require,module,exports){
+var EventEmitter = require('events').EventEmitter,
+    polyfill = require('./polyfill');
+
+module.exports = SelectionRange;
+
+SelectionRange.prototype = new EventEmitter();
+
+function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
+    var self = this;
+
+    self.start = undefined;
+    self.end = undefined;
+    self.selection = [];
+
+    function setSelection (cells) {
+        self.selection = cells;
+        self.emit('change', cells);
+    }
+
+    self.moveInDirection = function (direction, toEnd) {
+        var newStart = toEnd ? self.getLastSelectableCellInDirection(self.start, direction) : self.getSelectableCellInDirection(self.start, direction),
+            startChanged = newStart !== self.start,
+            belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== self.start.parentNode.parentNode.parentNode;
+
+        if (!belongingToOtherTable && (startChanged || self.start !== self.end)) {
+            self.setStart(newStart);
+        }
+
+        if (startChanged) {
+            return newStart;
+        }
+    };
+
+    self.extendInDirection = function (direction, toEnd) {
+        var newEnd = toEnd ? self.getLastSelectableCellInDirection(self.end, direction) : self.getCellInDirection(self.end, direction),
+            endChanged = newEnd && newEnd !== self.end;
+
+        if (newEnd) {
+            self.setEnd(newEnd);    
+        }
+
+        if (endChanged) {
+            return newEnd;
+        }
+    };
+
+    self.getCells = function () {
+        return self.getCellsInArea(self.start, self.end);
+    };
+
+    self.clear = function () {
+        self.start = undefined;
+        self.end = undefined;
+        setSelection([]);
+    };
+
+    self.destroy = function () {
+        self.removeAllListeners('change');
+        self.start = undefined;
+        self.end = undefined;
+        self.selection = null;
+        self = null;
+    };
+
+    self.setStart = function (element) {
+        self.start = element;
+        self.end = element;
+        setSelection(self.getCells());
+    };
+    self.setEnd = function (element) {
+        if (element === self.end) {
+            return;
+        }
+        self.start = self.start || element;
+
+        var cellsInArea = self.getCellsInArea(self.start, element),
+            allEditable = true;
+
+        cellsInArea.forEach(function (cell) {
+            allEditable = allEditable && cellIsSelectable(cell);
+        });
+
+        if (!allEditable) {
+            return;
+        }
+
+        self.end = element;
+        setSelection(self.getCells());
+    };
+    self.getCellInDirection = function (originCell, direction) {
+
+        var rowIndex = originCell.parentNode.rowIndex;
+        var cellIndex = getCellIndex(originCell);
+
+        var table = originCell.parentNode.parentNode.parentNode,
+            row = getRowByIndex(rowIndex + getDirectionYDelta(direction), table),
+            cell = row && getCellByIndex(row, cellIndex + getDirectionXDelta(direction, originCell));
+
+        if (direction === 'Left' && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+        if (direction === 'Up' && row && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+        if (direction === 'Right' && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+        if (direction === 'Down' && row && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+
+        return undefined;
+    };
+    self.getSelectableCellInDirection = function (originCell, direction) {
+        var lastCell,
+            cell = originCell;
+
+        while (cell) {
+            cell = self.getCellInDirection(cell, direction);
+
+            if (cell && cellIsSelectable(cell)) {
+                return cell;
+            }
+        }
+
+        return originCell;
+    };
+    self.getLastSelectableCellInDirection = function (originCell, direction) {
+        var nextCell = originCell;
+        do {
+            cell = nextCell;
+            nextCell = self.getSelectableCellInDirection(cell, direction);
+        } while(nextCell !== cell);
+
+        return cell;
+    };
+    self.getCellsInArea = function (startCell, endCell) {
+        var startX = Math.min(getCellIndex(startCell), getCellIndex(endCell)),
+            startY = Math.min(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
+            endX = Math.max(getCellIndex(startCell), getCellIndex(endCell)),
+            endY = Math.max(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
+            x, y,
+            cell,
+            cells = [];
+
+        for (x = startX; x <= endX; ++x) {
+            for (y = startY; y <= endY; ++y) {
+                cell = getCellByIndex(getRowByIndex(y), x);
+                if(cellIsVisible(cell)) {
+                    cells.push(cell || {});
+                }
+            }
+        }
+
+        return cells;
+    };
+    
+    function getDirectionXDelta (direction, cell) {
+        if (direction === 'Left') {
+            return -1;
+        }
+
+        if (direction === 'Right') {
+            return cell.colSpan;
+        }
+
+        return 0;
+    }
+
+    function getDirectionYDelta (direction) {
+        if (direction === 'Up') {
+            return -1;
+        }
+
+        if (direction === 'Down') {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    function getCellIndex (cell) {
+        var row = cell.parentNode,
+            colSpanSum = 0,
+            i;
+
+        for (i = 0; i < row.children.length; i++) {
+            if (row.children[i] === cell) {
+                break;
+            }
+
+            colSpanSum += row.children[i].colSpan;
+        }
+
+        return colSpanSum;
+    }
+}
+},{"events":10,"./polyfill":21}],29:[function(require,module,exports){
 var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
@@ -8635,203 +8842,5 @@ function SelectionView (table, selection) {
 
     html.addEventListener("mouseup", self.onMouseUp);
 }
-},{"./polyfill":21}],29:[function(require,module,exports){
-var EventEmitter = require('events').EventEmitter,
-    polyfill = require('./polyfill');
-
-module.exports = SelectionRange;
-
-SelectionRange.prototype = new EventEmitter();
-
-function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
-    var self = this;
-
-    self.start = undefined;
-    self.end = undefined;
-    self.selection = [];
-
-    function setSelection (cells) {
-        self.selection = cells;
-        self.emit('change', cells);
-    }
-
-    self.moveInDirection = function (direction, toEnd) {
-        var newStart = toEnd ? self.getLastSelectableCellInDirection(self.start, direction) : self.getSelectableCellInDirection(self.start, direction),
-            startChanged = newStart !== self.start,
-            belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== self.start.parentNode.parentNode.parentNode;
-
-        if (!belongingToOtherTable && (startChanged || self.start !== self.end)) {
-            self.setStart(newStart);
-        }
-
-        if (startChanged) {
-            return newStart;
-        }
-    };
-
-    self.extendInDirection = function (direction, toEnd) {
-        var newEnd = toEnd ? self.getLastSelectableCellInDirection(self.end, direction) : self.getCellInDirection(self.end, direction),
-            endChanged = newEnd && newEnd !== self.end;
-
-        if (newEnd) {
-            self.setEnd(newEnd);    
-        }
-
-        if (endChanged) {
-            return newEnd;
-        }
-    };
-
-    self.getCells = function () {
-        return self.getCellsInArea(self.start, self.end);
-    };
-
-    self.clear = function () {
-        self.start = undefined;
-        self.end = undefined;
-        setSelection([]);
-    };
-
-    self.destroy = function () {
-        self.removeAllListeners('change');
-        self.start = undefined;
-        self.end = undefined;
-        self.selection = null;
-        self = null;
-    };
-
-    self.setStart = function (element) {
-        self.start = element;
-        self.end = element;
-        setSelection(self.getCells());
-    };
-    self.setEnd = function (element) {
-        if (element === self.end) {
-            return;
-        }
-        self.start = self.start || element;
-
-        var cellsInArea = self.getCellsInArea(self.start, element),
-            allEditable = true;
-
-        cellsInArea.forEach(function (cell) {
-            allEditable = allEditable && cellIsSelectable(cell);
-        });
-
-        if (!allEditable) {
-            return;
-        }
-
-        self.end = element;
-        setSelection(self.getCells());
-    };
-    self.getCellInDirection = function (originCell, direction) {
-
-        var rowIndex = originCell.parentNode.rowIndex;
-        var cellIndex = getCellIndex(originCell);
-
-        var table = originCell.parentNode.parentNode.parentNode,
-            row = getRowByIndex(rowIndex + getDirectionYDelta(direction), table),
-            cell = row && getCellByIndex(row, cellIndex + getDirectionXDelta(direction, originCell));
-
-        if (direction === 'Left' && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-        if (direction === 'Up' && row && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-        if (direction === 'Right' && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-        if (direction === 'Down' && row && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-
-        return undefined;
-    };
-    self.getSelectableCellInDirection = function (originCell, direction) {
-        var lastCell,
-            cell = originCell;
-
-        while (cell) {
-            cell = self.getCellInDirection(cell, direction);
-
-            if (cell && cellIsSelectable(cell)) {
-                return cell;
-            }
-        }
-
-        return originCell;
-    };
-    self.getLastSelectableCellInDirection = function (originCell, direction) {
-        var nextCell = originCell;
-        do {
-            cell = nextCell;
-            nextCell = self.getSelectableCellInDirection(cell, direction);
-        } while(nextCell !== cell);
-
-        return cell;
-    };
-    self.getCellsInArea = function (startCell, endCell) {
-        var startX = Math.min(getCellIndex(startCell), getCellIndex(endCell)),
-            startY = Math.min(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
-            endX = Math.max(getCellIndex(startCell), getCellIndex(endCell)),
-            endY = Math.max(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
-            x, y,
-            cell,
-            cells = [];
-
-        for (x = startX; x <= endX; ++x) {
-            for (y = startY; y <= endY; ++y) {
-                cell = getCellByIndex(getRowByIndex(y), x);
-                if(cellIsVisible(cell)) {
-                    cells.push(cell || {});
-                }
-            }
-        }
-
-        return cells;
-    };
-    
-    function getDirectionXDelta (direction, cell) {
-        if (direction === 'Left') {
-            return -1;
-        }
-
-        if (direction === 'Right') {
-            return cell.colSpan;
-        }
-
-        return 0;
-    }
-
-    function getDirectionYDelta (direction) {
-        if (direction === 'Up') {
-            return -1;
-        }
-
-        if (direction === 'Down') {
-            return 1;
-        }
-
-        return 0;
-    }
-
-    function getCellIndex (cell) {
-        var row = cell.parentNode,
-            colSpanSum = 0,
-            i;
-
-        for (i = 0; i < row.children.length; i++) {
-            if (row.children[i] === cell) {
-                break;
-            }
-
-            colSpanSum += row.children[i].colSpan;
-        }
-
-        return colSpanSum;
-    }
-}
-},{"events":8,"./polyfill":21}]},{},[2])
+},{"./polyfill":21}]},{},[2])
 ;

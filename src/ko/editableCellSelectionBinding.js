@@ -19,7 +19,7 @@ var editableCellSelection = {
                 return {
                     cell: cell,
                     value: cell._cellValue(),
-                    text: cell._cellText()
+                    content: cell._cellContent()
                 };
             });
 

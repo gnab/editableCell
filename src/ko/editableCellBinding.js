@@ -15,7 +15,9 @@ var editableCell = {
 
         element._cellTemplated = element.innerHTML.trim() !== '';
         element._cellValue = valueAccessor;
-        element._cellText = function () { return allBindingsAccessor().cellText || this._cellValue(); };
+        element._cellContent = function () { return allBindingsAccessor().cellHTML || allBindingsAccessor().cellText || this._cellValue(); };
+        element._cellText = function () { return allBindingsAccessor().cellText; };
+        element._cellHTML = function () { return allBindingsAccessor().cellHTML; };
         element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
         element._cellValueUpdater = function (newValue) {
             utils.updateBindingValue(valueBindingName, this._cellValue, allBindingsAccessor, newValue);
@@ -29,7 +31,9 @@ var editableCell = {
             selection.unregisterCell(element);
 
             element._cellValue = null;
+            element._cellContent = null;
             element._cellText = null;
+            element._cellHTML = null;
             element._cellReadOnly = null;
             element._cellValueUpdater = null;
         });
@@ -53,7 +57,12 @@ var editableCell = {
             ko.applyBindingsToDescendants(bindingContext.createChildContext(ko.utils.unwrapObservable(valueAccessor())), element);
         }
         else {
-            element.textContent = ko.utils.unwrapObservable(element._cellText());
+            if (element._cellHTML()) {
+                element.innerHTML = ko.utils.unwrapObservable(element._cellHTML());
+            }
+            else {
+                element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
+            }
         }
     }
 };
