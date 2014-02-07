@@ -50,18 +50,31 @@ function SelectionView (table, selection) {
         self.element.style.display = 'block';
         self.element.focus();
 
-        var margin = 10,
+        var rect = selection.getRange().end.getBoundingClientRect(),
+            horizontalMargin = rect.width,
+            verticalMargin = rect.height,
             scrollHost = self.scrollHost || document.body,
             viewport = scrollHost.getBoundingClientRect(),
-            rect = selection.getRange().end.getBoundingClientRect(),
-            topOffset = rect.top - margin - viewport.top,
-            bottomOffset = viewport.bottom - rect.bottom - margin;
+            viewportTop = Math.max(viewport.top, 0),
+            viewportLeft = Math.max(viewport.left, 0),
+            viewportBottom = Math.min(viewport.bottom, window.innerHeight),
+            viewportRight = Math.min(viewport.right, window.innerWidth),
+            topOffset = rect.top - verticalMargin - viewportTop,
+            bottomOffset = viewportBottom - rect.bottom - verticalMargin,
+            leftOffset = rect.left - horizontalMargin - viewportLeft,
+            rightOffset = viewportRight - rect.right - horizontalMargin;
 
         if (topOffset < 0) {
             scrollHost.scrollTop += topOffset;
         }
         else if (bottomOffset < 0) {
             scrollHost.scrollTop -= bottomOffset;
+        }
+        else if (leftOffset < 0) {
+            scrollHost.scrollLeft += leftOffset;
+        }
+        else if (rightOffset < 0) {
+            scrollHost.scrollLeft -= rightOffset;
         }
     };
     

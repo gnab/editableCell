@@ -37,7 +37,7 @@ if (typeof ko !== 'undefined') {
         ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
     }
 }
-},{"../polyfill":3,"./editableCellBinding":4,"./editableCellSelectionBinding":5,"./editableCellScrollHostBinding":6}],3:[function(require,module,exports){
+},{"../polyfill":3,"./editableCellSelectionBinding":4,"./editableCellScrollHostBinding":5,"./editableCellBinding":6}],3:[function(require,module,exports){
 function forEach (list, f) {
   var i;
 
@@ -82,77 +82,6 @@ function extend (object) {
   };
 }
 },{}],4:[function(require,module,exports){
-var utils = require('./utils');
-
-var editableCell = {
-    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        var table = $(element).parents('table')[0],
-            selection = utils.initializeSelection(table),
-            valueBindingName = 'editableCell';
-
-        selection.registerCell(element);
-
-        if (allBindingsAccessor().cellValue) {
-            valueBindingName = 'cellValue';
-            valueAccessor = function () { return allBindingsAccessor().cellValue; };
-        }
-
-        element._cellTemplated = element.innerHTML.trim() !== '';
-        element._cellValue = valueAccessor;
-        element._cellContent = function () { return allBindingsAccessor().cellHTML || allBindingsAccessor().cellText || this._cellValue(); };
-        element._cellText = function () { return allBindingsAccessor().cellText; };
-        element._cellHTML = function () { return allBindingsAccessor().cellHTML; };
-        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
-        element._cellValueUpdater = function (newValue) {
-            utils.updateBindingValue(valueBindingName, this._cellValue, allBindingsAccessor, newValue);
-
-            if (!ko.isObservable(this._cellValue())) {
-                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
-            }
-        };
-
-        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
-            selection.unregisterCell(element);
-
-            element._cellValue = null;
-            element._cellContent = null;
-            element._cellText = null;
-            element._cellHTML = null;
-            element._cellReadOnly = null;
-            element._cellValueUpdater = null;
-        });
-
-        if (element._cellTemplated) {
-            ko.utils.domData.set(element, 'editableCellTemplate', {});
-            return { 'controlsDescendantBindings': true };
-        }
-    },
-    update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        if (element._cellTemplated) {
-            var template = ko.utils.domData.get(element, 'editableCellTemplate');
-
-            if (!template.savedNodes) {
-                template.savedNodes = utils.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
-            }
-            else {
-                ko.virtualElements.setDomNodeChildren(element, utils.cloneNodes(template.savedNodes));
-            }
-
-            ko.applyBindingsToDescendants(bindingContext.createChildContext(ko.utils.unwrapObservable(valueAccessor())), element);
-        }
-        else {
-            if (element._cellHTML()) {
-                element.innerHTML = ko.utils.unwrapObservable(element._cellHTML());
-            }
-            else {
-                element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
-            }
-        }
-    }
-};
-
-module.exports = editableCell;
-},{"./utils":7}],5:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellSelection = {
@@ -237,7 +166,7 @@ var editableCellSelection = {
 };
 
 module.exports = editableCellSelection;
-},{"./utils":7}],6:[function(require,module,exports){
+},{"./utils":7}],5:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellScrollHost = {
@@ -258,6 +187,77 @@ var editableCellScrollHost = {
 };
 
 module.exports = editableCellScrollHost;
+},{"./utils":7}],6:[function(require,module,exports){
+var utils = require('./utils');
+
+var editableCell = {
+    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var table = $(element).parents('table')[0],
+            selection = utils.initializeSelection(table),
+            valueBindingName = 'editableCell';
+
+        selection.registerCell(element);
+
+        if (allBindingsAccessor().cellValue) {
+            valueBindingName = 'cellValue';
+            valueAccessor = function () { return allBindingsAccessor().cellValue; };
+        }
+
+        element._cellTemplated = element.innerHTML.trim() !== '';
+        element._cellValue = valueAccessor;
+        element._cellContent = function () { return allBindingsAccessor().cellHTML || allBindingsAccessor().cellText || this._cellValue(); };
+        element._cellText = function () { return allBindingsAccessor().cellText; };
+        element._cellHTML = function () { return allBindingsAccessor().cellHTML; };
+        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
+        element._cellValueUpdater = function (newValue) {
+            utils.updateBindingValue(valueBindingName, this._cellValue, allBindingsAccessor, newValue);
+
+            if (!ko.isObservable(this._cellValue())) {
+                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
+            }
+        };
+
+        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
+            selection.unregisterCell(element);
+
+            element._cellValue = null;
+            element._cellContent = null;
+            element._cellText = null;
+            element._cellHTML = null;
+            element._cellReadOnly = null;
+            element._cellValueUpdater = null;
+        });
+
+        if (element._cellTemplated) {
+            ko.utils.domData.set(element, 'editableCellTemplate', {});
+            return { 'controlsDescendantBindings': true };
+        }
+    },
+    update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        if (element._cellTemplated) {
+            var template = ko.utils.domData.get(element, 'editableCellTemplate');
+
+            if (!template.savedNodes) {
+                template.savedNodes = utils.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
+            }
+            else {
+                ko.virtualElements.setDomNodeChildren(element, utils.cloneNodes(template.savedNodes));
+            }
+
+            ko.applyBindingsToDescendants(bindingContext.createChildContext(ko.utils.unwrapObservable(valueAccessor())), element);
+        }
+        else {
+            if (element._cellHTML()) {
+                element.innerHTML = ko.utils.unwrapObservable(element._cellHTML());
+            }
+            else {
+                element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
+            }
+        }
+    }
+};
+
+module.exports = editableCell;
 },{"./utils":7}],7:[function(require,module,exports){
 var Selection = require('../selection');
 
@@ -941,18 +941,31 @@ function SelectionView (table, selection) {
         self.element.style.display = 'block';
         self.element.focus();
 
-        var margin = 10,
+        var rect = selection.getRange().end.getBoundingClientRect(),
+            horizontalMargin = rect.width,
+            verticalMargin = rect.height,
             scrollHost = self.scrollHost || document.body,
             viewport = scrollHost.getBoundingClientRect(),
-            rect = selection.getRange().end.getBoundingClientRect(),
-            topOffset = rect.top - margin - viewport.top,
-            bottomOffset = viewport.bottom - rect.bottom - margin;
+            viewportTop = Math.max(viewport.top, 0),
+            viewportLeft = Math.max(viewport.left, 0),
+            viewportBottom = Math.min(viewport.bottom, window.innerHeight),
+            viewportRight = Math.min(viewport.right, window.innerWidth),
+            topOffset = rect.top - verticalMargin - viewportTop,
+            bottomOffset = viewportBottom - rect.bottom - verticalMargin,
+            leftOffset = rect.left - horizontalMargin - viewportLeft,
+            rightOffset = viewportRight - rect.right - horizontalMargin;
 
         if (topOffset < 0) {
             scrollHost.scrollTop += topOffset;
         }
         else if (bottomOffset < 0) {
             scrollHost.scrollTop -= bottomOffset;
+        }
+        else if (leftOffset < 0) {
+            scrollHost.scrollLeft += leftOffset;
+        }
+        else if (rightOffset < 0) {
+            scrollHost.scrollLeft -= rightOffset;
         }
     };
     
