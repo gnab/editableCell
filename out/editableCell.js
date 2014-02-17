@@ -1,6 +1,14 @@
 (function(e){if("function"==typeof bootstrap)bootstrap("editablecell",e);else if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else if("undefined"!=typeof ses){if(!ses.ok())return;ses.makeEditableCell=e}else"undefined"!=typeof window?window.editableCell=e():global.editableCell=e()})(function(){var define,ses,bootstrap,module,exports;
 return (function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0].call(u.exports,function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({1:[function(require,module,exports){
-var koBindingHandlers = require('./ko');
+var EventEmitter = require('events').EventEmitter,
+	publicEvents = new EventEmitter(),
+	privateEvents = new EventEmitter();
+
+module.exports.public = publicEvents;
+module.exports.private = privateEvents;
+},{"events":2}],3:[function(require,module,exports){
+var koBindingHandlers = require('./ko'),
+    events = require('./events');
 
 exports.selectCell = function (cell) {
     var table = cell.parentNode.parentNode.parentNode,
@@ -21,293 +29,39 @@ exports.setCellValue = function (cell, value) {
 
     selection.updateCellValue(cell, value);
 };
-},{"./ko":2}],2:[function(require,module,exports){
-var polyfill = require('../polyfill');
 
-// Knockout binding handlers
-var bindingHandlers = {
-    editableCell: require('./editableCellBinding'),
-    editableCellSelection: require('./editableCellSelectionBinding'),
-    editableCellScrollHost: require('./editableCellScrollHostBinding')
+// --------
+// Eventing
+// --------
+
+exports.on = function (event, listener) {
+    events.public.on(event, listener);
 };
 
-// Register Knockout binding handlers if Knockout is loaded
-if (typeof ko !== 'undefined') {
-    for (var bindingHandler in bindingHandlers) {
-        ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
-    }
-}
-},{"../polyfill":3,"./editableCellSelectionBinding":4,"./editableCellScrollHostBinding":5,"./editableCellBinding":6}],3:[function(require,module,exports){
-function forEach (list, f) {
-  var i;
-
-  for (i = 0; i < list.length; ++i) {
-    f(list[i], i);
-  }
-}
-
-forEach([Array, window.NodeList, window.HTMLCollection], extend);
-
-function extend (object) {
-  var prototype = object && object.prototype;
-
-  if (!prototype) {
-    return;
-  }
-
-  prototype.forEach = prototype.forEach || function (f) {
-    forEach(this, f);
-  };
-
-  prototype.filter = prototype.filter || function (f) {
-    var result = [];
-
-    this.forEach(function (element) {
-      if (f(element, result.length)) {
-        result.push(element);
-      }
-    });
-
-    return result;
-  };
-
-  prototype.map = prototype.map || function (f) {
-    var result = [];
-
-    this.forEach(function (element) {
-      result.push(f(element, result.length));
-    });
-
-    return result;
-  };
-}
-},{}],4:[function(require,module,exports){
-var utils = require('./utils');
-
-var editableCellSelection = {
-    _selectionMappings: [],
-
-    init: function (element, valueAccessor, allBindingsAccessor) {
-        if (element.tagName !== 'TABLE') {
-            throw new Error('editableCellSelection binding can only be applied to tables');
-        }
-
-        var table = element,
-            selection = utils.initializeSelection(table);
-
-        // Update supplied observable array when selection range changes
-        selection.on('change', rangeChanged);
-
-        function rangeChanged (newSelection) {
-            newSelection = ko.utils.arrayMap(newSelection, function (cell) {
-                return {
-                    cell: cell,
-                    value: cell._cellValue(),
-                    content: cell._cellContent()
-                };
-            });
-
-            utils.updateBindingValue('editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
-        }
-
-        // Keep track of selections
-        ko.bindingHandlers.editableCellSelection._selectionMappings.push([valueAccessor, table]);
-
-        // Perform clean-up when table is removed from DOM
-        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
-            // Remove selection from list
-            var selectionIndex = ko.utils.arrayFirst(ko.bindingHandlers.editableCellSelection._selectionMappings, function (tuple) {
-                return tuple[0] === valueAccessor;
-            });
-            ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
-
-            // Remove event listener
-            selection.removeListener('change', rangeChanged);
-        });
-    },
-    update: function (element, valueAccessor, allBindingsAccessor) {
-        var table = element,
-            selection = table._cellSelection,
-            newSelection = ko.utils.unwrapObservable(valueAccessor()) || [];
-
-        // Empty selection, so simply clear it out
-        if (newSelection.length === 0) {
-            selection.clear();
-            return;
-        }
-
-        var start = newSelection[0],
-            end = newSelection[newSelection.length - 1];
-
-        var isDirectUpdate = start.tagName === 'TD' || start.tagName === 'TH';
-
-        // Notification of changed selection, either after programmatic  
-        // update or after changing current selection in user interface
-        if (!isDirectUpdate) {
-            start = start.cell;
-            end = end.cell;
-        }
-
-        // Make sure selected cells belongs to current table, or else hide selection
-        var parentRowHidden = !start.parentNode;
-        var belongingToOtherTable = start.parentNode && start.parentNode.parentNode.parentNode !== table;
-
-        if (parentRowHidden || belongingToOtherTable) {
-            // Selection cannot be cleared, since that will affect selection in other table
-            selection.view.hide();
-            return;
-        }
-
-        // Programmatic update of selection, i.e. selection([startCell, endCell]);
-        if (isDirectUpdate) {
-            selection.setRange(start, end);
-        }
-    }
+exports.removeAllListeners = function () {
+    events.public.removeAllListeners.apply(events.public, arguments);
 };
 
-module.exports = editableCellSelection;
-},{"./utils":7}],5:[function(require,module,exports){
-var utils = require('./utils');
+// Proxy internal events
 
-var editableCellScrollHost = {
-    init: function (element) {
-        if (element.tagName !== 'TABLE') {
-            throw new Error('editableCellScrollHost binding can only be applied to tables');
-        }
+var proxyEvents = ['cellValueChanged'],
+    eventName,
+    i;
 
-        utils.initializeSelection(element);
-    },
-    update: function (element, valueAccessor) {
-        var table = element,
-            selection = table._cellSelection,
-            scrollHost = ko.utils.unwrapObservable(valueAccessor());
+for (i = 0; i < proxyEvents.length; ++i) {
+    eventName = proxyEvents[i];
 
-        selection.setScrollHost(scrollHost);
-    }
-};
-
-module.exports = editableCellScrollHost;
-},{"./utils":7}],6:[function(require,module,exports){
-var utils = require('./utils');
-
-var editableCell = {
-    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        var table = $(element).parents('table')[0],
-            selection = utils.initializeSelection(table),
-            valueBindingName = 'editableCell';
-
-        selection.registerCell(element);
-
-        if (allBindingsAccessor().cellValue) {
-            valueBindingName = 'cellValue';
-            valueAccessor = function () { return allBindingsAccessor().cellValue; };
-        }
-
-        element._cellTemplated = element.innerHTML.trim() !== '';
-        element._cellValue = valueAccessor;
-        element._cellContent = function () { return allBindingsAccessor().cellHTML || allBindingsAccessor().cellText || this._cellValue(); };
-        element._cellText = function () { return allBindingsAccessor().cellText; };
-        element._cellHTML = function () { return allBindingsAccessor().cellHTML; };
-        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
-        element._cellValueUpdater = function (newValue) {
-            utils.updateBindingValue(valueBindingName, this._cellValue, allBindingsAccessor, newValue);
-
-            if (!ko.isObservable(this._cellValue())) {
-                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
-            }
-        };
-
-        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
-            selection.unregisterCell(element);
-
-            element._cellValue = null;
-            element._cellContent = null;
-            element._cellText = null;
-            element._cellHTML = null;
-            element._cellReadOnly = null;
-            element._cellValueUpdater = null;
-        });
-
-        if (element._cellTemplated) {
-            ko.utils.domData.set(element, 'editableCellTemplate', {});
-            return { 'controlsDescendantBindings': true };
-        }
-    },
-    update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        if (element._cellTemplated) {
-            var template = ko.utils.domData.get(element, 'editableCellTemplate');
-
-            if (!template.savedNodes) {
-                template.savedNodes = utils.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
-            }
-            else {
-                ko.virtualElements.setDomNodeChildren(element, utils.cloneNodes(template.savedNodes));
-            }
-
-            ko.applyBindingsToDescendants(bindingContext.createChildContext(ko.utils.unwrapObservable(valueAccessor())), element);
-        }
-        else {
-            if (element._cellHTML()) {
-                element.innerHTML = ko.utils.unwrapObservable(element._cellHTML());
-            }
-            else {
-                element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
-            }
-        }
-    }
-};
-
-module.exports = editableCell;
-},{"./utils":7}],7:[function(require,module,exports){
-var Selection = require('../selection');
-
-module.exports = {
-    initializeSelection: initializeSelection,
-    updateBindingValue: updateBindingValue,
-    cloneNodes: cloneNodes
-};
-
-function initializeSelection (table) {
-    var selection = table._cellSelection;
-
-    if (selection === undefined) {
-        table._cellSelection = selection = new Selection(table, ko.bindingHandlers.editableCellSelection._selectionMappings);
-
-        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
-            table._cellSelection.destroy();
-        });
-    }
-
-    return selection;
+    events.private.on(eventName, createProxy(eventName));    
 }
 
-// `updateBindingValue` is a helper function borrowing private binding update functionality
-// from Knockout.js for supporting updating of both observables and non-observables.
-function updateBindingValue (bindingName, valueAccessor, allBindingsAccessor, newValue) {
-    if (ko.isWriteableObservable(valueAccessor())) {
-        valueAccessor()(newValue);
-        return;
-    }
-
-    var propertyWriters = allBindingsAccessor()._ko_property_writers;
-    if (propertyWriters && propertyWriters[bindingName]) {
-        propertyWriters[bindingName](newValue);
-    }
-
-    if (!ko.isObservable(valueAccessor())) {
-        allBindingsAccessor()[bindingName] = newValue;
-    }
+function createProxy (eventName) {
+    return function () {
+        var args = Array.prototype.slice.call(arguments);
+        args.unshift(eventName);
+        events.public.emit.apply(events.public, args);
+    };
 }
-
-// Borrowed from Knockout.js
-function cloneNodes (nodesArray, shouldCleanNodes) {
-    for (var i = 0, j = nodesArray.length, newNodesArray = []; i < j; i++) {
-        var clonedNode = nodesArray[i].cloneNode(true);
-        newNodesArray.push(shouldCleanNodes ? ko.cleanNode(clonedNode) : clonedNode);
-    }
-    return newNodesArray;
-}
-},{"../selection":8}],9:[function(require,module,exports){
+},{"./events":1,"./ko":4}],5:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -361,7 +115,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],10:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 (function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
 
 var EventEmitter = exports.EventEmitter = process.EventEmitter;
@@ -547,7 +301,302 @@ EventEmitter.prototype.listeners = function(type) {
 };
 
 })(require("__browserify_process"))
-},{"__browserify_process":9}],8:[function(require,module,exports){
+},{"__browserify_process":5}],4:[function(require,module,exports){
+var polyfill = require('../polyfill');
+
+// Knockout binding handlers
+var bindingHandlers = {
+    editableCell: require('./editableCellBinding'),
+    editableCellSelection: require('./editableCellSelectionBinding'),
+    editableCellScrollHost: require('./editableCellScrollHostBinding')
+};
+
+// Register Knockout binding handlers if Knockout is loaded
+if (typeof ko !== 'undefined') {
+    for (var bindingHandler in bindingHandlers) {
+        ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
+    }
+}
+},{"./editableCellBinding":6,"./editableCellSelectionBinding":7,"../polyfill":8,"./editableCellScrollHostBinding":9}],8:[function(require,module,exports){
+function forEach (list, f) {
+  var i;
+
+  for (i = 0; i < list.length; ++i) {
+    f(list[i], i);
+  }
+}
+
+forEach([Array, window.NodeList, window.HTMLCollection], extend);
+
+function extend (object) {
+  var prototype = object && object.prototype;
+
+  if (!prototype) {
+    return;
+  }
+
+  prototype.forEach = prototype.forEach || function (f) {
+    forEach(this, f);
+  };
+
+  prototype.filter = prototype.filter || function (f) {
+    var result = [];
+
+    this.forEach(function (element) {
+      if (f(element, result.length)) {
+        result.push(element);
+      }
+    });
+
+    return result;
+  };
+
+  prototype.map = prototype.map || function (f) {
+    var result = [];
+
+    this.forEach(function (element) {
+      result.push(f(element, result.length));
+    });
+
+    return result;
+  };
+}
+},{}],6:[function(require,module,exports){
+var utils = require('./utils'),
+    events = require('../events');
+
+var editableCell = {
+    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var table = $(element).parents('table')[0],
+            selection = utils.initializeSelection(table),
+            valueBindingName = 'editableCell';
+
+        selection.registerCell(element);
+
+        if (allBindingsAccessor().cellValue) {
+            valueBindingName = 'cellValue';
+            valueAccessor = function () { return allBindingsAccessor().cellValue; };
+        }
+
+        element._cellTemplated = element.innerHTML.trim() !== '';
+        element._cellValue = valueAccessor;
+        element._cellContent = function () { return allBindingsAccessor().cellHTML || allBindingsAccessor().cellText || this._cellValue(); };
+        element._cellText = function () { return allBindingsAccessor().cellText; };
+        element._cellHTML = function () { return allBindingsAccessor().cellHTML; };
+        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
+        element._cellValueUpdater = function (newValue) {
+            utils.updateBindingValue(element, valueBindingName, this._cellValue, allBindingsAccessor, newValue);
+
+            if (!ko.isObservable(this._cellValue())) {
+                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
+            }
+        };
+
+        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
+            selection.unregisterCell(element);
+
+            element._cellValue = null;
+            element._cellContent = null;
+            element._cellText = null;
+            element._cellHTML = null;
+            element._cellReadOnly = null;
+            element._cellValueUpdater = null;
+        });
+
+        if (element._cellTemplated) {
+            ko.utils.domData.set(element, 'editableCellTemplate', {});
+            return { 'controlsDescendantBindings': true };
+        }
+    },
+    update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var value = ko.utils.unwrapObservable(valueAccessor());
+
+        if (element._cellTemplated) {
+            var template = ko.utils.domData.get(element, 'editableCellTemplate');
+
+            if (!template.savedNodes) {
+                template.savedNodes = utils.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
+            }
+            else {
+                ko.virtualElements.setDomNodeChildren(element, utils.cloneNodes(template.savedNodes));
+            }
+
+            ko.applyBindingsToDescendants(bindingContext.createChildContext(value), element);
+        }
+        else {
+            if (element._cellHTML()) {
+                element.innerHTML = ko.utils.unwrapObservable(element._cellHTML());
+            }
+            else {
+                element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
+            }
+        }
+
+        events.private.emit('cellValueChanged', element);
+    }
+};
+
+module.exports = editableCell;
+},{"./utils":10,"../events":1}],7:[function(require,module,exports){
+var utils = require('./utils');
+
+var editableCellSelection = {
+    _selectionMappings: [],
+
+    init: function (element, valueAccessor, allBindingsAccessor) {
+        if (element.tagName !== 'TABLE') {
+            throw new Error('editableCellSelection binding can only be applied to tables');
+        }
+
+        var table = element,
+            selection = utils.initializeSelection(table);
+
+        // Update supplied observable array when selection range changes
+        selection.on('change', rangeChanged);
+
+        function rangeChanged (newSelection) {
+            newSelection = ko.utils.arrayMap(newSelection, function (cell) {
+                return {
+                    cell: cell,
+                    value: cell._cellValue(),
+                    content: cell._cellContent()
+                };
+            });
+
+            utils.updateBindingValue(element, 'editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
+        }
+
+        // Keep track of selections
+        ko.bindingHandlers.editableCellSelection._selectionMappings.push([valueAccessor, table]);
+
+        // Perform clean-up when table is removed from DOM
+        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
+            // Remove selection from list
+            var selectionIndex = ko.utils.arrayFirst(ko.bindingHandlers.editableCellSelection._selectionMappings, function (tuple) {
+                return tuple[0] === valueAccessor;
+            });
+            ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
+
+            // Remove event listener
+            selection.removeListener('change', rangeChanged);
+        });
+    },
+    update: function (element, valueAccessor, allBindingsAccessor) {
+        var table = element,
+            selection = table._cellSelection,
+            newSelection = ko.utils.unwrapObservable(valueAccessor()) || [];
+
+        // Empty selection, so simply clear it out
+        if (newSelection.length === 0) {
+            selection.clear();
+            return;
+        }
+
+        var start = newSelection[0],
+            end = newSelection[newSelection.length - 1];
+
+        var isDirectUpdate = start.tagName === 'TD' || start.tagName === 'TH';
+
+        // Notification of changed selection, either after programmatic  
+        // update or after changing current selection in user interface
+        if (!isDirectUpdate) {
+            start = start.cell;
+            end = end.cell;
+        }
+
+        // Make sure selected cells belongs to current table, or else hide selection
+        var parentRowHidden = !start.parentNode;
+        var belongingToOtherTable = start.parentNode && start.parentNode.parentNode.parentNode !== table;
+
+        if (parentRowHidden || belongingToOtherTable) {
+            // Selection cannot be cleared, since that will affect selection in other table
+            selection.view.hide();
+            return;
+        }
+
+        // Programmatic update of selection, i.e. selection([startCell, endCell]);
+        if (isDirectUpdate) {
+            selection.setRange(start, end);
+        }
+    }
+};
+
+module.exports = editableCellSelection;
+},{"./utils":10}],9:[function(require,module,exports){
+var utils = require('./utils');
+
+var editableCellScrollHost = {
+    init: function (element) {
+        if (element.tagName !== 'TABLE') {
+            throw new Error('editableCellScrollHost binding can only be applied to tables');
+        }
+
+        utils.initializeSelection(element);
+    },
+    update: function (element, valueAccessor) {
+        var table = element,
+            selection = table._cellSelection,
+            scrollHost = ko.utils.unwrapObservable(valueAccessor());
+
+        selection.setScrollHost(scrollHost);
+    }
+};
+
+module.exports = editableCellScrollHost;
+},{"./utils":10}],10:[function(require,module,exports){
+var Selection = require('../selection');
+
+module.exports = {
+    initializeSelection: initializeSelection,
+    updateBindingValue: updateBindingValue,
+    cloneNodes: cloneNodes
+};
+
+function initializeSelection (table) {
+    var selection = table._cellSelection;
+
+    if (selection === undefined) {
+        table._cellSelection = selection = new Selection(table, ko.bindingHandlers.editableCellSelection._selectionMappings);
+
+        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
+            table._cellSelection.destroy();
+        });
+    }
+
+    return selection;
+}
+
+// `updateBindingValue` is a helper function borrowing private binding update functionality
+// from Knockout.js for supporting updating of both observables and non-observables.
+function updateBindingValue (element, bindingName, valueAccessor, allBindingsAccessor, newValue) {
+    var options = {
+        cell: element
+    };
+
+    if (ko.isWriteableObservable(valueAccessor())) {
+        valueAccessor()(newValue, options);
+        return;
+    }
+
+    var propertyWriters = allBindingsAccessor()._ko_property_writers;
+    if (propertyWriters && propertyWriters[bindingName]) {
+        propertyWriters[bindingName](newValue, options);
+    }
+
+    if (!ko.isObservable(valueAccessor())) {
+        allBindingsAccessor()[bindingName] = newValue;
+    }
+}
+
+// Borrowed from Knockout.js
+function cloneNodes (nodesArray, shouldCleanNodes) {
+    for (var i = 0, j = nodesArray.length, newNodesArray = []; i < j; i++) {
+        var clonedNode = nodesArray[i].cloneNode(true);
+        newNodesArray.push(shouldCleanNodes ? ko.cleanNode(clonedNode) : clonedNode);
+    }
+    return newNodesArray;
+}
+},{"../selection":11}],11:[function(require,module,exports){
 var SelectionView = require('./selectionView'),
     SelectionRange = require('./selectionRange'),
     EventEmitter = require('events').EventEmitter,
@@ -888,7 +937,7 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"events":10,"./selectionView":11,"./selectionRange":12,"./polyfill":3}],11:[function(require,module,exports){
+},{"events":2,"./selectionView":12,"./selectionRange":13,"./polyfill":8}],12:[function(require,module,exports){
 var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
@@ -1115,7 +1164,7 @@ function SelectionView (table, selection) {
 
     html.addEventListener("mouseup", self.onMouseUp);
 }
-},{"./polyfill":3}],12:[function(require,module,exports){
+},{"./polyfill":8}],13:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill');
 
@@ -1313,6 +1362,6 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         return colSpanSum;
     }
 }
-},{"events":10,"./polyfill":3}]},{},[1])(1)
+},{"events":2,"./polyfill":8}]},{},[3])(3)
 });
 ;

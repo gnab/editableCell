@@ -1,4 +1,5 @@
-var utils = require('./utils');
+var utils = require('./utils'),
+    events = require('../events');
 
 var editableCell = {
     init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
@@ -20,7 +21,7 @@ var editableCell = {
         element._cellHTML = function () { return allBindingsAccessor().cellHTML; };
         element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
         element._cellValueUpdater = function (newValue) {
-            utils.updateBindingValue(valueBindingName, this._cellValue, allBindingsAccessor, newValue);
+            utils.updateBindingValue(element, valueBindingName, this._cellValue, allBindingsAccessor, newValue);
 
             if (!ko.isObservable(this._cellValue())) {
                 ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
@@ -44,6 +45,8 @@ var editableCell = {
         }
     },
     update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var value = ko.utils.unwrapObservable(valueAccessor());
+
         if (element._cellTemplated) {
             var template = ko.utils.domData.get(element, 'editableCellTemplate');
 
@@ -54,7 +57,7 @@ var editableCell = {
                 ko.virtualElements.setDomNodeChildren(element, utils.cloneNodes(template.savedNodes));
             }
 
-            ko.applyBindingsToDescendants(bindingContext.createChildContext(ko.utils.unwrapObservable(valueAccessor())), element);
+            ko.applyBindingsToDescendants(bindingContext.createChildContext(value), element);
         }
         else {
             if (element._cellHTML()) {
@@ -64,6 +67,8 @@ var editableCell = {
                 element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
             }
         }
+
+        events.private.emit('cellValueChanged', element);
     }
 };
 

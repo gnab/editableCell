@@ -22,15 +22,19 @@ function initializeSelection (table) {
 
 // `updateBindingValue` is a helper function borrowing private binding update functionality
 // from Knockout.js for supporting updating of both observables and non-observables.
-function updateBindingValue (bindingName, valueAccessor, allBindingsAccessor, newValue) {
+function updateBindingValue (element, bindingName, valueAccessor, allBindingsAccessor, newValue) {
+    var options = {
+        cell: element
+    };
+
     if (ko.isWriteableObservable(valueAccessor())) {
-        valueAccessor()(newValue);
+        valueAccessor()(newValue, options);
         return;
     }
 
     var propertyWriters = allBindingsAccessor()._ko_property_writers;
     if (propertyWriters && propertyWriters[bindingName]) {
-        propertyWriters[bindingName](newValue);
+        propertyWriters[bindingName](newValue, options);
     }
 
     if (!ko.isObservable(valueAccessor())) {

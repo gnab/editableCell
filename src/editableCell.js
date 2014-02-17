@@ -1,4 +1,5 @@
-var koBindingHandlers = require('./ko');
+var koBindingHandlers = require('./ko'),
+    events = require('./events');
 
 exports.selectCell = function (cell) {
     var table = cell.parentNode.parentNode.parentNode,
@@ -19,3 +20,35 @@ exports.setCellValue = function (cell, value) {
 
     selection.updateCellValue(cell, value);
 };
+
+// --------
+// Eventing
+// --------
+
+exports.on = function (event, listener) {
+    events.public.on(event, listener);
+};
+
+exports.removeAllListeners = function () {
+    events.public.removeAllListeners.apply(events.public, arguments);
+};
+
+// Proxy internal events
+
+var proxyEvents = ['cellValueChanged'],
+    eventName,
+    i;
+
+for (i = 0; i < proxyEvents.length; ++i) {
+    eventName = proxyEvents[i];
+
+    events.private.on(eventName, createProxy(eventName));    
+}
+
+function createProxy (eventName) {
+    return function () {
+        var args = Array.prototype.slice.call(arguments);
+        args.unshift(eventName);
+        events.public.emit.apply(events.public, args);
+    };
+}

@@ -23,7 +23,7 @@ var editableCellSelection = {
                 };
             });
 
-            utils.updateBindingValue('editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
+            utils.updateBindingValue(element, 'editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
         }
 
         // Keep track of selections
