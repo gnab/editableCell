@@ -867,7 +867,247 @@ assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
 assert.ifError = function(err) { if (err) {throw err;}};
 
 })()
-},{"util":7,"buffer":10}],5:[function(require,module,exports){
+},{"util":7,"buffer":10}],11:[function(require,module,exports){
+// shim for using process in browser
+
+var process = module.exports = {};
+
+process.nextTick = (function () {
+    var canSetImmediate = typeof window !== 'undefined'
+    && window.setImmediate;
+    var canPost = typeof window !== 'undefined'
+    && window.postMessage && window.addEventListener
+    ;
+
+    if (canSetImmediate) {
+        return function (f) { return window.setImmediate(f) };
+    }
+
+    if (canPost) {
+        var queue = [];
+        window.addEventListener('message', function (ev) {
+            if (ev.source === window && ev.data === 'process-tick') {
+                ev.stopPropagation();
+                if (queue.length > 0) {
+                    var fn = queue.shift();
+                    fn();
+                }
+            }
+        }, true);
+
+        return function nextTick(fn) {
+            queue.push(fn);
+            window.postMessage('process-tick', '*');
+        };
+    }
+
+    return function nextTick(fn) {
+        setTimeout(fn, 0);
+    };
+})();
+
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+}
+
+// TODO(shtylman)
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+
+},{}],8:[function(require,module,exports){
+(function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
+
+var EventEmitter = exports.EventEmitter = process.EventEmitter;
+var isArray = typeof Array.isArray === 'function'
+    ? Array.isArray
+    : function (xs) {
+        return Object.prototype.toString.call(xs) === '[object Array]'
+    }
+;
+function indexOf (xs, x) {
+    if (xs.indexOf) return xs.indexOf(x);
+    for (var i = 0; i < xs.length; i++) {
+        if (x === xs[i]) return i;
+    }
+    return -1;
+}
+
+// By default EventEmitters will print a warning if more than
+// 10 listeners are added to it. This is a useful default which
+// helps finding memory leaks.
+//
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+var defaultMaxListeners = 10;
+EventEmitter.prototype.setMaxListeners = function(n) {
+  if (!this._events) this._events = {};
+  this._events.maxListeners = n;
+};
+
+
+EventEmitter.prototype.emit = function(type) {
+  // If there is no 'error' event listener then throw.
+  if (type === 'error') {
+    if (!this._events || !this._events.error ||
+        (isArray(this._events.error) && !this._events.error.length))
+    {
+      if (arguments[1] instanceof Error) {
+        throw arguments[1]; // Unhandled 'error' event
+      } else {
+        throw new Error("Uncaught, unspecified 'error' event.");
+      }
+      return false;
+    }
+  }
+
+  if (!this._events) return false;
+  var handler = this._events[type];
+  if (!handler) return false;
+
+  if (typeof handler == 'function') {
+    switch (arguments.length) {
+      // fast cases
+      case 1:
+        handler.call(this);
+        break;
+      case 2:
+        handler.call(this, arguments[1]);
+        break;
+      case 3:
+        handler.call(this, arguments[1], arguments[2]);
+        break;
+      // slower
+      default:
+        var args = Array.prototype.slice.call(arguments, 1);
+        handler.apply(this, args);
+    }
+    return true;
+
+  } else if (isArray(handler)) {
+    var args = Array.prototype.slice.call(arguments, 1);
+
+    var listeners = handler.slice();
+    for (var i = 0, l = listeners.length; i < l; i++) {
+      listeners[i].apply(this, args);
+    }
+    return true;
+
+  } else {
+    return false;
+  }
+};
+
+// EventEmitter is defined in src/node_events.cc
+// EventEmitter.prototype.emit() is also defined there.
+EventEmitter.prototype.addListener = function(type, listener) {
+  if ('function' !== typeof listener) {
+    throw new Error('addListener only takes instances of Function');
+  }
+
+  if (!this._events) this._events = {};
+
+  // To avoid recursion in the case that type == "newListeners"! Before
+  // adding it to the listeners, first emit "newListeners".
+  this.emit('newListener', type, listener);
+
+  if (!this._events[type]) {
+    // Optimize the case of one listener. Don't need the extra array object.
+    this._events[type] = listener;
+  } else if (isArray(this._events[type])) {
+
+    // Check for listener leak
+    if (!this._events[type].warned) {
+      var m;
+      if (this._events.maxListeners !== undefined) {
+        m = this._events.maxListeners;
+      } else {
+        m = defaultMaxListeners;
+      }
+
+      if (m && m > 0 && this._events[type].length > m) {
+        this._events[type].warned = true;
+        console.error('(node) warning: possible EventEmitter memory ' +
+                      'leak detected. %d listeners added. ' +
+                      'Use emitter.setMaxListeners() to increase limit.',
+                      this._events[type].length);
+        console.trace();
+      }
+    }
+
+    // If we've already got an array, just append.
+    this._events[type].push(listener);
+  } else {
+    // Adding the second element, need to change to array.
+    this._events[type] = [this._events[type], listener];
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.once = function(type, listener) {
+  var self = this;
+  self.on(type, function g() {
+    self.removeListener(type, g);
+    listener.apply(this, arguments);
+  });
+
+  return this;
+};
+
+EventEmitter.prototype.removeListener = function(type, listener) {
+  if ('function' !== typeof listener) {
+    throw new Error('removeListener only takes instances of Function');
+  }
+
+  // does not use listeners(), so no side effect of creating _events[type]
+  if (!this._events || !this._events[type]) return this;
+
+  var list = this._events[type];
+
+  if (isArray(list)) {
+    var i = indexOf(list, listener);
+    if (i < 0) return this;
+    list.splice(i, 1);
+    if (list.length == 0)
+      delete this._events[type];
+  } else if (this._events[type] === listener) {
+    delete this._events[type];
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.removeAllListeners = function(type) {
+  if (arguments.length === 0) {
+    this._events = {};
+    return this;
+  }
+
+  // does not use listeners(), so no side effect of creating _events[type]
+  if (type && this._events && this._events[type]) this._events[type] = null;
+  return this;
+};
+
+EventEmitter.prototype.listeners = function(type) {
+  if (!this._events) this._events = {};
+  if (!this._events[type]) this._events[type] = [];
+  if (!isArray(this._events[type])) {
+    this._events[type] = [this._events[type]];
+  }
+  return this._events[type];
+};
+
+})(require("__browserify_process"))
+},{"__browserify_process":11}],5:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2012 TJ Holowaychuk <tj@vision-media.ca>
@@ -1599,309 +1839,7 @@ Assertion.prototype = {
 ('below', 'lessThan');
 
 
-},{"util":7,"http":11,"assert":9,"./eql":12}],6:[function(require,module,exports){
-var koBindingHandlers = require('./ko'),
-    events = require('./events');
-
-exports.selectCell = function (cell) {
-    var table = cell.parentNode.parentNode.parentNode,
-        selection = table._cellSelection;
-
-    selection.setRange(cell, cell);
-};
-
-exports.getTableSelection = function (table) {
-    var selection = table._cellSelection;
-
-    return selection;
-};
-
-exports.setCellValue = function (cell, value) {
-    var table = cell.parentNode.parentNode.parentNode,
-        selection = table._cellSelection;
-
-    selection.updateCellValue(cell, value);
-};
-
-// --------
-// Eventing
-// --------
-
-exports.on = function (event, listener) {
-    events.public.on(event, listener);
-};
-
-exports.removeAllListeners = function () {
-    events.public.removeAllListeners.apply(events.public, arguments);
-};
-
-// Proxy internal events
-
-var proxyEvents = ['cellValueChanged'],
-    eventName,
-    i;
-
-for (i = 0; i < proxyEvents.length; ++i) {
-    eventName = proxyEvents[i];
-
-    events.private.on(eventName, createProxy(eventName));    
-}
-
-function createProxy (eventName) {
-    return function () {
-        var args = Array.prototype.slice.call(arguments);
-        args.unshift(eventName);
-        events.public.emit.apply(events.public, args);
-    };
-}
-},{"./events":13,"./ko":14}],15:[function(require,module,exports){
-// shim for using process in browser
-
-var process = module.exports = {};
-
-process.nextTick = (function () {
-    var canSetImmediate = typeof window !== 'undefined'
-    && window.setImmediate;
-    var canPost = typeof window !== 'undefined'
-    && window.postMessage && window.addEventListener
-    ;
-
-    if (canSetImmediate) {
-        return function (f) { return window.setImmediate(f) };
-    }
-
-    if (canPost) {
-        var queue = [];
-        window.addEventListener('message', function (ev) {
-            if (ev.source === window && ev.data === 'process-tick') {
-                ev.stopPropagation();
-                if (queue.length > 0) {
-                    var fn = queue.shift();
-                    fn();
-                }
-            }
-        }, true);
-
-        return function nextTick(fn) {
-            queue.push(fn);
-            window.postMessage('process-tick', '*');
-        };
-    }
-
-    return function nextTick(fn) {
-        setTimeout(fn, 0);
-    };
-})();
-
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-}
-
-// TODO(shtylman)
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-
-},{}],8:[function(require,module,exports){
-(function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
-
-var EventEmitter = exports.EventEmitter = process.EventEmitter;
-var isArray = typeof Array.isArray === 'function'
-    ? Array.isArray
-    : function (xs) {
-        return Object.prototype.toString.call(xs) === '[object Array]'
-    }
-;
-function indexOf (xs, x) {
-    if (xs.indexOf) return xs.indexOf(x);
-    for (var i = 0; i < xs.length; i++) {
-        if (x === xs[i]) return i;
-    }
-    return -1;
-}
-
-// By default EventEmitters will print a warning if more than
-// 10 listeners are added to it. This is a useful default which
-// helps finding memory leaks.
-//
-// Obviously not all Emitters should be limited to 10. This function allows
-// that to be increased. Set to zero for unlimited.
-var defaultMaxListeners = 10;
-EventEmitter.prototype.setMaxListeners = function(n) {
-  if (!this._events) this._events = {};
-  this._events.maxListeners = n;
-};
-
-
-EventEmitter.prototype.emit = function(type) {
-  // If there is no 'error' event listener then throw.
-  if (type === 'error') {
-    if (!this._events || !this._events.error ||
-        (isArray(this._events.error) && !this._events.error.length))
-    {
-      if (arguments[1] instanceof Error) {
-        throw arguments[1]; // Unhandled 'error' event
-      } else {
-        throw new Error("Uncaught, unspecified 'error' event.");
-      }
-      return false;
-    }
-  }
-
-  if (!this._events) return false;
-  var handler = this._events[type];
-  if (!handler) return false;
-
-  if (typeof handler == 'function') {
-    switch (arguments.length) {
-      // fast cases
-      case 1:
-        handler.call(this);
-        break;
-      case 2:
-        handler.call(this, arguments[1]);
-        break;
-      case 3:
-        handler.call(this, arguments[1], arguments[2]);
-        break;
-      // slower
-      default:
-        var args = Array.prototype.slice.call(arguments, 1);
-        handler.apply(this, args);
-    }
-    return true;
-
-  } else if (isArray(handler)) {
-    var args = Array.prototype.slice.call(arguments, 1);
-
-    var listeners = handler.slice();
-    for (var i = 0, l = listeners.length; i < l; i++) {
-      listeners[i].apply(this, args);
-    }
-    return true;
-
-  } else {
-    return false;
-  }
-};
-
-// EventEmitter is defined in src/node_events.cc
-// EventEmitter.prototype.emit() is also defined there.
-EventEmitter.prototype.addListener = function(type, listener) {
-  if ('function' !== typeof listener) {
-    throw new Error('addListener only takes instances of Function');
-  }
-
-  if (!this._events) this._events = {};
-
-  // To avoid recursion in the case that type == "newListeners"! Before
-  // adding it to the listeners, first emit "newListeners".
-  this.emit('newListener', type, listener);
-
-  if (!this._events[type]) {
-    // Optimize the case of one listener. Don't need the extra array object.
-    this._events[type] = listener;
-  } else if (isArray(this._events[type])) {
-
-    // Check for listener leak
-    if (!this._events[type].warned) {
-      var m;
-      if (this._events.maxListeners !== undefined) {
-        m = this._events.maxListeners;
-      } else {
-        m = defaultMaxListeners;
-      }
-
-      if (m && m > 0 && this._events[type].length > m) {
-        this._events[type].warned = true;
-        console.error('(node) warning: possible EventEmitter memory ' +
-                      'leak detected. %d listeners added. ' +
-                      'Use emitter.setMaxListeners() to increase limit.',
-                      this._events[type].length);
-        console.trace();
-      }
-    }
-
-    // If we've already got an array, just append.
-    this._events[type].push(listener);
-  } else {
-    // Adding the second element, need to change to array.
-    this._events[type] = [this._events[type], listener];
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.on = EventEmitter.prototype.addListener;
-
-EventEmitter.prototype.once = function(type, listener) {
-  var self = this;
-  self.on(type, function g() {
-    self.removeListener(type, g);
-    listener.apply(this, arguments);
-  });
-
-  return this;
-};
-
-EventEmitter.prototype.removeListener = function(type, listener) {
-  if ('function' !== typeof listener) {
-    throw new Error('removeListener only takes instances of Function');
-  }
-
-  // does not use listeners(), so no side effect of creating _events[type]
-  if (!this._events || !this._events[type]) return this;
-
-  var list = this._events[type];
-
-  if (isArray(list)) {
-    var i = indexOf(list, listener);
-    if (i < 0) return this;
-    list.splice(i, 1);
-    if (list.length == 0)
-      delete this._events[type];
-  } else if (this._events[type] === listener) {
-    delete this._events[type];
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.removeAllListeners = function(type) {
-  if (arguments.length === 0) {
-    this._events = {};
-    return this;
-  }
-
-  // does not use listeners(), so no side effect of creating _events[type]
-  if (type && this._events && this._events[type]) this._events[type] = null;
-  return this;
-};
-
-EventEmitter.prototype.listeners = function(type) {
-  if (!this._events) this._events = {};
-  if (!this._events[type]) this._events[type] = [];
-  if (!isArray(this._events[type])) {
-    this._events[type] = [this._events[type]];
-  }
-  return this._events[type];
-};
-
-})(require("__browserify_process"))
-},{"__browserify_process":15}],13:[function(require,module,exports){
-var EventEmitter = require('events').EventEmitter,
-	publicEvents = new EventEmitter(),
-	privateEvents = new EventEmitter();
-
-module.exports.public = publicEvents;
-module.exports.private = privateEvents;
-},{"events":8}],11:[function(require,module,exports){
+},{"util":7,"http":12,"assert":9,"./eql":13}],12:[function(require,module,exports){
 var http = module.exports;
 var EventEmitter = require('events').EventEmitter;
 var Request = require('./lib/request');
@@ -1963,7 +1901,7 @@ var xhrHttp = (function () {
     }
 })();
 
-},{"events":8,"./lib/request":16}],17:[function(require,module,exports){
+},{"events":8,"./lib/request":14}],15:[function(require,module,exports){
 require=(function(e,t,n,r){function i(r){if(!n[r]){if(!t[r]){if(e)return e(r);throw new Error("Cannot find module '"+r+"'")}var s=n[r]={exports:{}};t[r][0](function(e){var n=t[r][1][e];return i(n?n:e)},s,s.exports)}return n[r].exports}for(var s=0;s<r.length;s++)i(r[s]);return i})(typeof require!=="undefined"&&require,{1:[function(require,module,exports){
 exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
   var e, m,
@@ -5828,7 +5766,7 @@ SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 },{}]},{},[])
 ;;module.exports=require("buffer-browserify")
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 (function(Buffer){
 // Taken from node's assert module, because it sucks
 // and exposes next to nothing useful.
@@ -5924,23 +5862,69 @@ function objEquiv (a, b) {
 }
 
 })(require("__browserify_buffer").Buffer)
-},{"__browserify_buffer":17}],14:[function(require,module,exports){
-var polyfill = require('../polyfill');
+},{"__browserify_buffer":15}],6:[function(require,module,exports){
+var koBindingHandlers = require('./ko'),
+    events = require('./events');
 
-// Knockout binding handlers
-var bindingHandlers = {
-    editableCell: require('./editableCellBinding'),
-    editableCellSelection: require('./editableCellSelectionBinding'),
-    editableCellScrollHost: require('./editableCellScrollHostBinding')
+exports.selectCell = function (cell) {
+    var table = cell.parentNode.parentNode.parentNode,
+        selection = table._cellSelection;
+
+    selection.setRange(cell, cell);
 };
 
-// Register Knockout binding handlers if Knockout is loaded
-if (typeof ko !== 'undefined') {
-    for (var bindingHandler in bindingHandlers) {
-        ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
-    }
+exports.getTableSelection = function (table) {
+    var selection = table._cellSelection;
+
+    return selection;
+};
+
+exports.setCellValue = function (cell, value) {
+    var table = cell.parentNode.parentNode.parentNode,
+        selection = table._cellSelection;
+
+    selection.updateCellValue(cell, value);
+};
+
+// --------
+// Eventing
+// --------
+
+exports.on = function (event, listener) {
+    events.public.on(event, listener);
+};
+
+exports.removeAllListeners = function () {
+    events.public.removeAllListeners.apply(events.public, arguments);
+};
+
+// Proxy internal events
+
+var proxyEvents = ['cellValueChanged'],
+    eventName,
+    i;
+
+for (i = 0; i < proxyEvents.length; ++i) {
+    eventName = proxyEvents[i];
+
+    events.private.on(eventName, createProxy(eventName));    
 }
-},{"../polyfill":18,"./editableCellBinding":19,"./editableCellSelectionBinding":20,"./editableCellScrollHostBinding":21}],22:[function(require,module,exports){
+
+function createProxy (eventName) {
+    return function () {
+        var args = Array.prototype.slice.call(arguments);
+        args.unshift(eventName);
+        events.public.emit.apply(events.public, args);
+    };
+}
+},{"./events":16,"./ko":17}],16:[function(require,module,exports){
+var EventEmitter = require('events').EventEmitter,
+	publicEvents = new EventEmitter(),
+	privateEvents = new EventEmitter();
+
+module.exports.public = publicEvents;
+module.exports.private = privateEvents;
+},{"events":8}],18:[function(require,module,exports){
 exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -6026,7 +6010,7 @@ exports.writeIEEE754 = function(buffer, value, offset, isBE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],23:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 var events = require('events');
 var util = require('util');
 
@@ -6147,51 +6131,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":8,"util":7}],18:[function(require,module,exports){
-function forEach (list, f) {
-  var i;
-
-  for (i = 0; i < list.length; ++i) {
-    f(list[i], i);
-  }
-}
-
-forEach([Array, window.NodeList, window.HTMLCollection], extend);
-
-function extend (object) {
-  var prototype = object && object.prototype;
-
-  if (!prototype) {
-    return;
-  }
-
-  prototype.forEach = prototype.forEach || function (f) {
-    forEach(this, f);
-  };
-
-  prototype.filter = prototype.filter || function (f) {
-    var result = [];
-
-    this.forEach(function (element) {
-      if (f(element, result.length)) {
-        result.push(element);
-      }
-    });
-
-    return result;
-  };
-
-  prototype.map = prototype.map || function (f) {
-    var result = [];
-
-    this.forEach(function (element) {
-      result.push(f(element, result.length));
-    });
-
-    return result;
-  };
-}
-},{}],10:[function(require,module,exports){
+},{"events":8,"util":7}],10:[function(require,module,exports){
 (function(){function SlowBuffer (size) {
     this.length = size;
 };
@@ -7511,189 +7451,7 @@ SlowBuffer.prototype.writeDoubleLE = Buffer.prototype.writeDoubleLE;
 SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 
 })()
-},{"assert":9,"./buffer_ieee754":22,"base64-js":24}],19:[function(require,module,exports){
-var utils = require('./utils'),
-    events = require('../events');
-
-var editableCell = {
-    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        var table = $(element).parents('table')[0],
-            selection = utils.initializeSelection(table),
-            valueBindingName = 'editableCell';
-
-        selection.registerCell(element);
-
-        if (allBindingsAccessor().cellValue) {
-            valueBindingName = 'cellValue';
-            valueAccessor = function () { return allBindingsAccessor().cellValue; };
-        }
-
-        element._cellTemplated = element.innerHTML.trim() !== '';
-        element._cellValue = valueAccessor;
-        element._cellContent = function () { return allBindingsAccessor().cellHTML || allBindingsAccessor().cellText || this._cellValue(); };
-        element._cellText = function () { return allBindingsAccessor().cellText; };
-        element._cellHTML = function () { return allBindingsAccessor().cellHTML; };
-        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
-        element._cellValueUpdater = function (newValue) {
-            utils.updateBindingValue(element, valueBindingName, this._cellValue, allBindingsAccessor, newValue);
-
-            if (!ko.isObservable(this._cellValue())) {
-                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
-            }
-        };
-
-        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
-            selection.unregisterCell(element);
-
-            element._cellValue = null;
-            element._cellContent = null;
-            element._cellText = null;
-            element._cellHTML = null;
-            element._cellReadOnly = null;
-            element._cellValueUpdater = null;
-        });
-
-        if (element._cellTemplated) {
-            ko.utils.domData.set(element, 'editableCellTemplate', {});
-            return { 'controlsDescendantBindings': true };
-        }
-    },
-    update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        var value = ko.utils.unwrapObservable(valueAccessor());
-
-        if (element._cellTemplated) {
-            var template = ko.utils.domData.get(element, 'editableCellTemplate');
-
-            if (!template.savedNodes) {
-                template.savedNodes = utils.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
-            }
-            else {
-                ko.virtualElements.setDomNodeChildren(element, utils.cloneNodes(template.savedNodes));
-            }
-
-            ko.applyBindingsToDescendants(bindingContext.createChildContext(value), element);
-        }
-        else {
-            if (element._cellHTML()) {
-                element.innerHTML = ko.utils.unwrapObservable(element._cellHTML());
-            }
-            else {
-                element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
-            }
-        }
-
-        events.private.emit('cellValueChanged', element);
-    }
-};
-
-module.exports = editableCell;
-},{"./utils":25,"../events":13}],20:[function(require,module,exports){
-var utils = require('./utils');
-
-var editableCellSelection = {
-    _selectionMappings: [],
-
-    init: function (element, valueAccessor, allBindingsAccessor) {
-        if (element.tagName !== 'TABLE') {
-            throw new Error('editableCellSelection binding can only be applied to tables');
-        }
-
-        var table = element,
-            selection = utils.initializeSelection(table);
-
-        // Update supplied observable array when selection range changes
-        selection.on('change', rangeChanged);
-
-        function rangeChanged (newSelection) {
-            newSelection = ko.utils.arrayMap(newSelection, function (cell) {
-                return {
-                    cell: cell,
-                    value: cell._cellValue(),
-                    content: cell._cellContent()
-                };
-            });
-
-            utils.updateBindingValue(element, 'editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
-        }
-
-        // Keep track of selections
-        ko.bindingHandlers.editableCellSelection._selectionMappings.push([valueAccessor, table]);
-
-        // Perform clean-up when table is removed from DOM
-        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
-            // Remove selection from list
-            var selectionIndex = ko.utils.arrayFirst(ko.bindingHandlers.editableCellSelection._selectionMappings, function (tuple) {
-                return tuple[0] === valueAccessor;
-            });
-            ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
-
-            // Remove event listener
-            selection.removeListener('change', rangeChanged);
-        });
-    },
-    update: function (element, valueAccessor, allBindingsAccessor) {
-        var table = element,
-            selection = table._cellSelection,
-            newSelection = ko.utils.unwrapObservable(valueAccessor()) || [];
-
-        // Empty selection, so simply clear it out
-        if (newSelection.length === 0) {
-            selection.clear();
-            return;
-        }
-
-        var start = newSelection[0],
-            end = newSelection[newSelection.length - 1];
-
-        var isDirectUpdate = start.tagName === 'TD' || start.tagName === 'TH';
-
-        // Notification of changed selection, either after programmatic  
-        // update or after changing current selection in user interface
-        if (!isDirectUpdate) {
-            start = start.cell;
-            end = end.cell;
-        }
-
-        // Make sure selected cells belongs to current table, or else hide selection
-        var parentRowHidden = !start.parentNode;
-        var belongingToOtherTable = start.parentNode && start.parentNode.parentNode.parentNode !== table;
-
-        if (parentRowHidden || belongingToOtherTable) {
-            // Selection cannot be cleared, since that will affect selection in other table
-            selection.view.hide();
-            return;
-        }
-
-        // Programmatic update of selection, i.e. selection([startCell, endCell]);
-        if (isDirectUpdate) {
-            selection.setRange(start, end);
-        }
-    }
-};
-
-module.exports = editableCellSelection;
-},{"./utils":25}],21:[function(require,module,exports){
-var utils = require('./utils');
-
-var editableCellScrollHost = {
-    init: function (element) {
-        if (element.tagName !== 'TABLE') {
-            throw new Error('editableCellScrollHost binding can only be applied to tables');
-        }
-
-        utils.initializeSelection(element);
-    },
-    update: function (element, valueAccessor) {
-        var table = element,
-            selection = table._cellSelection,
-            scrollHost = ko.utils.unwrapObservable(valueAccessor());
-
-        selection.setScrollHost(scrollHost);
-    }
-};
-
-module.exports = editableCellScrollHost;
-},{"./utils":25}],24:[function(require,module,exports){
+},{"assert":9,"./buffer_ieee754":18,"base64-js":20}],20:[function(require,module,exports){
 (function (exports) {
 	'use strict';
 
@@ -7779,7 +7537,7 @@ module.exports = editableCellScrollHost;
 	module.exports.fromByteArray = uint8ToBase64;
 }());
 
-},{}],26:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 var Stream = require('stream');
 
 var Response = module.exports = function (res) {
@@ -7900,7 +7658,67 @@ var isArray = Array.isArray || function (xs) {
     return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{"stream":23}],16:[function(require,module,exports){
+},{"stream":19}],17:[function(require,module,exports){
+var polyfill = require('../polyfill');
+
+// Knockout binding handlers
+var bindingHandlers = {
+    editableCell: require('./editableCellBinding'),
+    editableCellSelection: require('./editableCellSelectionBinding'),
+    editableCellScrollHost: require('./editableCellScrollHostBinding')
+};
+
+// Register Knockout binding handlers if Knockout is loaded
+if (typeof ko !== 'undefined') {
+    for (var bindingHandler in bindingHandlers) {
+        ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
+    }
+}
+},{"../polyfill":22,"./editableCellBinding":23,"./editableCellSelectionBinding":24,"./editableCellScrollHostBinding":25}],22:[function(require,module,exports){
+function forEach (list, f) {
+  var i;
+
+  for (i = 0; i < list.length; ++i) {
+    f(list[i], i);
+  }
+}
+
+forEach([Array, window.NodeList, window.HTMLCollection], extend);
+
+function extend (object) {
+  var prototype = object && object.prototype;
+
+  if (!prototype) {
+    return;
+  }
+
+  prototype.forEach = prototype.forEach || function (f) {
+    forEach(this, f);
+  };
+
+  prototype.filter = prototype.filter || function (f) {
+    var result = [];
+
+    this.forEach(function (element) {
+      if (f(element, result.length)) {
+        result.push(element);
+      }
+    });
+
+    return result;
+  };
+
+  prototype.map = prototype.map || function (f) {
+    var result = [];
+
+    this.forEach(function (element) {
+      result.push(f(element, result.length));
+    });
+
+    return result;
+  };
+}
+},{}],14:[function(require,module,exports){
 (function(){var Stream = require('stream');
 var Response = require('./response');
 var concatStream = require('concat-stream')
@@ -8034,7 +7852,248 @@ var indexOf = function (xs, x) {
 };
 
 })()
-},{"stream":23,"buffer":10,"./response":26,"concat-stream":27}],25:[function(require,module,exports){
+},{"stream":19,"buffer":10,"./response":21,"concat-stream":26}],23:[function(require,module,exports){
+var utils = require('./utils'),
+    events = require('../events');
+
+var editableCell = {
+    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var table = $(element).parents('table')[0],
+            selection = utils.initializeSelection(table),
+            valueBindingName = 'editableCell';
+
+        selection.registerCell(element);
+
+        if (allBindingsAccessor().cellValue) {
+            valueBindingName = 'cellValue';
+            valueAccessor = function () { return allBindingsAccessor().cellValue; };
+        }
+
+        element._cellTemplated = element.innerHTML.trim() !== '';
+        element._cellValue = valueAccessor;
+        element._cellContent = function () { return allBindingsAccessor().cellHTML || allBindingsAccessor().cellText || this._cellValue(); };
+        element._cellText = function () { return allBindingsAccessor().cellText; };
+        element._cellHTML = function () { return allBindingsAccessor().cellHTML; };
+        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
+        element._cellValueUpdater = function (newValue) {
+            utils.updateBindingValue(element, valueBindingName, this._cellValue, allBindingsAccessor, newValue);
+
+            if (!ko.isObservable(this._cellValue())) {
+                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
+            }
+        };
+
+        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
+            selection.unregisterCell(element);
+
+            element._cellValue = null;
+            element._cellContent = null;
+            element._cellText = null;
+            element._cellHTML = null;
+            element._cellReadOnly = null;
+            element._cellValueUpdater = null;
+        });
+
+        if (element._cellTemplated) {
+            ko.utils.domData.set(element, 'editableCellTemplate', {});
+            return { 'controlsDescendantBindings': true };
+        }
+
+        element.initialBind = true;
+    },
+    update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var value = ko.utils.unwrapObservable(valueAccessor());
+
+        if (element._cellTemplated) {
+            var template = ko.utils.domData.get(element, 'editableCellTemplate');
+
+            if (!template.savedNodes) {
+                template.savedNodes = utils.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
+            }
+            else {
+                ko.virtualElements.setDomNodeChildren(element, utils.cloneNodes(template.savedNodes));
+            }
+
+            ko.applyBindingsToDescendants(bindingContext.createChildContext(value), element);
+        }
+        else {
+            if (element._cellHTML()) {
+                element.innerHTML = ko.utils.unwrapObservable(element._cellHTML());
+            }
+            else {
+                element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
+            }
+        }
+
+        if (!element.initialBind) {
+            events.private.emit('cellValueChanged', element);
+        }
+
+        if (element.initialBind) {
+            element.initialBind = undefined;
+        }
+    }
+};
+
+module.exports = editableCell;
+},{"./utils":27,"../events":16}],24:[function(require,module,exports){
+var utils = require('./utils');
+
+var editableCellSelection = {
+    _selectionMappings: [],
+
+    init: function (element, valueAccessor, allBindingsAccessor) {
+        if (element.tagName !== 'TABLE') {
+            throw new Error('editableCellSelection binding can only be applied to tables');
+        }
+
+        var table = element,
+            selection = utils.initializeSelection(table);
+
+        // Update supplied observable array when selection range changes
+        selection.on('change', rangeChanged);
+
+        function rangeChanged (newSelection) {
+            newSelection = ko.utils.arrayMap(newSelection, function (cell) {
+                return {
+                    cell: cell,
+                    value: cell._cellValue(),
+                    content: cell._cellContent()
+                };
+            });
+
+            utils.updateBindingValue(element, 'editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
+        }
+
+        // Keep track of selections
+        ko.bindingHandlers.editableCellSelection._selectionMappings.push([valueAccessor, table]);
+
+        // Perform clean-up when table is removed from DOM
+        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
+            // Remove selection from list
+            var selectionIndex = ko.utils.arrayFirst(ko.bindingHandlers.editableCellSelection._selectionMappings, function (tuple) {
+                return tuple[0] === valueAccessor;
+            });
+            ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
+
+            // Remove event listener
+            selection.removeListener('change', rangeChanged);
+        });
+    },
+    update: function (element, valueAccessor, allBindingsAccessor) {
+        var table = element,
+            selection = table._cellSelection,
+            newSelection = ko.utils.unwrapObservable(valueAccessor()) || [];
+
+        // Empty selection, so simply clear it out
+        if (newSelection.length === 0) {
+            selection.clear();
+            return;
+        }
+
+        var start = newSelection[0],
+            end = newSelection[newSelection.length - 1];
+
+        var isDirectUpdate = start.tagName === 'TD' || start.tagName === 'TH';
+
+        // Notification of changed selection, either after programmatic  
+        // update or after changing current selection in user interface
+        if (!isDirectUpdate) {
+            start = start.cell;
+            end = end.cell;
+        }
+
+        // Make sure selected cells belongs to current table, or else hide selection
+        var parentRowHidden = !start.parentNode;
+        var belongingToOtherTable = start.parentNode && start.parentNode.parentNode.parentNode !== table;
+
+        if (parentRowHidden || belongingToOtherTable) {
+            // Selection cannot be cleared, since that will affect selection in other table
+            selection.view.hide();
+            return;
+        }
+
+        // Programmatic update of selection, i.e. selection([startCell, endCell]);
+        if (isDirectUpdate) {
+            selection.setRange(start, end);
+        }
+    }
+};
+
+module.exports = editableCellSelection;
+},{"./utils":27}],25:[function(require,module,exports){
+var utils = require('./utils');
+
+var editableCellScrollHost = {
+    init: function (element) {
+        if (element.tagName !== 'TABLE') {
+            throw new Error('editableCellScrollHost binding can only be applied to tables');
+        }
+
+        utils.initializeSelection(element);
+    },
+    update: function (element, valueAccessor) {
+        var table = element,
+            selection = table._cellSelection,
+            scrollHost = ko.utils.unwrapObservable(valueAccessor());
+
+        selection.setScrollHost(scrollHost);
+    }
+};
+
+module.exports = editableCellScrollHost;
+},{"./utils":27}],26:[function(require,module,exports){
+(function(Buffer){var stream = require('stream')
+var util = require('util')
+
+function ConcatStream(cb) {
+  stream.Stream.call(this)
+  this.writable = true
+  if (cb) this.cb = cb
+  this.body = []
+  if (this.cb) this.on('error', cb)
+}
+
+util.inherits(ConcatStream, stream.Stream)
+
+ConcatStream.prototype.write = function(chunk) {
+  this.body.push(chunk)
+}
+
+ConcatStream.prototype.arrayConcat = function(arrs) {
+  if (arrs.length === 0) return []
+  if (arrs.length === 1) return arrs[0]
+  return arrs.reduce(function (a, b) { return a.concat(b) })
+}
+
+ConcatStream.prototype.isArray = function(arr) {
+  var isArray = Array.isArray(arr)
+  var isTypedArray = arr.toString().match(/Array/)
+  return isArray || isTypedArray
+}
+
+ConcatStream.prototype.getBody = function () {
+  if (this.body.length === 0) return
+  if (typeof(this.body[0]) === "string") return this.body.join('')
+  if (this.isArray(this.body[0])) return this.arrayConcat(this.body)
+  if (typeof(Buffer) !== "undefined" && Buffer.isBuffer(this.body[0])) {
+    return Buffer.concat(this.body)
+  }
+  return this.body
+}
+
+ConcatStream.prototype.end = function() {
+  if (this.cb) this.cb(false, this.getBody())
+}
+
+module.exports = function(cb) {
+  return new ConcatStream(cb)
+}
+
+module.exports.ConcatStream = ConcatStream
+
+})(require("__browserify_buffer").Buffer)
+},{"stream":19,"util":7,"__browserify_buffer":15}],27:[function(require,module,exports){
 var Selection = require('../selection');
 
 module.exports = {
@@ -8087,58 +8146,7 @@ function cloneNodes (nodesArray, shouldCleanNodes) {
     }
     return newNodesArray;
 }
-},{"../selection":28}],27:[function(require,module,exports){
-(function(Buffer){var stream = require('stream')
-var util = require('util')
-
-function ConcatStream(cb) {
-  stream.Stream.call(this)
-  this.writable = true
-  if (cb) this.cb = cb
-  this.body = []
-  if (this.cb) this.on('error', cb)
-}
-
-util.inherits(ConcatStream, stream.Stream)
-
-ConcatStream.prototype.write = function(chunk) {
-  this.body.push(chunk)
-}
-
-ConcatStream.prototype.arrayConcat = function(arrs) {
-  if (arrs.length === 0) return []
-  if (arrs.length === 1) return arrs[0]
-  return arrs.reduce(function (a, b) { return a.concat(b) })
-}
-
-ConcatStream.prototype.isArray = function(arr) {
-  var isArray = Array.isArray(arr)
-  var isTypedArray = arr.toString().match(/Array/)
-  return isArray || isTypedArray
-}
-
-ConcatStream.prototype.getBody = function () {
-  if (this.body.length === 0) return
-  if (typeof(this.body[0]) === "string") return this.body.join('')
-  if (this.isArray(this.body[0])) return this.arrayConcat(this.body)
-  if (typeof(Buffer) !== "undefined" && Buffer.isBuffer(this.body[0])) {
-    return Buffer.concat(this.body)
-  }
-  return this.body
-}
-
-ConcatStream.prototype.end = function() {
-  if (this.cb) this.cb(false, this.getBody())
-}
-
-module.exports = function(cb) {
-  return new ConcatStream(cb)
-}
-
-module.exports.ConcatStream = ConcatStream
-
-})(require("__browserify_buffer").Buffer)
-},{"stream":23,"util":7,"__browserify_buffer":17}],28:[function(require,module,exports){
+},{"../selection":28}],28:[function(require,module,exports){
 var SelectionView = require('./selectionView'),
     SelectionRange = require('./selectionRange'),
     EventEmitter = require('events').EventEmitter,
@@ -8479,7 +8487,205 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"events":8,"./selectionView":29,"./polyfill":18,"./selectionRange":30}],29:[function(require,module,exports){
+},{"events":8,"./selectionView":29,"./selectionRange":30,"./polyfill":22}],30:[function(require,module,exports){
+var EventEmitter = require('events').EventEmitter,
+    polyfill = require('./polyfill');
+
+module.exports = SelectionRange;
+
+SelectionRange.prototype = new EventEmitter();
+
+function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
+    var self = this;
+
+    self.start = undefined;
+    self.end = undefined;
+    self.selection = [];
+
+    function setSelection (cells) {
+        self.selection = cells;
+        self.emit('change', cells);
+    }
+
+    self.moveInDirection = function (direction, toEnd) {
+        var newStart = toEnd ? self.getLastSelectableCellInDirection(self.start, direction) : self.getSelectableCellInDirection(self.start, direction),
+            startChanged = newStart !== self.start,
+            belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== self.start.parentNode.parentNode.parentNode;
+
+        if (!belongingToOtherTable && (startChanged || self.start !== self.end)) {
+            self.setStart(newStart);
+        }
+
+        if (startChanged) {
+            return newStart;
+        }
+    };
+
+    self.extendInDirection = function (direction, toEnd) {
+        var newEnd = toEnd ? self.getLastSelectableCellInDirection(self.end, direction) : self.getCellInDirection(self.end, direction),
+            endChanged = newEnd && newEnd !== self.end;
+
+        if (newEnd) {
+            self.setEnd(newEnd);    
+        }
+
+        if (endChanged) {
+            return newEnd;
+        }
+    };
+
+    self.getCells = function () {
+        return self.getCellsInArea(self.start, self.end);
+    };
+
+    self.clear = function () {
+        self.start = undefined;
+        self.end = undefined;
+        setSelection([]);
+    };
+
+    self.destroy = function () {
+        self.removeAllListeners('change');
+        self.start = undefined;
+        self.end = undefined;
+        self.selection = null;
+        self = null;
+    };
+
+    self.setStart = function (element) {
+        self.start = element;
+        self.end = element;
+        setSelection(self.getCells());
+    };
+    self.setEnd = function (element) {
+        if (element === self.end) {
+            return;
+        }
+        self.start = self.start || element;
+
+        var cellsInArea = self.getCellsInArea(self.start, element),
+            allEditable = true;
+
+        cellsInArea.forEach(function (cell) {
+            allEditable = allEditable && cellIsSelectable(cell);
+        });
+
+        if (!allEditable) {
+            return;
+        }
+
+        self.end = element;
+        setSelection(self.getCells());
+    };
+    self.getCellInDirection = function (originCell, direction) {
+
+        var rowIndex = originCell.parentNode.rowIndex;
+        var cellIndex = getCellIndex(originCell);
+
+        var table = originCell.parentNode.parentNode.parentNode,
+            row = getRowByIndex(rowIndex + getDirectionYDelta(direction), table),
+            cell = row && getCellByIndex(row, cellIndex + getDirectionXDelta(direction, originCell));
+
+        if (direction === 'Left' && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+        if (direction === 'Up' && row && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+        if (direction === 'Right' && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+        if (direction === 'Down' && row && cell) {
+            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
+        }
+
+        return undefined;
+    };
+    self.getSelectableCellInDirection = function (originCell, direction) {
+        var lastCell,
+            cell = originCell;
+
+        while (cell) {
+            cell = self.getCellInDirection(cell, direction);
+
+            if (cell && cellIsSelectable(cell)) {
+                return cell;
+            }
+        }
+
+        return originCell;
+    };
+    self.getLastSelectableCellInDirection = function (originCell, direction) {
+        var nextCell = originCell;
+        do {
+            cell = nextCell;
+            nextCell = self.getSelectableCellInDirection(cell, direction);
+        } while(nextCell !== cell);
+
+        return cell;
+    };
+    self.getCellsInArea = function (startCell, endCell) {
+        var startX = Math.min(getCellIndex(startCell), getCellIndex(endCell)),
+            startY = Math.min(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
+            endX = Math.max(getCellIndex(startCell), getCellIndex(endCell)),
+            endY = Math.max(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
+            x, y,
+            cell,
+            cells = [];
+
+        for (x = startX; x <= endX; ++x) {
+            for (y = startY; y <= endY; ++y) {
+                cell = getCellByIndex(getRowByIndex(y), x);
+                if(cellIsVisible(cell)) {
+                    cells.push(cell || {});
+                }
+            }
+        }
+
+        return cells;
+    };
+    
+    function getDirectionXDelta (direction, cell) {
+        if (direction === 'Left') {
+            return -1;
+        }
+
+        if (direction === 'Right') {
+            return cell.colSpan;
+        }
+
+        return 0;
+    }
+
+    function getDirectionYDelta (direction) {
+        if (direction === 'Up') {
+            return -1;
+        }
+
+        if (direction === 'Down') {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    function getCellIndex (cell) {
+        var row = cell.parentNode,
+            colSpanSum = 0,
+            i;
+
+        for (i = 0; i < row.children.length; i++) {
+            if (row.children[i] === cell) {
+                break;
+            }
+
+            colSpanSum += row.children[i].colSpan;
+        }
+
+        return colSpanSum;
+    }
+}
+},{"events":8,"./polyfill":22}],29:[function(require,module,exports){
 var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
@@ -8706,203 +8912,5 @@ function SelectionView (table, selection) {
 
     html.addEventListener("mouseup", self.onMouseUp);
 }
-},{"./polyfill":18}],30:[function(require,module,exports){
-var EventEmitter = require('events').EventEmitter,
-    polyfill = require('./polyfill');
-
-module.exports = SelectionRange;
-
-SelectionRange.prototype = new EventEmitter();
-
-function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
-    var self = this;
-
-    self.start = undefined;
-    self.end = undefined;
-    self.selection = [];
-
-    function setSelection (cells) {
-        self.selection = cells;
-        self.emit('change', cells);
-    }
-
-    self.moveInDirection = function (direction, toEnd) {
-        var newStart = toEnd ? self.getLastSelectableCellInDirection(self.start, direction) : self.getSelectableCellInDirection(self.start, direction),
-            startChanged = newStart !== self.start,
-            belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== self.start.parentNode.parentNode.parentNode;
-
-        if (!belongingToOtherTable && (startChanged || self.start !== self.end)) {
-            self.setStart(newStart);
-        }
-
-        if (startChanged) {
-            return newStart;
-        }
-    };
-
-    self.extendInDirection = function (direction, toEnd) {
-        var newEnd = toEnd ? self.getLastSelectableCellInDirection(self.end, direction) : self.getCellInDirection(self.end, direction),
-            endChanged = newEnd && newEnd !== self.end;
-
-        if (newEnd) {
-            self.setEnd(newEnd);    
-        }
-
-        if (endChanged) {
-            return newEnd;
-        }
-    };
-
-    self.getCells = function () {
-        return self.getCellsInArea(self.start, self.end);
-    };
-
-    self.clear = function () {
-        self.start = undefined;
-        self.end = undefined;
-        setSelection([]);
-    };
-
-    self.destroy = function () {
-        self.removeAllListeners('change');
-        self.start = undefined;
-        self.end = undefined;
-        self.selection = null;
-        self = null;
-    };
-
-    self.setStart = function (element) {
-        self.start = element;
-        self.end = element;
-        setSelection(self.getCells());
-    };
-    self.setEnd = function (element) {
-        if (element === self.end) {
-            return;
-        }
-        self.start = self.start || element;
-
-        var cellsInArea = self.getCellsInArea(self.start, element),
-            allEditable = true;
-
-        cellsInArea.forEach(function (cell) {
-            allEditable = allEditable && cellIsSelectable(cell);
-        });
-
-        if (!allEditable) {
-            return;
-        }
-
-        self.end = element;
-        setSelection(self.getCells());
-    };
-    self.getCellInDirection = function (originCell, direction) {
-
-        var rowIndex = originCell.parentNode.rowIndex;
-        var cellIndex = getCellIndex(originCell);
-
-        var table = originCell.parentNode.parentNode.parentNode,
-            row = getRowByIndex(rowIndex + getDirectionYDelta(direction), table),
-            cell = row && getCellByIndex(row, cellIndex + getDirectionXDelta(direction, originCell));
-
-        if (direction === 'Left' && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-        if (direction === 'Up' && row && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-        if (direction === 'Right' && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-        if (direction === 'Down' && row && cell) {
-            return cellIsVisible(cell) && cell || self.getCellInDirection(cell, direction);
-        }
-
-        return undefined;
-    };
-    self.getSelectableCellInDirection = function (originCell, direction) {
-        var lastCell,
-            cell = originCell;
-
-        while (cell) {
-            cell = self.getCellInDirection(cell, direction);
-
-            if (cell && cellIsSelectable(cell)) {
-                return cell;
-            }
-        }
-
-        return originCell;
-    };
-    self.getLastSelectableCellInDirection = function (originCell, direction) {
-        var nextCell = originCell;
-        do {
-            cell = nextCell;
-            nextCell = self.getSelectableCellInDirection(cell, direction);
-        } while(nextCell !== cell);
-
-        return cell;
-    };
-    self.getCellsInArea = function (startCell, endCell) {
-        var startX = Math.min(getCellIndex(startCell), getCellIndex(endCell)),
-            startY = Math.min(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
-            endX = Math.max(getCellIndex(startCell), getCellIndex(endCell)),
-            endY = Math.max(startCell.parentNode.rowIndex, endCell.parentNode.rowIndex),
-            x, y,
-            cell,
-            cells = [];
-
-        for (x = startX; x <= endX; ++x) {
-            for (y = startY; y <= endY; ++y) {
-                cell = getCellByIndex(getRowByIndex(y), x);
-                if(cellIsVisible(cell)) {
-                    cells.push(cell || {});
-                }
-            }
-        }
-
-        return cells;
-    };
-    
-    function getDirectionXDelta (direction, cell) {
-        if (direction === 'Left') {
-            return -1;
-        }
-
-        if (direction === 'Right') {
-            return cell.colSpan;
-        }
-
-        return 0;
-    }
-
-    function getDirectionYDelta (direction) {
-        if (direction === 'Up') {
-            return -1;
-        }
-
-        if (direction === 'Down') {
-            return 1;
-        }
-
-        return 0;
-    }
-
-    function getCellIndex (cell) {
-        var row = cell.parentNode,
-            colSpanSum = 0,
-            i;
-
-        for (i = 0; i < row.children.length; i++) {
-            if (row.children[i] === cell) {
-                break;
-            }
-
-            colSpanSum += row.children[i].colSpan;
-        }
-
-        return colSpanSum;
-    }
-}
-},{"events":8,"./polyfill":18}]},{},[2])
+},{"./polyfill":22}]},{},[2])
 ;

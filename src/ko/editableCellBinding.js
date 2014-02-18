@@ -43,6 +43,8 @@ var editableCell = {
             ko.utils.domData.set(element, 'editableCellTemplate', {});
             return { 'controlsDescendantBindings': true };
         }
+
+        element.initialBind = true;
     },
     update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var value = ko.utils.unwrapObservable(valueAccessor());
@@ -68,7 +70,13 @@ var editableCell = {
             }
         }
 
-        events.private.emit('cellValueChanged', element);
+        if (!element.initialBind) {
+            events.private.emit('cellValueChanged', element);
+        }
+
+        if (element.initialBind) {
+            element.initialBind = undefined;
+        }
     }
 };
 
