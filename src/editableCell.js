@@ -29,13 +29,17 @@ exports.on = function (event, listener) {
     events.public.on(event, listener);
 };
 
+exports.removeListener = function () {
+    events.public.removeListener.apply(events.public, arguments);
+};
+
 exports.removeAllListeners = function () {
     events.public.removeAllListeners.apply(events.public, arguments);
 };
 
 // Proxy internal events
 
-var proxyEvents = ['cellValueChanged'],
+var proxyEvents = ['cellValueChanged', 'beforeCopy'],
     eventName,
     i;
 

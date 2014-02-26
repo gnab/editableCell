@@ -31,13 +31,17 @@ exports.on = function (event, listener) {
     events.public.on(event, listener);
 };
 
+exports.removeListener = function () {
+    events.public.removeListener.apply(events.public, arguments);
+};
+
 exports.removeAllListeners = function () {
     events.public.removeAllListeners.apply(events.public, arguments);
 };
 
 // Proxy internal events
 
-var proxyEvents = ['cellValueChanged'],
+var proxyEvents = ['cellValueChanged', 'beforeCopy'],
     eventName,
     i;
 
@@ -445,7 +449,7 @@ var editableCell = {
 };
 
 module.exports = editableCell;
-},{"./utils":10,"../events":2}],8:[function(require,module,exports){
+},{"../events":2,"./utils":10}],8:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellSelection = {
@@ -608,7 +612,8 @@ function cloneNodes (nodesArray, shouldCleanNodes) {
 var SelectionView = require('./selectionView'),
     SelectionRange = require('./selectionRange'),
     EventEmitter = require('events').EventEmitter,
-    polyfill = require('./polyfill');
+    polyfill = require('./polyfill'),
+    events = require('./events');
 
 module.exports = Selection;
 
@@ -895,7 +900,8 @@ function Selection (table, selectionMappings) {
             cols = cells[cells.length - 1].cellIndex - cells[0].cellIndex + 1,
             rows = cells.length / cols,
             lines = [],
-            i = 0;
+            i = 0,
+            copyEventData = {text: ''};
 
         cells.forEach(function (cell) {
             var lineIndex = i % rows,
@@ -907,9 +913,14 @@ function Selection (table, selectionMappings) {
             i++;
         });
 
-        return lines.map(function (line) {
+        copyEventData.text = lines.map(function (line) {
             return line.join('\t');
         }).join('\r\n');
+
+        
+        events.private.emit('beforeCopy', copyEventData);
+
+        return copyEventData.text;
     };
     self.onPaste = function (text) {
         var selStart = range.getCells()[0],
@@ -945,7 +956,7 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"events":4,"./selectionView":12,"./selectionRange":13,"./polyfill":6}],12:[function(require,module,exports){
+},{"events":4,"./selectionView":12,"./selectionRange":13,"./polyfill":6,"./events":2}],12:[function(require,module,exports){
 var polyfill = require('./polyfill');
 
 module.exports = SelectionView;

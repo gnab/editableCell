@@ -1,7 +1,8 @@
 var SelectionView = require('./selectionView'),
     SelectionRange = require('./selectionRange'),
     EventEmitter = require('events').EventEmitter,
-    polyfill = require('./polyfill');
+    polyfill = require('./polyfill'),
+    events = require('./events');
 
 module.exports = Selection;
 
@@ -288,7 +289,8 @@ function Selection (table, selectionMappings) {
             cols = cells[cells.length - 1].cellIndex - cells[0].cellIndex + 1,
             rows = cells.length / cols,
             lines = [],
-            i = 0;
+            i = 0,
+            copyEventData = {text: ''};
 
         cells.forEach(function (cell) {
             var lineIndex = i % rows,
@@ -300,9 +302,14 @@ function Selection (table, selectionMappings) {
             i++;
         });
 
-        return lines.map(function (line) {
+        copyEventData.text = lines.map(function (line) {
             return line.join('\t');
         }).join('\r\n');
+
+        
+        events.private.emit('beforeCopy', copyEventData);
+
+        return copyEventData.text;
     };
     self.onPaste = function (text) {
         var selStart = range.getCells()[0],
