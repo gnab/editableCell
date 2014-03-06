@@ -65,7 +65,67 @@ var EventEmitter = require('events').EventEmitter,
 
 module.exports.public = publicEvents;
 module.exports.private = privateEvents;
-},{"events":4}],5:[function(require,module,exports){
+},{"events":4}],3:[function(require,module,exports){
+var polyfill = require('../polyfill');
+
+// Knockout binding handlers
+var bindingHandlers = {
+    editableCell: require('./editableCellBinding'),
+    editableCellSelection: require('./editableCellSelectionBinding'),
+    editableCellScrollHost: require('./editableCellScrollHostBinding')
+};
+
+// Register Knockout binding handlers if Knockout is loaded
+if (typeof ko !== 'undefined') {
+    for (var bindingHandler in bindingHandlers) {
+        ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
+    }
+}
+},{"../polyfill":5,"./editableCellBinding":6,"./editableCellScrollHostBinding":7,"./editableCellSelectionBinding":8}],5:[function(require,module,exports){
+function forEach (list, f) {
+  var i;
+
+  for (i = 0; i < list.length; ++i) {
+    f(list[i], i);
+  }
+}
+
+forEach([Array, window.NodeList, window.HTMLCollection], extend);
+
+function extend (object) {
+  var prototype = object && object.prototype;
+
+  if (!prototype) {
+    return;
+  }
+
+  prototype.forEach = prototype.forEach || function (f) {
+    forEach(this, f);
+  };
+
+  prototype.filter = prototype.filter || function (f) {
+    var result = [];
+
+    this.forEach(function (element) {
+      if (f(element, result.length)) {
+        result.push(element);
+      }
+    });
+
+    return result;
+  };
+
+  prototype.map = prototype.map || function (f) {
+    var result = [];
+
+    this.forEach(function (element) {
+      result.push(f(element, result.length));
+    });
+
+    return result;
+  };
+}
+},{}],9:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -305,94 +365,34 @@ EventEmitter.prototype.listeners = function(type) {
 };
 
 })(require("__browserify_process"))
-},{"__browserify_process":5}],3:[function(require,module,exports){
-var polyfill = require('../polyfill');
-
-// Knockout binding handlers
-var bindingHandlers = {
-    editableCell: require('./editableCellBinding'),
-    editableCellSelection: require('./editableCellSelectionBinding'),
-    editableCellScrollHost: require('./editableCellScrollHostBinding')
-};
-
-// Register Knockout binding handlers if Knockout is loaded
-if (typeof ko !== 'undefined') {
-    for (var bindingHandler in bindingHandlers) {
-        ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
-    }
-}
-},{"../polyfill":6,"./editableCellBinding":7,"./editableCellSelectionBinding":8,"./editableCellScrollHostBinding":9}],6:[function(require,module,exports){
-function forEach (list, f) {
-  var i;
-
-  for (i = 0; i < list.length; ++i) {
-    f(list[i], i);
-  }
-}
-
-forEach([Array, window.NodeList, window.HTMLCollection], extend);
-
-function extend (object) {
-  var prototype = object && object.prototype;
-
-  if (!prototype) {
-    return;
-  }
-
-  prototype.forEach = prototype.forEach || function (f) {
-    forEach(this, f);
-  };
-
-  prototype.filter = prototype.filter || function (f) {
-    var result = [];
-
-    this.forEach(function (element) {
-      if (f(element, result.length)) {
-        result.push(element);
-      }
-    });
-
-    return result;
-  };
-
-  prototype.map = prototype.map || function (f) {
-    var result = [];
-
-    this.forEach(function (element) {
-      result.push(f(element, result.length));
-    });
-
-    return result;
-  };
-}
-},{}],7:[function(require,module,exports){
+},{"__browserify_process":9}],6:[function(require,module,exports){
 var utils = require('./utils'),
     events = require('../events');
 
 var editableCell = {
-    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+    init: function (element, valueAccessor, allBindings, viewModel, bindingContext) {
         var table = $(element).parents('table')[0],
             selection = utils.initializeSelection(table),
             valueBindingName = 'editableCell';
 
         selection.registerCell(element);
 
-        if (allBindingsAccessor().cellValue) {
+        if (allBindings.has('cellValue')) {
             valueBindingName = 'cellValue';
-            valueAccessor = function () { return allBindingsAccessor().cellValue; };
+            valueAccessor = function () { return allBindings.get('cellValue'); };
         }
 
         element._cellTemplated = element.innerHTML.trim() !== '';
         element._cellValue = valueAccessor;
-        element._cellContent = function () { return allBindingsAccessor().cellHTML || allBindingsAccessor().cellText || this._cellValue(); };
-        element._cellText = function () { return allBindingsAccessor().cellText; };
-        element._cellHTML = function () { return allBindingsAccessor().cellHTML; };
-        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
+        element._cellContent = function () { return allBindings.get('cellHTML') || allBindings.get('cellText') || this._cellValue(); };
+        element._cellText = function () { return allBindings.get('cellText'); };
+        element._cellHTML = function () { return allBindings.get('cellHTML'); };
+        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindings.get('cellReadOnly')); };
         element._cellValueUpdater = function (newValue) {
-            utils.updateBindingValue(element, valueBindingName, this._cellValue, allBindingsAccessor, newValue);
+            utils.updateBindingValue(element, valueBindingName, this._cellValue, allBindings, newValue);
 
             if (!ko.isObservable(this._cellValue())) {
-                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
+                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindings, viewModel, bindingContext);
             }
         };
 
@@ -414,7 +414,7 @@ var editableCell = {
 
         element.initialBind = true;
     },
-    update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+    update: function (element, valueAccessor, allBindings, viewModel, bindingContext) {
         var value = ko.utils.unwrapObservable(valueAccessor());
 
         if (element._cellTemplated) {
@@ -449,7 +449,28 @@ var editableCell = {
 };
 
 module.exports = editableCell;
-},{"../events":2,"./utils":10}],8:[function(require,module,exports){
+},{"./utils":10,"../events":2}],7:[function(require,module,exports){
+var utils = require('./utils');
+
+var editableCellScrollHost = {
+    init: function (element) {
+        if (element.tagName !== 'TABLE') {
+            throw new Error('editableCellScrollHost binding can only be applied to tables');
+        }
+
+        utils.initializeSelection(element);
+    },
+    update: function (element, valueAccessor) {
+        var table = element,
+            selection = table._cellSelection,
+            scrollHost = ko.utils.unwrapObservable(valueAccessor());
+
+        selection.setScrollHost(scrollHost);
+    }
+};
+
+module.exports = editableCellScrollHost;
+},{"./utils":10}],8:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellSelection = {
@@ -534,27 +555,6 @@ var editableCellSelection = {
 };
 
 module.exports = editableCellSelection;
-},{"./utils":10}],9:[function(require,module,exports){
-var utils = require('./utils');
-
-var editableCellScrollHost = {
-    init: function (element) {
-        if (element.tagName !== 'TABLE') {
-            throw new Error('editableCellScrollHost binding can only be applied to tables');
-        }
-
-        utils.initializeSelection(element);
-    },
-    update: function (element, valueAccessor) {
-        var table = element,
-            selection = table._cellSelection,
-            scrollHost = ko.utils.unwrapObservable(valueAccessor());
-
-        selection.setScrollHost(scrollHost);
-    }
-};
-
-module.exports = editableCellScrollHost;
 },{"./utils":10}],10:[function(require,module,exports){
 var Selection = require('../selection');
 
@@ -956,7 +956,7 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"events":4,"./selectionView":12,"./selectionRange":13,"./polyfill":6,"./events":2}],12:[function(require,module,exports){
+},{"events":4,"./selectionView":12,"./polyfill":5,"./selectionRange":13,"./events":2}],12:[function(require,module,exports){
 var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
@@ -1183,7 +1183,7 @@ function SelectionView (table, selection) {
 
     html.addEventListener("mouseup", self.onMouseUp);
 }
-},{"./polyfill":6}],13:[function(require,module,exports){
+},{"./polyfill":5}],13:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill');
 
@@ -1381,6 +1381,6 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         return colSpanSum;
     }
 }
-},{"events":4,"./polyfill":6}]},{},[1])(1)
+},{"events":4,"./polyfill":5}]},{},[1])(1)
 });
 ;

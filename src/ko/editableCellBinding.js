@@ -2,29 +2,29 @@ var utils = require('./utils'),
     events = require('../events');
 
 var editableCell = {
-    init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+    init: function (element, valueAccessor, allBindings, viewModel, bindingContext) {
         var table = $(element).parents('table')[0],
             selection = utils.initializeSelection(table),
             valueBindingName = 'editableCell';
 
         selection.registerCell(element);
 
-        if (allBindingsAccessor().cellValue) {
+        if (allBindings.has('cellValue')) {
             valueBindingName = 'cellValue';
-            valueAccessor = function () { return allBindingsAccessor().cellValue; };
+            valueAccessor = function () { return allBindings.get('cellValue'); };
         }
 
         element._cellTemplated = element.innerHTML.trim() !== '';
         element._cellValue = valueAccessor;
-        element._cellContent = function () { return allBindingsAccessor().cellHTML || allBindingsAccessor().cellText || this._cellValue(); };
-        element._cellText = function () { return allBindingsAccessor().cellText; };
-        element._cellHTML = function () { return allBindingsAccessor().cellHTML; };
-        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindingsAccessor().cellReadOnly); };
+        element._cellContent = function () { return allBindings.get('cellHTML') || allBindings.get('cellText') || this._cellValue(); };
+        element._cellText = function () { return allBindings.get('cellText'); };
+        element._cellHTML = function () { return allBindings.get('cellHTML'); };
+        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindings.get('cellReadOnly')); };
         element._cellValueUpdater = function (newValue) {
-            utils.updateBindingValue(element, valueBindingName, this._cellValue, allBindingsAccessor, newValue);
+            utils.updateBindingValue(element, valueBindingName, this._cellValue, allBindings, newValue);
 
             if (!ko.isObservable(this._cellValue())) {
-                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext);
+                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindings, viewModel, bindingContext);
             }
         };
 
@@ -46,7 +46,7 @@ var editableCell = {
 
         element.initialBind = true;
     },
-    update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+    update: function (element, valueAccessor, allBindings, viewModel, bindingContext) {
         var value = ko.utils.unwrapObservable(valueAccessor());
 
         if (element._cellTemplated) {
