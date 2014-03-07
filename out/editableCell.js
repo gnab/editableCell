@@ -1,5 +1,12 @@
 (function(e){if("function"==typeof bootstrap)bootstrap("editablecell",e);else if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else if("undefined"!=typeof ses){if(!ses.ok())return;ses.makeEditableCell=e}else"undefined"!=typeof window?window.editableCell=e():global.editableCell=e()})(function(){var define,ses,bootstrap,module,exports;
 return (function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0].call(u.exports,function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({1:[function(require,module,exports){
+var EventEmitter = require('events').EventEmitter,
+	publicEvents = new EventEmitter(),
+	privateEvents = new EventEmitter();
+
+module.exports.public = publicEvents;
+module.exports.private = privateEvents;
+},{"events":2}],3:[function(require,module,exports){
 var koBindingHandlers = require('./ko'),
     events = require('./events');
 
@@ -58,74 +65,7 @@ function createProxy (eventName) {
         events.public.emit.apply(events.public, args);
     };
 }
-},{"./events":2,"./ko":3}],2:[function(require,module,exports){
-var EventEmitter = require('events').EventEmitter,
-	publicEvents = new EventEmitter(),
-	privateEvents = new EventEmitter();
-
-module.exports.public = publicEvents;
-module.exports.private = privateEvents;
-},{"events":4}],3:[function(require,module,exports){
-var polyfill = require('../polyfill');
-
-// Knockout binding handlers
-var bindingHandlers = {
-    editableCell: require('./editableCellBinding'),
-    editableCellSelection: require('./editableCellSelectionBinding'),
-    editableCellScrollHost: require('./editableCellScrollHostBinding')
-};
-
-// Register Knockout binding handlers if Knockout is loaded
-if (typeof ko !== 'undefined') {
-    for (var bindingHandler in bindingHandlers) {
-        ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
-    }
-}
-},{"../polyfill":5,"./editableCellBinding":6,"./editableCellScrollHostBinding":7,"./editableCellSelectionBinding":8}],5:[function(require,module,exports){
-function forEach (list, f) {
-  var i;
-
-  for (i = 0; i < list.length; ++i) {
-    f(list[i], i);
-  }
-}
-
-forEach([Array, window.NodeList, window.HTMLCollection], extend);
-
-function extend (object) {
-  var prototype = object && object.prototype;
-
-  if (!prototype) {
-    return;
-  }
-
-  prototype.forEach = prototype.forEach || function (f) {
-    forEach(this, f);
-  };
-
-  prototype.filter = prototype.filter || function (f) {
-    var result = [];
-
-    this.forEach(function (element) {
-      if (f(element, result.length)) {
-        result.push(element);
-      }
-    });
-
-    return result;
-  };
-
-  prototype.map = prototype.map || function (f) {
-    var result = [];
-
-    this.forEach(function (element) {
-      result.push(f(element, result.length));
-    });
-
-    return result;
-  };
-}
-},{}],9:[function(require,module,exports){
+},{"./events":1,"./ko":4}],5:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -179,7 +119,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],4:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 (function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
 
 var EventEmitter = exports.EventEmitter = process.EventEmitter;
@@ -365,7 +305,67 @@ EventEmitter.prototype.listeners = function(type) {
 };
 
 })(require("__browserify_process"))
-},{"__browserify_process":9}],6:[function(require,module,exports){
+},{"__browserify_process":5}],4:[function(require,module,exports){
+var polyfill = require('../polyfill');
+
+// Knockout binding handlers
+var bindingHandlers = {
+    editableCell: require('./editableCellBinding'),
+    editableCellSelection: require('./editableCellSelectionBinding'),
+    editableCellScrollHost: require('./editableCellScrollHostBinding')
+};
+
+// Register Knockout binding handlers if Knockout is loaded
+if (typeof ko !== 'undefined') {
+    for (var bindingHandler in bindingHandlers) {
+        ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
+    }
+}
+},{"../polyfill":6,"./editableCellBinding":7,"./editableCellSelectionBinding":8,"./editableCellScrollHostBinding":9}],6:[function(require,module,exports){
+function forEach (list, f) {
+  var i;
+
+  for (i = 0; i < list.length; ++i) {
+    f(list[i], i);
+  }
+}
+
+forEach([Array, window.NodeList, window.HTMLCollection], extend);
+
+function extend (object) {
+  var prototype = object && object.prototype;
+
+  if (!prototype) {
+    return;
+  }
+
+  prototype.forEach = prototype.forEach || function (f) {
+    forEach(this, f);
+  };
+
+  prototype.filter = prototype.filter || function (f) {
+    var result = [];
+
+    this.forEach(function (element) {
+      if (f(element, result.length)) {
+        result.push(element);
+      }
+    });
+
+    return result;
+  };
+
+  prototype.map = prototype.map || function (f) {
+    var result = [];
+
+    this.forEach(function (element) {
+      result.push(f(element, result.length));
+    });
+
+    return result;
+  };
+}
+},{}],7:[function(require,module,exports){
 var utils = require('./utils'),
     events = require('../events');
 
@@ -449,28 +449,7 @@ var editableCell = {
 };
 
 module.exports = editableCell;
-},{"./utils":10,"../events":2}],7:[function(require,module,exports){
-var utils = require('./utils');
-
-var editableCellScrollHost = {
-    init: function (element) {
-        if (element.tagName !== 'TABLE') {
-            throw new Error('editableCellScrollHost binding can only be applied to tables');
-        }
-
-        utils.initializeSelection(element);
-    },
-    update: function (element, valueAccessor) {
-        var table = element,
-            selection = table._cellSelection,
-            scrollHost = ko.utils.unwrapObservable(valueAccessor());
-
-        selection.setScrollHost(scrollHost);
-    }
-};
-
-module.exports = editableCellScrollHost;
-},{"./utils":10}],8:[function(require,module,exports){
+},{"./utils":10,"../events":1}],8:[function(require,module,exports){
 var utils = require('./utils');
 
 var editableCellSelection = {
@@ -539,7 +518,7 @@ var editableCellSelection = {
 
         // Make sure selected cells belongs to current table, or else hide selection
         var parentRowHidden = !start.parentNode;
-        var belongingToOtherTable = start.parentNode && start.parentNode.parentNode.parentNode !== table;
+        var belongingToOtherTable = start.parentNode && start.parentNode.parentNode && start.parentNode.parentNode.parentNode !== table;
 
         if (parentRowHidden || belongingToOtherTable) {
             // Selection cannot be cleared, since that will affect selection in other table
@@ -555,6 +534,27 @@ var editableCellSelection = {
 };
 
 module.exports = editableCellSelection;
+},{"./utils":10}],9:[function(require,module,exports){
+var utils = require('./utils');
+
+var editableCellScrollHost = {
+    init: function (element) {
+        if (element.tagName !== 'TABLE') {
+            throw new Error('editableCellScrollHost binding can only be applied to tables');
+        }
+
+        utils.initializeSelection(element);
+    },
+    update: function (element, valueAccessor) {
+        var table = element,
+            selection = table._cellSelection,
+            scrollHost = ko.utils.unwrapObservable(valueAccessor());
+
+        selection.setScrollHost(scrollHost);
+    }
+};
+
+module.exports = editableCellScrollHost;
 },{"./utils":10}],10:[function(require,module,exports){
 var Selection = require('../selection');
 
@@ -956,7 +956,7 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"events":4,"./selectionView":12,"./polyfill":5,"./selectionRange":13,"./events":2}],12:[function(require,module,exports){
+},{"events":2,"./selectionView":12,"./polyfill":6,"./events":1,"./selectionRange":13}],12:[function(require,module,exports){
 var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
@@ -1183,7 +1183,7 @@ function SelectionView (table, selection) {
 
     html.addEventListener("mouseup", self.onMouseUp);
 }
-},{"./polyfill":5}],13:[function(require,module,exports){
+},{"./polyfill":6}],13:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill');
 
@@ -1381,6 +1381,6 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         return colSpanSum;
     }
 }
-},{"events":4,"./polyfill":5}]},{},[1])(1)
+},{"events":2,"./polyfill":6}]},{},[3])(3)
 });
 ;
