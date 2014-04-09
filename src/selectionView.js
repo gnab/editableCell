@@ -67,13 +67,13 @@ function SelectionView (table, selection) {
         if (topOffset < 0) {
             scrollHost.scrollTop += topOffset;
         }
-        else if (bottomOffset < 0) {
+        if (bottomOffset < 0) {
             scrollHost.scrollTop -= bottomOffset;
         }
-        else if (leftOffset < 0) {
+        if (leftOffset < 0) {
             scrollHost.scrollLeft += leftOffset;
         }
-        else if (rightOffset < 0) {
+        if (rightOffset < 0) {
             scrollHost.scrollLeft -= rightOffset;
         }
     };

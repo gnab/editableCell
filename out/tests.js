@@ -38,83 +38,7 @@ require('should');
 require('./test/ko/editableCellBindingTest.js');
 require('./test/ko/editableCellSelectionBindingTest.js');
 require('./test/utils.js');
-},{"./test/ko/editableCellBindingTest.js":3,"./test/ko/editableCellSelectionBindingTest.js":4,"./test/utils.js":1,"should":5}],3:[function(require,module,exports){
-var editableCell = require('../../src/editableCell');
-var utils = require('../utils');
-
-describe('editableCell binding', function () {
-    it('should be registered with Knockout', function () {
-        ko.bindingHandlers.should.have.property('editableCell');
-    });
-
-    describe('cell value initial assignment', function () {
-        it('should assign constant value', function () {
-            var cell = utils.createCell("editableCell: 'value'");
-
-            ko.applyBindings({}, cell);
-
-            cell.innerHTML.should.equal('value');
-        });
-
-        it('should assign variable value', function () {
-            var cell = utils.createCell("editableCell: variable");
-
-            ko.applyBindings({variable: 'value'}, cell);
-
-            cell.innerHTML.should.equal('value');
-        });
-
-        it('should assign observable value', function () {
-            var cell = utils.createCell("editableCell: observable");
-
-            ko.applyBindings({observable: ko.observable('value')}, cell);
-
-            cell.innerHTML.should.equal('value');
-        });
-
-        it('should prefer cellText helper binding', function () {
-            var cell = utils.createCell("editableCell: 'value', cellText: 'text'");
-
-            ko.applyBindings({}, cell);
-
-            cell.innerHTML.should.equal('text');
-        });
-
-        it('should prefer template', function () {
-            var cell = utils.createCell("editableCell: 'value'");
-            cell.appendChild(utils.createElement('span', "text: 'template'"));
-
-            ko.applyBindings({}, cell);
-
-            cell.innerHTML.should.equal(
-                '<span data-bind="text: \'template\'">template</span>');
-        });
-    });
-
-    describe('cell value synchronization', function () {
-        it('should reassign cell value when observable value changes', function () {
-            var cell = utils.createCell("editableCell: observable");
-            var observable = ko.observable('value');
-
-            ko.applyBindings({observable: observable}, cell);
-
-            observable('updated value');
-            cell.innerHTML.should.equal('updated value');
-        });
-
-        it('should update observable value when cell value changes', function () {
-            var cell = utils.createCell("editableCell: observable") ;
-            var observable = ko.observable('value');
-
-            ko.applyBindings({observable: observable}, cell);
-
-            editableCell.setCellValue(cell, 'updated value');
-
-            observable().should.equal('updated value');
-        });
-    });
-});
-},{"../utils":1,"../../src/editableCell":6}],4:[function(require,module,exports){
+},{"./test/ko/editableCellSelectionBindingTest.js":3,"./test/ko/editableCellBindingTest.js":4,"./test/utils.js":1,"should":5}],3:[function(require,module,exports){
 var editableCell = require('../../src/editableCell');
 var utils = require('../utils');
 
@@ -197,917 +121,142 @@ describe('editableCellSelection binding', function () {
         });
     });
 });
-},{"../../src/editableCell":6,"../utils":1}],7:[function(require,module,exports){
-var events = require('events');
+},{"../../src/editableCell":6,"../utils":1}],4:[function(require,module,exports){
+var editableCell = require('../../src/editableCell');
+var utils = require('../utils');
 
-exports.isArray = isArray;
-exports.isDate = function(obj){return Object.prototype.toString.call(obj) === '[object Date]'};
-exports.isRegExp = function(obj){return Object.prototype.toString.call(obj) === '[object RegExp]'};
-
-
-exports.print = function () {};
-exports.puts = function () {};
-exports.debug = function() {};
-
-exports.inspect = function(obj, showHidden, depth, colors) {
-  var seen = [];
-
-  var stylize = function(str, styleType) {
-    // http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
-    var styles =
-        { 'bold' : [1, 22],
-          'italic' : [3, 23],
-          'underline' : [4, 24],
-          'inverse' : [7, 27],
-          'white' : [37, 39],
-          'grey' : [90, 39],
-          'black' : [30, 39],
-          'blue' : [34, 39],
-          'cyan' : [36, 39],
-          'green' : [32, 39],
-          'magenta' : [35, 39],
-          'red' : [31, 39],
-          'yellow' : [33, 39] };
-
-    var style =
-        { 'special': 'cyan',
-          'number': 'blue',
-          'boolean': 'yellow',
-          'undefined': 'grey',
-          'null': 'bold',
-          'string': 'green',
-          'date': 'magenta',
-          // "name": intentionally not styling
-          'regexp': 'red' }[styleType];
-
-    if (style) {
-      return '\033[' + styles[style][0] + 'm' + str +
-             '\033[' + styles[style][1] + 'm';
-    } else {
-      return str;
-    }
-  };
-  if (! colors) {
-    stylize = function(str, styleType) { return str; };
-  }
-
-  function format(value, recurseTimes) {
-    // Provide a hook for user-specified inspect functions.
-    // Check that value is an object with an inspect function on it
-    if (value && typeof value.inspect === 'function' &&
-        // Filter out the util module, it's inspect function is special
-        value !== exports &&
-        // Also filter out any prototype objects using the circular check.
-        !(value.constructor && value.constructor.prototype === value)) {
-      return value.inspect(recurseTimes);
-    }
-
-    // Primitive types cannot have properties
-    switch (typeof value) {
-      case 'undefined':
-        return stylize('undefined', 'undefined');
-
-      case 'string':
-        var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
-                                                 .replace(/'/g, "\\'")
-                                                 .replace(/\\"/g, '"') + '\'';
-        return stylize(simple, 'string');
-
-      case 'number':
-        return stylize('' + value, 'number');
-
-      case 'boolean':
-        return stylize('' + value, 'boolean');
-    }
-    // For some reason typeof null is "object", so special case here.
-    if (value === null) {
-      return stylize('null', 'null');
-    }
-
-    // Look up the keys of the object.
-    var visible_keys = Object_keys(value);
-    var keys = showHidden ? Object_getOwnPropertyNames(value) : visible_keys;
-
-    // Functions without properties can be shortcutted.
-    if (typeof value === 'function' && keys.length === 0) {
-      if (isRegExp(value)) {
-        return stylize('' + value, 'regexp');
-      } else {
-        var name = value.name ? ': ' + value.name : '';
-        return stylize('[Function' + name + ']', 'special');
-      }
-    }
-
-    // Dates without properties can be shortcutted
-    if (isDate(value) && keys.length === 0) {
-      return stylize(value.toUTCString(), 'date');
-    }
-
-    var base, type, braces;
-    // Determine the object type
-    if (isArray(value)) {
-      type = 'Array';
-      braces = ['[', ']'];
-    } else {
-      type = 'Object';
-      braces = ['{', '}'];
-    }
-
-    // Make functions say that they are functions
-    if (typeof value === 'function') {
-      var n = value.name ? ': ' + value.name : '';
-      base = (isRegExp(value)) ? ' ' + value : ' [Function' + n + ']';
-    } else {
-      base = '';
-    }
-
-    // Make dates with properties first say the date
-    if (isDate(value)) {
-      base = ' ' + value.toUTCString();
-    }
-
-    if (keys.length === 0) {
-      return braces[0] + base + braces[1];
-    }
-
-    if (recurseTimes < 0) {
-      if (isRegExp(value)) {
-        return stylize('' + value, 'regexp');
-      } else {
-        return stylize('[Object]', 'special');
-      }
-    }
-
-    seen.push(value);
-
-    var output = keys.map(function(key) {
-      var name, str;
-      if (value.__lookupGetter__) {
-        if (value.__lookupGetter__(key)) {
-          if (value.__lookupSetter__(key)) {
-            str = stylize('[Getter/Setter]', 'special');
-          } else {
-            str = stylize('[Getter]', 'special');
-          }
-        } else {
-          if (value.__lookupSetter__(key)) {
-            str = stylize('[Setter]', 'special');
-          }
-        }
-      }
-      if (visible_keys.indexOf(key) < 0) {
-        name = '[' + key + ']';
-      }
-      if (!str) {
-        if (seen.indexOf(value[key]) < 0) {
-          if (recurseTimes === null) {
-            str = format(value[key]);
-          } else {
-            str = format(value[key], recurseTimes - 1);
-          }
-          if (str.indexOf('\n') > -1) {
-            if (isArray(value)) {
-              str = str.split('\n').map(function(line) {
-                return '  ' + line;
-              }).join('\n').substr(2);
-            } else {
-              str = '\n' + str.split('\n').map(function(line) {
-                return '   ' + line;
-              }).join('\n');
-            }
-          }
-        } else {
-          str = stylize('[Circular]', 'special');
-        }
-      }
-      if (typeof name === 'undefined') {
-        if (type === 'Array' && key.match(/^\d+$/)) {
-          return str;
-        }
-        name = JSON.stringify('' + key);
-        if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
-          name = name.substr(1, name.length - 2);
-          name = stylize(name, 'name');
-        } else {
-          name = name.replace(/'/g, "\\'")
-                     .replace(/\\"/g, '"')
-                     .replace(/(^"|"$)/g, "'");
-          name = stylize(name, 'string');
-        }
-      }
-
-      return name + ': ' + str;
+describe('editableCell binding', function () {
+    it('should be registered with Knockout', function () {
+        ko.bindingHandlers.should.have.property('editableCell');
     });
 
-    seen.pop();
+    describe('cell value initial assignment', function () {
+        it('should assign constant value', function () {
+            var cell = utils.createCell("editableCell: 'value'");
 
-    var numLinesEst = 0;
-    var length = output.reduce(function(prev, cur) {
-      numLinesEst++;
-      if (cur.indexOf('\n') >= 0) numLinesEst++;
-      return prev + cur.length + 1;
-    }, 0);
+            ko.applyBindings({}, cell);
 
-    if (length > 50) {
-      output = braces[0] +
-               (base === '' ? '' : base + '\n ') +
-               ' ' +
-               output.join(',\n  ') +
-               ' ' +
-               braces[1];
+            cell.innerHTML.should.equal('value');
+        });
 
-    } else {
-      output = braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
-    }
+        it('should assign variable value', function () {
+            var cell = utils.createCell("editableCell: variable");
 
-    return output;
-  }
-  return format(obj, (typeof depth === 'undefined' ? 2 : depth));
+            ko.applyBindings({variable: 'value'}, cell);
+
+            cell.innerHTML.should.equal('value');
+        });
+
+        it('should assign observable value', function () {
+            var cell = utils.createCell("editableCell: observable");
+
+            ko.applyBindings({observable: ko.observable('value')}, cell);
+
+            cell.innerHTML.should.equal('value');
+        });
+
+        it('should prefer cellText helper binding', function () {
+            var cell = utils.createCell("editableCell: 'value', cellText: 'text'");
+
+            ko.applyBindings({}, cell);
+
+            cell.innerHTML.should.equal('text');
+        });
+
+        it('should prefer template', function () {
+            var cell = utils.createCell("editableCell: 'value'");
+            cell.appendChild(utils.createElement('span', "text: 'template'"));
+
+            ko.applyBindings({}, cell);
+
+            cell.innerHTML.should.equal(
+                '<span data-bind="text: \'template\'">template</span>');
+        });
+    });
+
+    describe('cell value synchronization', function () {
+        it('should reassign cell value when observable value changes', function () {
+            var cell = utils.createCell("editableCell: observable");
+            var observable = ko.observable('value');
+
+            ko.applyBindings({observable: observable}, cell);
+
+            observable('updated value');
+            cell.innerHTML.should.equal('updated value');
+        });
+
+        it('should update observable value when cell value changes', function () {
+            var cell = utils.createCell("editableCell: observable") ;
+            var observable = ko.observable('value');
+
+            ko.applyBindings({observable: observable}, cell);
+
+            editableCell.setCellValue(cell, 'updated value');
+
+            observable().should.equal('updated value');
+        });
+    });
+});
+},{"../utils":1,"../../src/editableCell":6}],6:[function(require,module,exports){
+var koBindingHandlers = require('./ko'),
+    events = require('./events');
+
+exports.selectCell = function (cell) {
+    var table = cell.parentNode.parentNode.parentNode,
+        selection = table._cellSelection;
+
+    selection.setRange(cell, cell);
 };
 
+exports.getTableSelection = function (table) {
+    var selection = table._cellSelection;
 
-function isArray(ar) {
-  return ar instanceof Array ||
-         Array.isArray(ar) ||
-         (ar && ar !== Object.prototype && isArray(ar.__proto__));
-}
-
-
-function isRegExp(re) {
-  return re instanceof RegExp ||
-    (typeof re === 'object' && Object.prototype.toString.call(re) === '[object RegExp]');
-}
-
-
-function isDate(d) {
-  if (d instanceof Date) return true;
-  if (typeof d !== 'object') return false;
-  var properties = Date.prototype && Object_getOwnPropertyNames(Date.prototype);
-  var proto = d.__proto__ && Object_getOwnPropertyNames(d.__proto__);
-  return JSON.stringify(proto) === JSON.stringify(properties);
-}
-
-function pad(n) {
-  return n < 10 ? '0' + n.toString(10) : n.toString(10);
-}
-
-var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
-              'Oct', 'Nov', 'Dec'];
-
-// 26 Feb 16:19:34
-function timestamp() {
-  var d = new Date();
-  var time = [pad(d.getHours()),
-              pad(d.getMinutes()),
-              pad(d.getSeconds())].join(':');
-  return [d.getDate(), months[d.getMonth()], time].join(' ');
-}
-
-exports.log = function (msg) {};
-
-exports.pump = null;
-
-var Object_keys = Object.keys || function (obj) {
-    var res = [];
-    for (var key in obj) res.push(key);
-    return res;
+    return selection;
 };
 
-var Object_getOwnPropertyNames = Object.getOwnPropertyNames || function (obj) {
-    var res = [];
-    for (var key in obj) {
-        if (Object.hasOwnProperty.call(obj, key)) res.push(key);
-    }
-    return res;
+exports.setCellValue = function (cell, value) {
+    var table = cell.parentNode.parentNode.parentNode,
+        selection = table._cellSelection;
+
+    selection.updateCellValue(cell, value);
 };
 
-var Object_create = Object.create || function (prototype, properties) {
-    // from es5-shim
-    var object;
-    if (prototype === null) {
-        object = { '__proto__' : null };
-    }
-    else {
-        if (typeof prototype !== 'object') {
-            throw new TypeError(
-                'typeof prototype[' + (typeof prototype) + '] != \'object\''
-            );
-        }
-        var Type = function () {};
-        Type.prototype = prototype;
-        object = new Type();
-        object.__proto__ = prototype;
-    }
-    if (typeof properties !== 'undefined' && Object.defineProperties) {
-        Object.defineProperties(object, properties);
-    }
-    return object;
+// --------
+// Eventing
+// --------
+
+exports.on = function (event, listener) {
+    events.public.on(event, listener);
 };
 
-exports.inherits = function(ctor, superCtor) {
-  ctor.super_ = superCtor;
-  ctor.prototype = Object_create(superCtor.prototype, {
-    constructor: {
-      value: ctor,
-      enumerable: false,
-      writable: true,
-      configurable: true
-    }
-  });
+exports.removeListener = function () {
+    events.public.removeListener.apply(events.public, arguments);
 };
 
-var formatRegExp = /%[sdj%]/g;
-exports.format = function(f) {
-  if (typeof f !== 'string') {
-    var objects = [];
-    for (var i = 0; i < arguments.length; i++) {
-      objects.push(exports.inspect(arguments[i]));
-    }
-    return objects.join(' ');
-  }
-
-  var i = 1;
-  var args = arguments;
-  var len = args.length;
-  var str = String(f).replace(formatRegExp, function(x) {
-    if (x === '%%') return '%';
-    if (i >= len) return x;
-    switch (x) {
-      case '%s': return String(args[i++]);
-      case '%d': return Number(args[i++]);
-      case '%j': return JSON.stringify(args[i++]);
-      default:
-        return x;
-    }
-  });
-  for(var x = args[i]; i < len; x = args[++i]){
-    if (x === null || typeof x !== 'object') {
-      str += ' ' + x;
-    } else {
-      str += ' ' + exports.inspect(x);
-    }
-  }
-  return str;
+exports.removeAllListeners = function () {
+    events.public.removeAllListeners.apply(events.public, arguments);
 };
 
-},{"events":8}],9:[function(require,module,exports){
-(function(){// UTILITY
-var util = require('util');
-var Buffer = require("buffer").Buffer;
-var pSlice = Array.prototype.slice;
+// Proxy internal events
 
-function objectKeys(object) {
-  if (Object.keys) return Object.keys(object);
-  var result = [];
-  for (var name in object) {
-    if (Object.prototype.hasOwnProperty.call(object, name)) {
-      result.push(name);
-    }
-  }
-  return result;
+var proxyEvents = ['cellValueChanged', 'beforeCopy'],
+    eventName,
+    i;
+
+for (i = 0; i < proxyEvents.length; ++i) {
+    eventName = proxyEvents[i];
+
+    events.private.on(eventName, createProxy(eventName));    
 }
 
-// 1. The assert module provides functions that throw
-// AssertionError's when particular conditions are not met. The
-// assert module must conform to the following interface.
-
-var assert = module.exports = ok;
-
-// 2. The AssertionError is defined in assert.
-// new assert.AssertionError({ message: message,
-//                             actual: actual,
-//                             expected: expected })
-
-assert.AssertionError = function AssertionError(options) {
-  this.name = 'AssertionError';
-  this.message = options.message;
-  this.actual = options.actual;
-  this.expected = options.expected;
-  this.operator = options.operator;
-  var stackStartFunction = options.stackStartFunction || fail;
-
-  if (Error.captureStackTrace) {
-    Error.captureStackTrace(this, stackStartFunction);
-  }
-};
-util.inherits(assert.AssertionError, Error);
-
-function replacer(key, value) {
-  if (value === undefined) {
-    return '' + value;
-  }
-  if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) {
-    return value.toString();
-  }
-  if (typeof value === 'function' || value instanceof RegExp) {
-    return value.toString();
-  }
-  return value;
-}
-
-function truncate(s, n) {
-  if (typeof s == 'string') {
-    return s.length < n ? s : s.slice(0, n);
-  } else {
-    return s;
-  }
-}
-
-assert.AssertionError.prototype.toString = function() {
-  if (this.message) {
-    return [this.name + ':', this.message].join(' ');
-  } else {
-    return [
-      this.name + ':',
-      truncate(JSON.stringify(this.actual, replacer), 128),
-      this.operator,
-      truncate(JSON.stringify(this.expected, replacer), 128)
-    ].join(' ');
-  }
-};
-
-// assert.AssertionError instanceof Error
-
-assert.AssertionError.__proto__ = Error.prototype;
-
-// At present only the three keys mentioned above are used and
-// understood by the spec. Implementations or sub modules can pass
-// other keys to the AssertionError's constructor - they will be
-// ignored.
-
-// 3. All of the following functions must throw an AssertionError
-// when a corresponding condition is not met, with a message that
-// may be undefined if not provided.  All assertion methods provide
-// both the actual and expected values to the assertion error for
-// display purposes.
-
-function fail(actual, expected, message, operator, stackStartFunction) {
-  throw new assert.AssertionError({
-    message: message,
-    actual: actual,
-    expected: expected,
-    operator: operator,
-    stackStartFunction: stackStartFunction
-  });
-}
-
-// EXTENSION! allows for well behaved errors defined elsewhere.
-assert.fail = fail;
-
-// 4. Pure assertion tests whether a value is truthy, as determined
-// by !!guard.
-// assert.ok(guard, message_opt);
-// This statement is equivalent to assert.equal(true, guard,
-// message_opt);. To test strictly for the value true, use
-// assert.strictEqual(true, guard, message_opt);.
-
-function ok(value, message) {
-  if (!!!value) fail(value, true, message, '==', assert.ok);
-}
-assert.ok = ok;
-
-// 5. The equality assertion tests shallow, coercive equality with
-// ==.
-// assert.equal(actual, expected, message_opt);
-
-assert.equal = function equal(actual, expected, message) {
-  if (actual != expected) fail(actual, expected, message, '==', assert.equal);
-};
-
-// 6. The non-equality assertion tests for whether two objects are not equal
-// with != assert.notEqual(actual, expected, message_opt);
-
-assert.notEqual = function notEqual(actual, expected, message) {
-  if (actual == expected) {
-    fail(actual, expected, message, '!=', assert.notEqual);
-  }
-};
-
-// 7. The equivalence assertion tests a deep equality relation.
-// assert.deepEqual(actual, expected, message_opt);
-
-assert.deepEqual = function deepEqual(actual, expected, message) {
-  if (!_deepEqual(actual, expected)) {
-    fail(actual, expected, message, 'deepEqual', assert.deepEqual);
-  }
-};
-
-function _deepEqual(actual, expected) {
-  // 7.1. All identical values are equivalent, as determined by ===.
-  if (actual === expected) {
-    return true;
-
-  } else if (Buffer.isBuffer(actual) && Buffer.isBuffer(expected)) {
-    if (actual.length != expected.length) return false;
-
-    for (var i = 0; i < actual.length; i++) {
-      if (actual[i] !== expected[i]) return false;
-    }
-
-    return true;
-
-  // 7.2. If the expected value is a Date object, the actual value is
-  // equivalent if it is also a Date object that refers to the same time.
-  } else if (actual instanceof Date && expected instanceof Date) {
-    return actual.getTime() === expected.getTime();
-
-  // 7.3. Other pairs that do not both pass typeof value == 'object',
-  // equivalence is determined by ==.
-  } else if (typeof actual != 'object' && typeof expected != 'object') {
-    return actual == expected;
-
-  // 7.4. For all other Object pairs, including Array objects, equivalence is
-  // determined by having the same number of owned properties (as verified
-  // with Object.prototype.hasOwnProperty.call), the same set of keys
-  // (although not necessarily the same order), equivalent values for every
-  // corresponding key, and an identical 'prototype' property. Note: this
-  // accounts for both named and indexed properties on Arrays.
-  } else {
-    return objEquiv(actual, expected);
-  }
-}
-
-function isUndefinedOrNull(value) {
-  return value === null || value === undefined;
-}
-
-function isArguments(object) {
-  return Object.prototype.toString.call(object) == '[object Arguments]';
-}
-
-function objEquiv(a, b) {
-  if (isUndefinedOrNull(a) || isUndefinedOrNull(b))
-    return false;
-  // an identical 'prototype' property.
-  if (a.prototype !== b.prototype) return false;
-  //~~~I've managed to break Object.keys through screwy arguments passing.
-  //   Converting to array solves the problem.
-  if (isArguments(a)) {
-    if (!isArguments(b)) {
-      return false;
-    }
-    a = pSlice.call(a);
-    b = pSlice.call(b);
-    return _deepEqual(a, b);
-  }
-  try {
-    var ka = objectKeys(a),
-        kb = objectKeys(b),
-        key, i;
-  } catch (e) {//happens when one is a string literal and the other isn't
-    return false;
-  }
-  // having the same number of owned properties (keys incorporates
-  // hasOwnProperty)
-  if (ka.length != kb.length)
-    return false;
-  //the same set of keys (although not necessarily the same order),
-  ka.sort();
-  kb.sort();
-  //~~~cheap key test
-  for (i = ka.length - 1; i >= 0; i--) {
-    if (ka[i] != kb[i])
-      return false;
-  }
-  //equivalent values for every corresponding key, and
-  //~~~possibly expensive deep test
-  for (i = ka.length - 1; i >= 0; i--) {
-    key = ka[i];
-    if (!_deepEqual(a[key], b[key])) return false;
-  }
-  return true;
-}
-
-// 8. The non-equivalence assertion tests for any deep inequality.
-// assert.notDeepEqual(actual, expected, message_opt);
-
-assert.notDeepEqual = function notDeepEqual(actual, expected, message) {
-  if (_deepEqual(actual, expected)) {
-    fail(actual, expected, message, 'notDeepEqual', assert.notDeepEqual);
-  }
-};
-
-// 9. The strict equality assertion tests strict equality, as determined by ===.
-// assert.strictEqual(actual, expected, message_opt);
-
-assert.strictEqual = function strictEqual(actual, expected, message) {
-  if (actual !== expected) {
-    fail(actual, expected, message, '===', assert.strictEqual);
-  }
-};
-
-// 10. The strict non-equality assertion tests for strict inequality, as
-// determined by !==.  assert.notStrictEqual(actual, expected, message_opt);
-
-assert.notStrictEqual = function notStrictEqual(actual, expected, message) {
-  if (actual === expected) {
-    fail(actual, expected, message, '!==', assert.notStrictEqual);
-  }
-};
-
-function expectedException(actual, expected) {
-  if (!actual || !expected) {
-    return false;
-  }
-
-  if (expected instanceof RegExp) {
-    return expected.test(actual);
-  } else if (actual instanceof expected) {
-    return true;
-  } else if (expected.call({}, actual) === true) {
-    return true;
-  }
-
-  return false;
-}
-
-function _throws(shouldThrow, block, expected, message) {
-  var actual;
-
-  if (typeof expected === 'string') {
-    message = expected;
-    expected = null;
-  }
-
-  try {
-    block();
-  } catch (e) {
-    actual = e;
-  }
-
-  message = (expected && expected.name ? ' (' + expected.name + ').' : '.') +
-            (message ? ' ' + message : '.');
-
-  if (shouldThrow && !actual) {
-    fail('Missing expected exception' + message);
-  }
-
-  if (!shouldThrow && expectedException(actual, expected)) {
-    fail('Got unwanted exception' + message);
-  }
-
-  if ((shouldThrow && actual && expected &&
-      !expectedException(actual, expected)) || (!shouldThrow && actual)) {
-    throw actual;
-  }
-}
-
-// 11. Expected to throw an error:
-// assert.throws(block, Error_opt, message_opt);
-
-assert.throws = function(block, /*optional*/error, /*optional*/message) {
-  _throws.apply(this, [true].concat(pSlice.call(arguments)));
-};
-
-// EXTENSION! This is annoying to write outside this module.
-assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
-  _throws.apply(this, [false].concat(pSlice.call(arguments)));
-};
-
-assert.ifError = function(err) { if (err) {throw err;}};
-
-})()
-},{"util":7,"buffer":10}],11:[function(require,module,exports){
-// shim for using process in browser
-
-var process = module.exports = {};
-
-process.nextTick = (function () {
-    var canSetImmediate = typeof window !== 'undefined'
-    && window.setImmediate;
-    var canPost = typeof window !== 'undefined'
-    && window.postMessage && window.addEventListener
-    ;
-
-    if (canSetImmediate) {
-        return function (f) { return window.setImmediate(f) };
-    }
-
-    if (canPost) {
-        var queue = [];
-        window.addEventListener('message', function (ev) {
-            if (ev.source === window && ev.data === 'process-tick') {
-                ev.stopPropagation();
-                if (queue.length > 0) {
-                    var fn = queue.shift();
-                    fn();
-                }
-            }
-        }, true);
-
-        return function nextTick(fn) {
-            queue.push(fn);
-            window.postMessage('process-tick', '*');
-        };
-    }
-
-    return function nextTick(fn) {
-        setTimeout(fn, 0);
+function createProxy (eventName) {
+    return function () {
+        var args = Array.prototype.slice.call(arguments);
+        args.unshift(eventName);
+        events.public.emit.apply(events.public, args);
     };
-})();
-
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
 }
-
-// TODO(shtylman)
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-
-},{}],8:[function(require,module,exports){
-(function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
-
-var EventEmitter = exports.EventEmitter = process.EventEmitter;
-var isArray = typeof Array.isArray === 'function'
-    ? Array.isArray
-    : function (xs) {
-        return Object.prototype.toString.call(xs) === '[object Array]'
-    }
-;
-function indexOf (xs, x) {
-    if (xs.indexOf) return xs.indexOf(x);
-    for (var i = 0; i < xs.length; i++) {
-        if (x === xs[i]) return i;
-    }
-    return -1;
-}
-
-// By default EventEmitters will print a warning if more than
-// 10 listeners are added to it. This is a useful default which
-// helps finding memory leaks.
-//
-// Obviously not all Emitters should be limited to 10. This function allows
-// that to be increased. Set to zero for unlimited.
-var defaultMaxListeners = 10;
-EventEmitter.prototype.setMaxListeners = function(n) {
-  if (!this._events) this._events = {};
-  this._events.maxListeners = n;
-};
-
-
-EventEmitter.prototype.emit = function(type) {
-  // If there is no 'error' event listener then throw.
-  if (type === 'error') {
-    if (!this._events || !this._events.error ||
-        (isArray(this._events.error) && !this._events.error.length))
-    {
-      if (arguments[1] instanceof Error) {
-        throw arguments[1]; // Unhandled 'error' event
-      } else {
-        throw new Error("Uncaught, unspecified 'error' event.");
-      }
-      return false;
-    }
-  }
-
-  if (!this._events) return false;
-  var handler = this._events[type];
-  if (!handler) return false;
-
-  if (typeof handler == 'function') {
-    switch (arguments.length) {
-      // fast cases
-      case 1:
-        handler.call(this);
-        break;
-      case 2:
-        handler.call(this, arguments[1]);
-        break;
-      case 3:
-        handler.call(this, arguments[1], arguments[2]);
-        break;
-      // slower
-      default:
-        var args = Array.prototype.slice.call(arguments, 1);
-        handler.apply(this, args);
-    }
-    return true;
-
-  } else if (isArray(handler)) {
-    var args = Array.prototype.slice.call(arguments, 1);
-
-    var listeners = handler.slice();
-    for (var i = 0, l = listeners.length; i < l; i++) {
-      listeners[i].apply(this, args);
-    }
-    return true;
-
-  } else {
-    return false;
-  }
-};
-
-// EventEmitter is defined in src/node_events.cc
-// EventEmitter.prototype.emit() is also defined there.
-EventEmitter.prototype.addListener = function(type, listener) {
-  if ('function' !== typeof listener) {
-    throw new Error('addListener only takes instances of Function');
-  }
-
-  if (!this._events) this._events = {};
-
-  // To avoid recursion in the case that type == "newListeners"! Before
-  // adding it to the listeners, first emit "newListeners".
-  this.emit('newListener', type, listener);
-
-  if (!this._events[type]) {
-    // Optimize the case of one listener. Don't need the extra array object.
-    this._events[type] = listener;
-  } else if (isArray(this._events[type])) {
-
-    // Check for listener leak
-    if (!this._events[type].warned) {
-      var m;
-      if (this._events.maxListeners !== undefined) {
-        m = this._events.maxListeners;
-      } else {
-        m = defaultMaxListeners;
-      }
-
-      if (m && m > 0 && this._events[type].length > m) {
-        this._events[type].warned = true;
-        console.error('(node) warning: possible EventEmitter memory ' +
-                      'leak detected. %d listeners added. ' +
-                      'Use emitter.setMaxListeners() to increase limit.',
-                      this._events[type].length);
-        console.trace();
-      }
-    }
-
-    // If we've already got an array, just append.
-    this._events[type].push(listener);
-  } else {
-    // Adding the second element, need to change to array.
-    this._events[type] = [this._events[type], listener];
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.on = EventEmitter.prototype.addListener;
-
-EventEmitter.prototype.once = function(type, listener) {
-  var self = this;
-  self.on(type, function g() {
-    self.removeListener(type, g);
-    listener.apply(this, arguments);
-  });
-
-  return this;
-};
-
-EventEmitter.prototype.removeListener = function(type, listener) {
-  if ('function' !== typeof listener) {
-    throw new Error('removeListener only takes instances of Function');
-  }
-
-  // does not use listeners(), so no side effect of creating _events[type]
-  if (!this._events || !this._events[type]) return this;
-
-  var list = this._events[type];
-
-  if (isArray(list)) {
-    var i = indexOf(list, listener);
-    if (i < 0) return this;
-    list.splice(i, 1);
-    if (list.length == 0)
-      delete this._events[type];
-  } else if (this._events[type] === listener) {
-    delete this._events[type];
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.removeAllListeners = function(type) {
-  if (arguments.length === 0) {
-    this._events = {};
-    return this;
-  }
-
-  // does not use listeners(), so no side effect of creating _events[type]
-  if (type && this._events && this._events[type]) this._events[type] = null;
-  return this;
-};
-
-EventEmitter.prototype.listeners = function(type) {
-  if (!this._events) this._events = {};
-  if (!this._events[type]) this._events[type] = [];
-  if (!isArray(this._events[type])) {
-    this._events[type] = [this._events[type]];
-  }
-  return this._events[type];
-};
-
-})(require("__browserify_process"))
-},{"__browserify_process":11}],5:[function(require,module,exports){
+},{"./events":7,"./ko":8}],5:[function(require,module,exports){
 /*!
  * Should
  * Copyright(c) 2010-2012 TJ Holowaychuk <tj@vision-media.ca>
@@ -1839,69 +988,924 @@ Assertion.prototype = {
 ('below', 'lessThan');
 
 
-},{"util":7,"http":12,"assert":9,"./eql":13}],12:[function(require,module,exports){
-var http = module.exports;
-var EventEmitter = require('events').EventEmitter;
-var Request = require('./lib/request');
+},{"util":9,"http":10,"assert":11,"./eql":12}],7:[function(require,module,exports){
+var EventEmitter = require('events').EventEmitter,
+	publicEvents = new EventEmitter(),
+	privateEvents = new EventEmitter();
 
-http.request = function (params, cb) {
-    if (!params) params = {};
-    if (!params.host) params.host = window.location.host.split(':')[0];
-    if (!params.port) params.port = window.location.port;
-    if (!params.scheme) params.scheme = window.location.protocol.split(':')[0];
-    
-    var req = new Request(new xhrHttp, params);
-    if (cb) req.on('response', cb);
-    return req;
+module.exports.public = publicEvents;
+module.exports.private = privateEvents;
+},{"events":13}],11:[function(require,module,exports){
+(function(){// UTILITY
+var util = require('util');
+var Buffer = require("buffer").Buffer;
+var pSlice = Array.prototype.slice;
+
+function objectKeys(object) {
+  if (Object.keys) return Object.keys(object);
+  var result = [];
+  for (var name in object) {
+    if (Object.prototype.hasOwnProperty.call(object, name)) {
+      result.push(name);
+    }
+  }
+  return result;
+}
+
+// 1. The assert module provides functions that throw
+// AssertionError's when particular conditions are not met. The
+// assert module must conform to the following interface.
+
+var assert = module.exports = ok;
+
+// 2. The AssertionError is defined in assert.
+// new assert.AssertionError({ message: message,
+//                             actual: actual,
+//                             expected: expected })
+
+assert.AssertionError = function AssertionError(options) {
+  this.name = 'AssertionError';
+  this.message = options.message;
+  this.actual = options.actual;
+  this.expected = options.expected;
+  this.operator = options.operator;
+  var stackStartFunction = options.stackStartFunction || fail;
+
+  if (Error.captureStackTrace) {
+    Error.captureStackTrace(this, stackStartFunction);
+  }
+};
+util.inherits(assert.AssertionError, Error);
+
+function replacer(key, value) {
+  if (value === undefined) {
+    return '' + value;
+  }
+  if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) {
+    return value.toString();
+  }
+  if (typeof value === 'function' || value instanceof RegExp) {
+    return value.toString();
+  }
+  return value;
+}
+
+function truncate(s, n) {
+  if (typeof s == 'string') {
+    return s.length < n ? s : s.slice(0, n);
+  } else {
+    return s;
+  }
+}
+
+assert.AssertionError.prototype.toString = function() {
+  if (this.message) {
+    return [this.name + ':', this.message].join(' ');
+  } else {
+    return [
+      this.name + ':',
+      truncate(JSON.stringify(this.actual, replacer), 128),
+      this.operator,
+      truncate(JSON.stringify(this.expected, replacer), 128)
+    ].join(' ');
+  }
 };
 
-http.get = function (params, cb) {
-    params.method = 'GET';
-    var req = http.request(params, cb);
-    req.end();
-    return req;
+// assert.AssertionError instanceof Error
+
+assert.AssertionError.__proto__ = Error.prototype;
+
+// At present only the three keys mentioned above are used and
+// understood by the spec. Implementations or sub modules can pass
+// other keys to the AssertionError's constructor - they will be
+// ignored.
+
+// 3. All of the following functions must throw an AssertionError
+// when a corresponding condition is not met, with a message that
+// may be undefined if not provided.  All assertion methods provide
+// both the actual and expected values to the assertion error for
+// display purposes.
+
+function fail(actual, expected, message, operator, stackStartFunction) {
+  throw new assert.AssertionError({
+    message: message,
+    actual: actual,
+    expected: expected,
+    operator: operator,
+    stackStartFunction: stackStartFunction
+  });
+}
+
+// EXTENSION! allows for well behaved errors defined elsewhere.
+assert.fail = fail;
+
+// 4. Pure assertion tests whether a value is truthy, as determined
+// by !!guard.
+// assert.ok(guard, message_opt);
+// This statement is equivalent to assert.equal(true, guard,
+// message_opt);. To test strictly for the value true, use
+// assert.strictEqual(true, guard, message_opt);.
+
+function ok(value, message) {
+  if (!!!value) fail(value, true, message, '==', assert.ok);
+}
+assert.ok = ok;
+
+// 5. The equality assertion tests shallow, coercive equality with
+// ==.
+// assert.equal(actual, expected, message_opt);
+
+assert.equal = function equal(actual, expected, message) {
+  if (actual != expected) fail(actual, expected, message, '==', assert.equal);
 };
 
-http.Agent = function () {};
-http.Agent.defaultMaxSockets = 4;
+// 6. The non-equality assertion tests for whether two objects are not equal
+// with != assert.notEqual(actual, expected, message_opt);
 
-var xhrHttp = (function () {
-    if (typeof window === 'undefined') {
-        throw new Error('no window object present');
+assert.notEqual = function notEqual(actual, expected, message) {
+  if (actual == expected) {
+    fail(actual, expected, message, '!=', assert.notEqual);
+  }
+};
+
+// 7. The equivalence assertion tests a deep equality relation.
+// assert.deepEqual(actual, expected, message_opt);
+
+assert.deepEqual = function deepEqual(actual, expected, message) {
+  if (!_deepEqual(actual, expected)) {
+    fail(actual, expected, message, 'deepEqual', assert.deepEqual);
+  }
+};
+
+function _deepEqual(actual, expected) {
+  // 7.1. All identical values are equivalent, as determined by ===.
+  if (actual === expected) {
+    return true;
+
+  } else if (Buffer.isBuffer(actual) && Buffer.isBuffer(expected)) {
+    if (actual.length != expected.length) return false;
+
+    for (var i = 0; i < actual.length; i++) {
+      if (actual[i] !== expected[i]) return false;
     }
-    else if (window.XMLHttpRequest) {
-        return window.XMLHttpRequest;
+
+    return true;
+
+  // 7.2. If the expected value is a Date object, the actual value is
+  // equivalent if it is also a Date object that refers to the same time.
+  } else if (actual instanceof Date && expected instanceof Date) {
+    return actual.getTime() === expected.getTime();
+
+  // 7.3. Other pairs that do not both pass typeof value == 'object',
+  // equivalence is determined by ==.
+  } else if (typeof actual != 'object' && typeof expected != 'object') {
+    return actual == expected;
+
+  // 7.4. For all other Object pairs, including Array objects, equivalence is
+  // determined by having the same number of owned properties (as verified
+  // with Object.prototype.hasOwnProperty.call), the same set of keys
+  // (although not necessarily the same order), equivalent values for every
+  // corresponding key, and an identical 'prototype' property. Note: this
+  // accounts for both named and indexed properties on Arrays.
+  } else {
+    return objEquiv(actual, expected);
+  }
+}
+
+function isUndefinedOrNull(value) {
+  return value === null || value === undefined;
+}
+
+function isArguments(object) {
+  return Object.prototype.toString.call(object) == '[object Arguments]';
+}
+
+function objEquiv(a, b) {
+  if (isUndefinedOrNull(a) || isUndefinedOrNull(b))
+    return false;
+  // an identical 'prototype' property.
+  if (a.prototype !== b.prototype) return false;
+  //~~~I've managed to break Object.keys through screwy arguments passing.
+  //   Converting to array solves the problem.
+  if (isArguments(a)) {
+    if (!isArguments(b)) {
+      return false;
     }
-    else if (window.ActiveXObject) {
-        var axs = [
-            'Msxml2.XMLHTTP.6.0',
-            'Msxml2.XMLHTTP.3.0',
-            'Microsoft.XMLHTTP'
-        ];
-        for (var i = 0; i < axs.length; i++) {
-            try {
-                var ax = new(window.ActiveXObject)(axs[i]);
-                return function () {
-                    if (ax) {
-                        var ax_ = ax;
-                        ax = null;
-                        return ax_;
-                    }
-                    else {
-                        return new(window.ActiveXObject)(axs[i]);
-                    }
-                };
+    a = pSlice.call(a);
+    b = pSlice.call(b);
+    return _deepEqual(a, b);
+  }
+  try {
+    var ka = objectKeys(a),
+        kb = objectKeys(b),
+        key, i;
+  } catch (e) {//happens when one is a string literal and the other isn't
+    return false;
+  }
+  // having the same number of owned properties (keys incorporates
+  // hasOwnProperty)
+  if (ka.length != kb.length)
+    return false;
+  //the same set of keys (although not necessarily the same order),
+  ka.sort();
+  kb.sort();
+  //~~~cheap key test
+  for (i = ka.length - 1; i >= 0; i--) {
+    if (ka[i] != kb[i])
+      return false;
+  }
+  //equivalent values for every corresponding key, and
+  //~~~possibly expensive deep test
+  for (i = ka.length - 1; i >= 0; i--) {
+    key = ka[i];
+    if (!_deepEqual(a[key], b[key])) return false;
+  }
+  return true;
+}
+
+// 8. The non-equivalence assertion tests for any deep inequality.
+// assert.notDeepEqual(actual, expected, message_opt);
+
+assert.notDeepEqual = function notDeepEqual(actual, expected, message) {
+  if (_deepEqual(actual, expected)) {
+    fail(actual, expected, message, 'notDeepEqual', assert.notDeepEqual);
+  }
+};
+
+// 9. The strict equality assertion tests strict equality, as determined by ===.
+// assert.strictEqual(actual, expected, message_opt);
+
+assert.strictEqual = function strictEqual(actual, expected, message) {
+  if (actual !== expected) {
+    fail(actual, expected, message, '===', assert.strictEqual);
+  }
+};
+
+// 10. The strict non-equality assertion tests for strict inequality, as
+// determined by !==.  assert.notStrictEqual(actual, expected, message_opt);
+
+assert.notStrictEqual = function notStrictEqual(actual, expected, message) {
+  if (actual === expected) {
+    fail(actual, expected, message, '!==', assert.notStrictEqual);
+  }
+};
+
+function expectedException(actual, expected) {
+  if (!actual || !expected) {
+    return false;
+  }
+
+  if (expected instanceof RegExp) {
+    return expected.test(actual);
+  } else if (actual instanceof expected) {
+    return true;
+  } else if (expected.call({}, actual) === true) {
+    return true;
+  }
+
+  return false;
+}
+
+function _throws(shouldThrow, block, expected, message) {
+  var actual;
+
+  if (typeof expected === 'string') {
+    message = expected;
+    expected = null;
+  }
+
+  try {
+    block();
+  } catch (e) {
+    actual = e;
+  }
+
+  message = (expected && expected.name ? ' (' + expected.name + ').' : '.') +
+            (message ? ' ' + message : '.');
+
+  if (shouldThrow && !actual) {
+    fail('Missing expected exception' + message);
+  }
+
+  if (!shouldThrow && expectedException(actual, expected)) {
+    fail('Got unwanted exception' + message);
+  }
+
+  if ((shouldThrow && actual && expected &&
+      !expectedException(actual, expected)) || (!shouldThrow && actual)) {
+    throw actual;
+  }
+}
+
+// 11. Expected to throw an error:
+// assert.throws(block, Error_opt, message_opt);
+
+assert.throws = function(block, /*optional*/error, /*optional*/message) {
+  _throws.apply(this, [true].concat(pSlice.call(arguments)));
+};
+
+// EXTENSION! This is annoying to write outside this module.
+assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
+  _throws.apply(this, [false].concat(pSlice.call(arguments)));
+};
+
+assert.ifError = function(err) { if (err) {throw err;}};
+
+})()
+},{"util":9,"buffer":14}],15:[function(require,module,exports){
+// shim for using process in browser
+
+var process = module.exports = {};
+
+process.nextTick = (function () {
+    var canSetImmediate = typeof window !== 'undefined'
+    && window.setImmediate;
+    var canPost = typeof window !== 'undefined'
+    && window.postMessage && window.addEventListener
+    ;
+
+    if (canSetImmediate) {
+        return function (f) { return window.setImmediate(f) };
+    }
+
+    if (canPost) {
+        var queue = [];
+        window.addEventListener('message', function (ev) {
+            if (ev.source === window && ev.data === 'process-tick') {
+                ev.stopPropagation();
+                if (queue.length > 0) {
+                    var fn = queue.shift();
+                    fn();
+                }
             }
-            catch (e) {}
-        }
-        throw new Error('ajax not supported in this browser')
+        }, true);
+
+        return function nextTick(fn) {
+            queue.push(fn);
+            window.postMessage('process-tick', '*');
+        };
     }
-    else {
-        throw new Error('ajax not supported in this browser');
-    }
+
+    return function nextTick(fn) {
+        setTimeout(fn, 0);
+    };
 })();
 
-},{"events":8,"./lib/request":14}],15:[function(require,module,exports){
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+}
+
+// TODO(shtylman)
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+
+},{}],13:[function(require,module,exports){
+(function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
+
+var EventEmitter = exports.EventEmitter = process.EventEmitter;
+var isArray = typeof Array.isArray === 'function'
+    ? Array.isArray
+    : function (xs) {
+        return Object.prototype.toString.call(xs) === '[object Array]'
+    }
+;
+function indexOf (xs, x) {
+    if (xs.indexOf) return xs.indexOf(x);
+    for (var i = 0; i < xs.length; i++) {
+        if (x === xs[i]) return i;
+    }
+    return -1;
+}
+
+// By default EventEmitters will print a warning if more than
+// 10 listeners are added to it. This is a useful default which
+// helps finding memory leaks.
+//
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+var defaultMaxListeners = 10;
+EventEmitter.prototype.setMaxListeners = function(n) {
+  if (!this._events) this._events = {};
+  this._events.maxListeners = n;
+};
+
+
+EventEmitter.prototype.emit = function(type) {
+  // If there is no 'error' event listener then throw.
+  if (type === 'error') {
+    if (!this._events || !this._events.error ||
+        (isArray(this._events.error) && !this._events.error.length))
+    {
+      if (arguments[1] instanceof Error) {
+        throw arguments[1]; // Unhandled 'error' event
+      } else {
+        throw new Error("Uncaught, unspecified 'error' event.");
+      }
+      return false;
+    }
+  }
+
+  if (!this._events) return false;
+  var handler = this._events[type];
+  if (!handler) return false;
+
+  if (typeof handler == 'function') {
+    switch (arguments.length) {
+      // fast cases
+      case 1:
+        handler.call(this);
+        break;
+      case 2:
+        handler.call(this, arguments[1]);
+        break;
+      case 3:
+        handler.call(this, arguments[1], arguments[2]);
+        break;
+      // slower
+      default:
+        var args = Array.prototype.slice.call(arguments, 1);
+        handler.apply(this, args);
+    }
+    return true;
+
+  } else if (isArray(handler)) {
+    var args = Array.prototype.slice.call(arguments, 1);
+
+    var listeners = handler.slice();
+    for (var i = 0, l = listeners.length; i < l; i++) {
+      listeners[i].apply(this, args);
+    }
+    return true;
+
+  } else {
+    return false;
+  }
+};
+
+// EventEmitter is defined in src/node_events.cc
+// EventEmitter.prototype.emit() is also defined there.
+EventEmitter.prototype.addListener = function(type, listener) {
+  if ('function' !== typeof listener) {
+    throw new Error('addListener only takes instances of Function');
+  }
+
+  if (!this._events) this._events = {};
+
+  // To avoid recursion in the case that type == "newListeners"! Before
+  // adding it to the listeners, first emit "newListeners".
+  this.emit('newListener', type, listener);
+
+  if (!this._events[type]) {
+    // Optimize the case of one listener. Don't need the extra array object.
+    this._events[type] = listener;
+  } else if (isArray(this._events[type])) {
+
+    // Check for listener leak
+    if (!this._events[type].warned) {
+      var m;
+      if (this._events.maxListeners !== undefined) {
+        m = this._events.maxListeners;
+      } else {
+        m = defaultMaxListeners;
+      }
+
+      if (m && m > 0 && this._events[type].length > m) {
+        this._events[type].warned = true;
+        console.error('(node) warning: possible EventEmitter memory ' +
+                      'leak detected. %d listeners added. ' +
+                      'Use emitter.setMaxListeners() to increase limit.',
+                      this._events[type].length);
+        console.trace();
+      }
+    }
+
+    // If we've already got an array, just append.
+    this._events[type].push(listener);
+  } else {
+    // Adding the second element, need to change to array.
+    this._events[type] = [this._events[type], listener];
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.once = function(type, listener) {
+  var self = this;
+  self.on(type, function g() {
+    self.removeListener(type, g);
+    listener.apply(this, arguments);
+  });
+
+  return this;
+};
+
+EventEmitter.prototype.removeListener = function(type, listener) {
+  if ('function' !== typeof listener) {
+    throw new Error('removeListener only takes instances of Function');
+  }
+
+  // does not use listeners(), so no side effect of creating _events[type]
+  if (!this._events || !this._events[type]) return this;
+
+  var list = this._events[type];
+
+  if (isArray(list)) {
+    var i = indexOf(list, listener);
+    if (i < 0) return this;
+    list.splice(i, 1);
+    if (list.length == 0)
+      delete this._events[type];
+  } else if (this._events[type] === listener) {
+    delete this._events[type];
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.removeAllListeners = function(type) {
+  if (arguments.length === 0) {
+    this._events = {};
+    return this;
+  }
+
+  // does not use listeners(), so no side effect of creating _events[type]
+  if (type && this._events && this._events[type]) this._events[type] = null;
+  return this;
+};
+
+EventEmitter.prototype.listeners = function(type) {
+  if (!this._events) this._events = {};
+  if (!this._events[type]) this._events[type] = [];
+  if (!isArray(this._events[type])) {
+    this._events[type] = [this._events[type]];
+  }
+  return this._events[type];
+};
+
+})(require("__browserify_process"))
+},{"__browserify_process":15}],9:[function(require,module,exports){
+var events = require('events');
+
+exports.isArray = isArray;
+exports.isDate = function(obj){return Object.prototype.toString.call(obj) === '[object Date]'};
+exports.isRegExp = function(obj){return Object.prototype.toString.call(obj) === '[object RegExp]'};
+
+
+exports.print = function () {};
+exports.puts = function () {};
+exports.debug = function() {};
+
+exports.inspect = function(obj, showHidden, depth, colors) {
+  var seen = [];
+
+  var stylize = function(str, styleType) {
+    // http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
+    var styles =
+        { 'bold' : [1, 22],
+          'italic' : [3, 23],
+          'underline' : [4, 24],
+          'inverse' : [7, 27],
+          'white' : [37, 39],
+          'grey' : [90, 39],
+          'black' : [30, 39],
+          'blue' : [34, 39],
+          'cyan' : [36, 39],
+          'green' : [32, 39],
+          'magenta' : [35, 39],
+          'red' : [31, 39],
+          'yellow' : [33, 39] };
+
+    var style =
+        { 'special': 'cyan',
+          'number': 'blue',
+          'boolean': 'yellow',
+          'undefined': 'grey',
+          'null': 'bold',
+          'string': 'green',
+          'date': 'magenta',
+          // "name": intentionally not styling
+          'regexp': 'red' }[styleType];
+
+    if (style) {
+      return '\033[' + styles[style][0] + 'm' + str +
+             '\033[' + styles[style][1] + 'm';
+    } else {
+      return str;
+    }
+  };
+  if (! colors) {
+    stylize = function(str, styleType) { return str; };
+  }
+
+  function format(value, recurseTimes) {
+    // Provide a hook for user-specified inspect functions.
+    // Check that value is an object with an inspect function on it
+    if (value && typeof value.inspect === 'function' &&
+        // Filter out the util module, it's inspect function is special
+        value !== exports &&
+        // Also filter out any prototype objects using the circular check.
+        !(value.constructor && value.constructor.prototype === value)) {
+      return value.inspect(recurseTimes);
+    }
+
+    // Primitive types cannot have properties
+    switch (typeof value) {
+      case 'undefined':
+        return stylize('undefined', 'undefined');
+
+      case 'string':
+        var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
+                                                 .replace(/'/g, "\\'")
+                                                 .replace(/\\"/g, '"') + '\'';
+        return stylize(simple, 'string');
+
+      case 'number':
+        return stylize('' + value, 'number');
+
+      case 'boolean':
+        return stylize('' + value, 'boolean');
+    }
+    // For some reason typeof null is "object", so special case here.
+    if (value === null) {
+      return stylize('null', 'null');
+    }
+
+    // Look up the keys of the object.
+    var visible_keys = Object_keys(value);
+    var keys = showHidden ? Object_getOwnPropertyNames(value) : visible_keys;
+
+    // Functions without properties can be shortcutted.
+    if (typeof value === 'function' && keys.length === 0) {
+      if (isRegExp(value)) {
+        return stylize('' + value, 'regexp');
+      } else {
+        var name = value.name ? ': ' + value.name : '';
+        return stylize('[Function' + name + ']', 'special');
+      }
+    }
+
+    // Dates without properties can be shortcutted
+    if (isDate(value) && keys.length === 0) {
+      return stylize(value.toUTCString(), 'date');
+    }
+
+    var base, type, braces;
+    // Determine the object type
+    if (isArray(value)) {
+      type = 'Array';
+      braces = ['[', ']'];
+    } else {
+      type = 'Object';
+      braces = ['{', '}'];
+    }
+
+    // Make functions say that they are functions
+    if (typeof value === 'function') {
+      var n = value.name ? ': ' + value.name : '';
+      base = (isRegExp(value)) ? ' ' + value : ' [Function' + n + ']';
+    } else {
+      base = '';
+    }
+
+    // Make dates with properties first say the date
+    if (isDate(value)) {
+      base = ' ' + value.toUTCString();
+    }
+
+    if (keys.length === 0) {
+      return braces[0] + base + braces[1];
+    }
+
+    if (recurseTimes < 0) {
+      if (isRegExp(value)) {
+        return stylize('' + value, 'regexp');
+      } else {
+        return stylize('[Object]', 'special');
+      }
+    }
+
+    seen.push(value);
+
+    var output = keys.map(function(key) {
+      var name, str;
+      if (value.__lookupGetter__) {
+        if (value.__lookupGetter__(key)) {
+          if (value.__lookupSetter__(key)) {
+            str = stylize('[Getter/Setter]', 'special');
+          } else {
+            str = stylize('[Getter]', 'special');
+          }
+        } else {
+          if (value.__lookupSetter__(key)) {
+            str = stylize('[Setter]', 'special');
+          }
+        }
+      }
+      if (visible_keys.indexOf(key) < 0) {
+        name = '[' + key + ']';
+      }
+      if (!str) {
+        if (seen.indexOf(value[key]) < 0) {
+          if (recurseTimes === null) {
+            str = format(value[key]);
+          } else {
+            str = format(value[key], recurseTimes - 1);
+          }
+          if (str.indexOf('\n') > -1) {
+            if (isArray(value)) {
+              str = str.split('\n').map(function(line) {
+                return '  ' + line;
+              }).join('\n').substr(2);
+            } else {
+              str = '\n' + str.split('\n').map(function(line) {
+                return '   ' + line;
+              }).join('\n');
+            }
+          }
+        } else {
+          str = stylize('[Circular]', 'special');
+        }
+      }
+      if (typeof name === 'undefined') {
+        if (type === 'Array' && key.match(/^\d+$/)) {
+          return str;
+        }
+        name = JSON.stringify('' + key);
+        if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
+          name = name.substr(1, name.length - 2);
+          name = stylize(name, 'name');
+        } else {
+          name = name.replace(/'/g, "\\'")
+                     .replace(/\\"/g, '"')
+                     .replace(/(^"|"$)/g, "'");
+          name = stylize(name, 'string');
+        }
+      }
+
+      return name + ': ' + str;
+    });
+
+    seen.pop();
+
+    var numLinesEst = 0;
+    var length = output.reduce(function(prev, cur) {
+      numLinesEst++;
+      if (cur.indexOf('\n') >= 0) numLinesEst++;
+      return prev + cur.length + 1;
+    }, 0);
+
+    if (length > 50) {
+      output = braces[0] +
+               (base === '' ? '' : base + '\n ') +
+               ' ' +
+               output.join(',\n  ') +
+               ' ' +
+               braces[1];
+
+    } else {
+      output = braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
+    }
+
+    return output;
+  }
+  return format(obj, (typeof depth === 'undefined' ? 2 : depth));
+};
+
+
+function isArray(ar) {
+  return ar instanceof Array ||
+         Array.isArray(ar) ||
+         (ar && ar !== Object.prototype && isArray(ar.__proto__));
+}
+
+
+function isRegExp(re) {
+  return re instanceof RegExp ||
+    (typeof re === 'object' && Object.prototype.toString.call(re) === '[object RegExp]');
+}
+
+
+function isDate(d) {
+  if (d instanceof Date) return true;
+  if (typeof d !== 'object') return false;
+  var properties = Date.prototype && Object_getOwnPropertyNames(Date.prototype);
+  var proto = d.__proto__ && Object_getOwnPropertyNames(d.__proto__);
+  return JSON.stringify(proto) === JSON.stringify(properties);
+}
+
+function pad(n) {
+  return n < 10 ? '0' + n.toString(10) : n.toString(10);
+}
+
+var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+              'Oct', 'Nov', 'Dec'];
+
+// 26 Feb 16:19:34
+function timestamp() {
+  var d = new Date();
+  var time = [pad(d.getHours()),
+              pad(d.getMinutes()),
+              pad(d.getSeconds())].join(':');
+  return [d.getDate(), months[d.getMonth()], time].join(' ');
+}
+
+exports.log = function (msg) {};
+
+exports.pump = null;
+
+var Object_keys = Object.keys || function (obj) {
+    var res = [];
+    for (var key in obj) res.push(key);
+    return res;
+};
+
+var Object_getOwnPropertyNames = Object.getOwnPropertyNames || function (obj) {
+    var res = [];
+    for (var key in obj) {
+        if (Object.hasOwnProperty.call(obj, key)) res.push(key);
+    }
+    return res;
+};
+
+var Object_create = Object.create || function (prototype, properties) {
+    // from es5-shim
+    var object;
+    if (prototype === null) {
+        object = { '__proto__' : null };
+    }
+    else {
+        if (typeof prototype !== 'object') {
+            throw new TypeError(
+                'typeof prototype[' + (typeof prototype) + '] != \'object\''
+            );
+        }
+        var Type = function () {};
+        Type.prototype = prototype;
+        object = new Type();
+        object.__proto__ = prototype;
+    }
+    if (typeof properties !== 'undefined' && Object.defineProperties) {
+        Object.defineProperties(object, properties);
+    }
+    return object;
+};
+
+exports.inherits = function(ctor, superCtor) {
+  ctor.super_ = superCtor;
+  ctor.prototype = Object_create(superCtor.prototype, {
+    constructor: {
+      value: ctor,
+      enumerable: false,
+      writable: true,
+      configurable: true
+    }
+  });
+};
+
+var formatRegExp = /%[sdj%]/g;
+exports.format = function(f) {
+  if (typeof f !== 'string') {
+    var objects = [];
+    for (var i = 0; i < arguments.length; i++) {
+      objects.push(exports.inspect(arguments[i]));
+    }
+    return objects.join(' ');
+  }
+
+  var i = 1;
+  var args = arguments;
+  var len = args.length;
+  var str = String(f).replace(formatRegExp, function(x) {
+    if (x === '%%') return '%';
+    if (i >= len) return x;
+    switch (x) {
+      case '%s': return String(args[i++]);
+      case '%d': return Number(args[i++]);
+      case '%j': return JSON.stringify(args[i++]);
+      default:
+        return x;
+    }
+  });
+  for(var x = args[i]; i < len; x = args[++i]){
+    if (x === null || typeof x !== 'object') {
+      str += ' ' + x;
+    } else {
+      str += ' ' + exports.inspect(x);
+    }
+  }
+  return str;
+};
+
+},{"events":13}],16:[function(require,module,exports){
 require=(function(e,t,n,r){function i(r){if(!n[r]){if(!t[r]){if(e)return e(r);throw new Error("Cannot find module '"+r+"'")}var s=n[r]={exports:{}};t[r][0](function(e){var n=t[r][1][e];return i(n?n:e)},s,s.exports)}return n[r].exports}for(var s=0;s<r.length;s++)i(r[s]);return i})(typeof require!=="undefined"&&require,{1:[function(require,module,exports){
 exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
   var e, m,
@@ -5766,7 +5770,7 @@ SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 },{}]},{},[])
 ;;module.exports=require("buffer-browserify")
 
-},{}],13:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 (function(Buffer){
 // Taken from node's assert module, because it sucks
 // and exposes next to nothing useful.
@@ -5862,73 +5866,129 @@ function objEquiv (a, b) {
 }
 
 })(require("__browserify_buffer").Buffer)
-},{"__browserify_buffer":15}],6:[function(require,module,exports){
-var koBindingHandlers = require('./ko'),
-    events = require('./events');
+},{"__browserify_buffer":16}],10:[function(require,module,exports){
+var http = module.exports;
+var EventEmitter = require('events').EventEmitter;
+var Request = require('./lib/request');
 
-exports.selectCell = function (cell) {
-    var table = cell.parentNode.parentNode.parentNode,
-        selection = table._cellSelection;
-
-    selection.setRange(cell, cell);
+http.request = function (params, cb) {
+    if (!params) params = {};
+    if (!params.host) params.host = window.location.host.split(':')[0];
+    if (!params.port) params.port = window.location.port;
+    if (!params.scheme) params.scheme = window.location.protocol.split(':')[0];
+    
+    var req = new Request(new xhrHttp, params);
+    if (cb) req.on('response', cb);
+    return req;
 };
 
-exports.getTableSelection = function (table) {
-    var selection = table._cellSelection;
-
-    return selection;
+http.get = function (params, cb) {
+    params.method = 'GET';
+    var req = http.request(params, cb);
+    req.end();
+    return req;
 };
 
-exports.setCellValue = function (cell, value) {
-    var table = cell.parentNode.parentNode.parentNode,
-        selection = table._cellSelection;
+http.Agent = function () {};
+http.Agent.defaultMaxSockets = 4;
 
-    selection.updateCellValue(cell, value);
+var xhrHttp = (function () {
+    if (typeof window === 'undefined') {
+        throw new Error('no window object present');
+    }
+    else if (window.XMLHttpRequest) {
+        return window.XMLHttpRequest;
+    }
+    else if (window.ActiveXObject) {
+        var axs = [
+            'Msxml2.XMLHTTP.6.0',
+            'Msxml2.XMLHTTP.3.0',
+            'Microsoft.XMLHTTP'
+        ];
+        for (var i = 0; i < axs.length; i++) {
+            try {
+                var ax = new(window.ActiveXObject)(axs[i]);
+                return function () {
+                    if (ax) {
+                        var ax_ = ax;
+                        ax = null;
+                        return ax_;
+                    }
+                    else {
+                        return new(window.ActiveXObject)(axs[i]);
+                    }
+                };
+            }
+            catch (e) {}
+        }
+        throw new Error('ajax not supported in this browser')
+    }
+    else {
+        throw new Error('ajax not supported in this browser');
+    }
+})();
+
+},{"events":13,"./lib/request":17}],8:[function(require,module,exports){
+var polyfill = require('../polyfill');
+
+// Knockout binding handlers
+var bindingHandlers = {
+    editableCell: require('./editableCellBinding'),
+    editableCellSelection: require('./editableCellSelectionBinding'),
+    editableCellScrollHost: require('./editableCellScrollHostBinding')
 };
 
-// --------
-// Eventing
-// --------
+// Register Knockout binding handlers if Knockout is loaded
+if (typeof ko !== 'undefined') {
+    for (var bindingHandler in bindingHandlers) {
+        ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
+    }
+}
+},{"../polyfill":18,"./editableCellBinding":19,"./editableCellSelectionBinding":20,"./editableCellScrollHostBinding":21}],18:[function(require,module,exports){
+function forEach (list, f) {
+  var i;
 
-exports.on = function (event, listener) {
-    events.public.on(event, listener);
-};
-
-exports.removeListener = function () {
-    events.public.removeListener.apply(events.public, arguments);
-};
-
-exports.removeAllListeners = function () {
-    events.public.removeAllListeners.apply(events.public, arguments);
-};
-
-// Proxy internal events
-
-var proxyEvents = ['cellValueChanged', 'beforeCopy'],
-    eventName,
-    i;
-
-for (i = 0; i < proxyEvents.length; ++i) {
-    eventName = proxyEvents[i];
-
-    events.private.on(eventName, createProxy(eventName));    
+  for (i = 0; i < list.length; ++i) {
+    f(list[i], i);
+  }
 }
 
-function createProxy (eventName) {
-    return function () {
-        var args = Array.prototype.slice.call(arguments);
-        args.unshift(eventName);
-        events.public.emit.apply(events.public, args);
-    };
-}
-},{"./events":16,"./ko":17}],16:[function(require,module,exports){
-var EventEmitter = require('events').EventEmitter,
-	publicEvents = new EventEmitter(),
-	privateEvents = new EventEmitter();
+forEach([Array, window.NodeList, window.HTMLCollection], extend);
 
-module.exports.public = publicEvents;
-module.exports.private = privateEvents;
-},{"events":8}],18:[function(require,module,exports){
+function extend (object) {
+  var prototype = object && object.prototype;
+
+  if (!prototype) {
+    return;
+  }
+
+  prototype.forEach = prototype.forEach || function (f) {
+    forEach(this, f);
+  };
+
+  prototype.filter = prototype.filter || function (f) {
+    var result = [];
+
+    this.forEach(function (element) {
+      if (f(element, result.length)) {
+        result.push(element);
+      }
+    });
+
+    return result;
+  };
+
+  prototype.map = prototype.map || function (f) {
+    var result = [];
+
+    this.forEach(function (element) {
+      result.push(f(element, result.length));
+    });
+
+    return result;
+  };
+}
+},{}],22:[function(require,module,exports){
 exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -6014,128 +6074,7 @@ exports.writeIEEE754 = function(buffer, value, offset, isBE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],19:[function(require,module,exports){
-var events = require('events');
-var util = require('util');
-
-function Stream() {
-  events.EventEmitter.call(this);
-}
-util.inherits(Stream, events.EventEmitter);
-module.exports = Stream;
-// Backwards-compat with node 0.4.x
-Stream.Stream = Stream;
-
-Stream.prototype.pipe = function(dest, options) {
-  var source = this;
-
-  function ondata(chunk) {
-    if (dest.writable) {
-      if (false === dest.write(chunk) && source.pause) {
-        source.pause();
-      }
-    }
-  }
-
-  source.on('data', ondata);
-
-  function ondrain() {
-    if (source.readable && source.resume) {
-      source.resume();
-    }
-  }
-
-  dest.on('drain', ondrain);
-
-  // If the 'end' option is not supplied, dest.end() will be called when
-  // source gets the 'end' or 'close' events.  Only dest.end() once, and
-  // only when all sources have ended.
-  if (!dest._isStdio && (!options || options.end !== false)) {
-    dest._pipeCount = dest._pipeCount || 0;
-    dest._pipeCount++;
-
-    source.on('end', onend);
-    source.on('close', onclose);
-  }
-
-  var didOnEnd = false;
-  function onend() {
-    if (didOnEnd) return;
-    didOnEnd = true;
-
-    dest._pipeCount--;
-
-    // remove the listeners
-    cleanup();
-
-    if (dest._pipeCount > 0) {
-      // waiting for other incoming streams to end.
-      return;
-    }
-
-    dest.end();
-  }
-
-
-  function onclose() {
-    if (didOnEnd) return;
-    didOnEnd = true;
-
-    dest._pipeCount--;
-
-    // remove the listeners
-    cleanup();
-
-    if (dest._pipeCount > 0) {
-      // waiting for other incoming streams to end.
-      return;
-    }
-
-    dest.destroy();
-  }
-
-  // don't leave dangling pipes when there are errors.
-  function onerror(er) {
-    cleanup();
-    if (this.listeners('error').length === 0) {
-      throw er; // Unhandled stream error in pipe.
-    }
-  }
-
-  source.on('error', onerror);
-  dest.on('error', onerror);
-
-  // remove all the event listeners that were added.
-  function cleanup() {
-    source.removeListener('data', ondata);
-    dest.removeListener('drain', ondrain);
-
-    source.removeListener('end', onend);
-    source.removeListener('close', onclose);
-
-    source.removeListener('error', onerror);
-    dest.removeListener('error', onerror);
-
-    source.removeListener('end', cleanup);
-    source.removeListener('close', cleanup);
-
-    dest.removeListener('end', cleanup);
-    dest.removeListener('close', cleanup);
-  }
-
-  source.on('end', cleanup);
-  source.on('close', cleanup);
-
-  dest.on('end', cleanup);
-  dest.on('close', cleanup);
-
-  dest.emit('pipe', source);
-
-  // Allow for unix-like usage: A.pipe(B).pipe(C)
-  return dest;
-};
-
-},{"events":8,"util":7}],10:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 (function(){function SlowBuffer (size) {
     this.length = size;
 };
@@ -7455,7 +7394,318 @@ SlowBuffer.prototype.writeDoubleLE = Buffer.prototype.writeDoubleLE;
 SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 
 })()
-},{"assert":9,"./buffer_ieee754":18,"base64-js":20}],20:[function(require,module,exports){
+},{"assert":11,"./buffer_ieee754":22,"base64-js":23}],20:[function(require,module,exports){
+var utils = require('./utils');
+
+var editableCellSelection = {
+    _selectionMappings: [],
+
+    init: function (element, valueAccessor, allBindingsAccessor) {
+        if (element.tagName !== 'TABLE') {
+            throw new Error('editableCellSelection binding can only be applied to tables');
+        }
+
+        var table = element,
+            selection = utils.initializeSelection(table);
+
+        // Update supplied observable array when selection range changes
+        selection.on('change', rangeChanged);
+
+        function rangeChanged (newSelection) {
+            newSelection = ko.utils.arrayMap(newSelection, function (cell) {
+                return {
+                    cell: cell,
+                    value: cell._cellValue(),
+                    content: cell._cellContent()
+                };
+            });
+
+            utils.updateBindingValue(element, 'editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
+        }
+
+        // Keep track of selections
+        ko.bindingHandlers.editableCellSelection._selectionMappings.push([valueAccessor, table]);
+
+        // Perform clean-up when table is removed from DOM
+        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
+            // Remove selection from list
+            var selectionIndex = ko.utils.arrayFirst(ko.bindingHandlers.editableCellSelection._selectionMappings, function (tuple) {
+                return tuple[0] === valueAccessor;
+            });
+            ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
+
+            // Remove event listener
+            selection.removeListener('change', rangeChanged);
+        });
+    },
+    update: function (element, valueAccessor, allBindingsAccessor) {
+        var table = element,
+            selection = table._cellSelection,
+            newSelection = ko.utils.unwrapObservable(valueAccessor()) || [];
+
+        // Empty selection, so simply clear it out
+        if (newSelection.length === 0) {
+            selection.clear();
+            return;
+        }
+
+        var start = newSelection[0],
+            end = newSelection[newSelection.length - 1];
+
+        var isDirectUpdate = start.tagName === 'TD' || start.tagName === 'TH';
+
+        // Notification of changed selection, either after programmatic  
+        // update or after changing current selection in user interface
+        if (!isDirectUpdate) {
+            start = start.cell;
+            end = end.cell;
+        }
+
+        // Make sure selected cells belongs to current table, or else hide selection
+        var parentRowHidden = !start.parentNode;
+        var belongingToOtherTable = start.parentNode && start.parentNode.parentNode && start.parentNode.parentNode.parentNode !== table;
+
+        if (parentRowHidden || belongingToOtherTable) {
+            // Selection cannot be cleared, since that will affect selection in other table
+            selection.view.hide();
+            return;
+        }
+
+        // Programmatic update of selection, i.e. selection([startCell, endCell]);
+        if (isDirectUpdate) {
+            selection.setRange(start, end);
+        }
+    }
+};
+
+module.exports = editableCellSelection;
+},{"./utils":24}],21:[function(require,module,exports){
+var utils = require('./utils');
+
+var editableCellScrollHost = {
+    init: function (element) {
+        if (element.tagName !== 'TABLE') {
+            throw new Error('editableCellScrollHost binding can only be applied to tables');
+        }
+
+        utils.initializeSelection(element);
+    },
+    update: function (element, valueAccessor) {
+        var table = element,
+            selection = table._cellSelection,
+            scrollHost = ko.utils.unwrapObservable(valueAccessor());
+
+        selection.setScrollHost(scrollHost);
+    }
+};
+
+module.exports = editableCellScrollHost;
+},{"./utils":24}],19:[function(require,module,exports){
+var utils = require('./utils'),
+    events = require('../events');
+
+var editableCell = {
+    init: function (element, valueAccessor, allBindings, viewModel, bindingContext) {
+        var table = $(element).parents('table')[0],
+            selection = utils.initializeSelection(table),
+            valueBindingName = 'editableCell';
+
+        selection.registerCell(element);
+
+        if (allBindings.has('cellValue')) {
+            valueBindingName = 'cellValue';
+            valueAccessor = function () { return allBindings.get('cellValue'); };
+        }
+
+        element._cellTemplated = element.innerHTML.trim() !== '';
+        element._cellValue = valueAccessor;
+        element._cellContent = function () { return allBindings.get('cellHTML') || allBindings.get('cellText') || this._cellValue(); };
+        element._cellText = function () { return allBindings.get('cellText'); };
+        element._cellHTML = function () { return allBindings.get('cellHTML'); };
+        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindings.get('cellReadOnly')); };
+        element._cellValueUpdater = function (newValue) {
+            utils.updateBindingValue(element, valueBindingName, this._cellValue, allBindings, newValue);
+
+            if (!ko.isObservable(this._cellValue())) {
+                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindings, viewModel, bindingContext);
+            }
+        };
+
+        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
+            selection.unregisterCell(element);
+
+            element._cellValue = null;
+            element._cellContent = null;
+            element._cellText = null;
+            element._cellHTML = null;
+            element._cellReadOnly = null;
+            element._cellValueUpdater = null;
+        });
+
+        if (element._cellTemplated) {
+            ko.utils.domData.set(element, 'editableCellTemplate', {});
+            return { 'controlsDescendantBindings': true };
+        }
+
+        element.initialBind = true;
+    },
+    update: function (element, valueAccessor, allBindings, viewModel, bindingContext) {
+        var value = ko.utils.unwrapObservable(valueAccessor());
+
+        if (element._cellTemplated) {
+            var template = ko.utils.domData.get(element, 'editableCellTemplate');
+
+            if (!template.savedNodes) {
+                template.savedNodes = utils.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
+            }
+            else {
+                ko.virtualElements.setDomNodeChildren(element, utils.cloneNodes(template.savedNodes));
+            }
+
+            ko.applyBindingsToDescendants(bindingContext.createChildContext(value), element);
+        }
+        else {
+            if (element._cellHTML()) {
+                element.innerHTML = ko.utils.unwrapObservable(element._cellHTML());
+            }
+            else {
+                element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
+            }
+        }
+
+        if (!element.initialBind) {
+            events.private.emit('cellValueChanged', element);
+        }
+
+        if (element.initialBind) {
+            element.initialBind = undefined;
+        }
+    }
+};
+
+module.exports = editableCell;
+},{"../events":7,"./utils":24}],25:[function(require,module,exports){
+var events = require('events');
+var util = require('util');
+
+function Stream() {
+  events.EventEmitter.call(this);
+}
+util.inherits(Stream, events.EventEmitter);
+module.exports = Stream;
+// Backwards-compat with node 0.4.x
+Stream.Stream = Stream;
+
+Stream.prototype.pipe = function(dest, options) {
+  var source = this;
+
+  function ondata(chunk) {
+    if (dest.writable) {
+      if (false === dest.write(chunk) && source.pause) {
+        source.pause();
+      }
+    }
+  }
+
+  source.on('data', ondata);
+
+  function ondrain() {
+    if (source.readable && source.resume) {
+      source.resume();
+    }
+  }
+
+  dest.on('drain', ondrain);
+
+  // If the 'end' option is not supplied, dest.end() will be called when
+  // source gets the 'end' or 'close' events.  Only dest.end() once, and
+  // only when all sources have ended.
+  if (!dest._isStdio && (!options || options.end !== false)) {
+    dest._pipeCount = dest._pipeCount || 0;
+    dest._pipeCount++;
+
+    source.on('end', onend);
+    source.on('close', onclose);
+  }
+
+  var didOnEnd = false;
+  function onend() {
+    if (didOnEnd) return;
+    didOnEnd = true;
+
+    dest._pipeCount--;
+
+    // remove the listeners
+    cleanup();
+
+    if (dest._pipeCount > 0) {
+      // waiting for other incoming streams to end.
+      return;
+    }
+
+    dest.end();
+  }
+
+
+  function onclose() {
+    if (didOnEnd) return;
+    didOnEnd = true;
+
+    dest._pipeCount--;
+
+    // remove the listeners
+    cleanup();
+
+    if (dest._pipeCount > 0) {
+      // waiting for other incoming streams to end.
+      return;
+    }
+
+    dest.destroy();
+  }
+
+  // don't leave dangling pipes when there are errors.
+  function onerror(er) {
+    cleanup();
+    if (this.listeners('error').length === 0) {
+      throw er; // Unhandled stream error in pipe.
+    }
+  }
+
+  source.on('error', onerror);
+  dest.on('error', onerror);
+
+  // remove all the event listeners that were added.
+  function cleanup() {
+    source.removeListener('data', ondata);
+    dest.removeListener('drain', ondrain);
+
+    source.removeListener('end', onend);
+    source.removeListener('close', onclose);
+
+    source.removeListener('error', onerror);
+    dest.removeListener('error', onerror);
+
+    source.removeListener('end', cleanup);
+    source.removeListener('close', cleanup);
+
+    dest.removeListener('end', cleanup);
+    dest.removeListener('close', cleanup);
+  }
+
+  source.on('end', cleanup);
+  source.on('close', cleanup);
+
+  dest.on('end', cleanup);
+  dest.on('close', cleanup);
+
+  dest.emit('pipe', source);
+
+  // Allow for unix-like usage: A.pipe(B).pipe(C)
+  return dest;
+};
+
+},{"events":13,"util":9}],23:[function(require,module,exports){
 (function (exports) {
 	'use strict';
 
@@ -7541,7 +7791,7 @@ SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 	module.exports.fromByteArray = uint8ToBase64;
 }());
 
-},{}],21:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 var Stream = require('stream');
 
 var Response = module.exports = function (res) {
@@ -7662,67 +7912,60 @@ var isArray = Array.isArray || function (xs) {
     return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{"stream":19}],17:[function(require,module,exports){
-var polyfill = require('../polyfill');
+},{"stream":25}],24:[function(require,module,exports){
+var Selection = require('../selection');
 
-// Knockout binding handlers
-var bindingHandlers = {
-    editableCell: require('./editableCellBinding'),
-    editableCellSelection: require('./editableCellSelectionBinding'),
-    editableCellScrollHost: require('./editableCellScrollHostBinding')
+module.exports = {
+    initializeSelection: initializeSelection,
+    updateBindingValue: updateBindingValue,
+    cloneNodes: cloneNodes
 };
 
-// Register Knockout binding handlers if Knockout is loaded
-if (typeof ko !== 'undefined') {
-    for (var bindingHandler in bindingHandlers) {
-        ko.bindingHandlers[bindingHandler] = bindingHandlers[bindingHandler];
+function initializeSelection (table) {
+    var selection = table._cellSelection;
+
+    if (selection === undefined) {
+        table._cellSelection = selection = new Selection(table, ko.bindingHandlers.editableCellSelection._selectionMappings);
+
+        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
+            table._cellSelection.destroy();
+        });
+    }
+
+    return selection;
+}
+
+// `updateBindingValue` is a helper function borrowing private binding update functionality
+// from Knockout.js for supporting updating of both observables and non-observables.
+function updateBindingValue (element, bindingName, valueAccessor, allBindingsAccessor, newValue) {
+    var options = {
+        cell: element
+    };
+
+    if (ko.isWriteableObservable(valueAccessor())) {
+        valueAccessor()(newValue, options);
+        return;
+    }
+
+    var propertyWriters = allBindingsAccessor()._ko_property_writers;
+    if (propertyWriters && propertyWriters[bindingName]) {
+        propertyWriters[bindingName](newValue, options);
+    }
+
+    if (!ko.isObservable(valueAccessor())) {
+        allBindingsAccessor()[bindingName] = newValue;
     }
 }
-},{"./editableCellBinding":22,"./editableCellSelectionBinding":23,"../polyfill":24,"./editableCellScrollHostBinding":25}],24:[function(require,module,exports){
-function forEach (list, f) {
-  var i;
 
-  for (i = 0; i < list.length; ++i) {
-    f(list[i], i);
-  }
+// Borrowed from Knockout.js
+function cloneNodes (nodesArray, shouldCleanNodes) {
+    for (var i = 0, j = nodesArray.length, newNodesArray = []; i < j; i++) {
+        var clonedNode = nodesArray[i].cloneNode(true);
+        newNodesArray.push(shouldCleanNodes ? ko.cleanNode(clonedNode) : clonedNode);
+    }
+    return newNodesArray;
 }
-
-forEach([Array, window.NodeList, window.HTMLCollection], extend);
-
-function extend (object) {
-  var prototype = object && object.prototype;
-
-  if (!prototype) {
-    return;
-  }
-
-  prototype.forEach = prototype.forEach || function (f) {
-    forEach(this, f);
-  };
-
-  prototype.filter = prototype.filter || function (f) {
-    var result = [];
-
-    this.forEach(function (element) {
-      if (f(element, result.length)) {
-        result.push(element);
-      }
-    });
-
-    return result;
-  };
-
-  prototype.map = prototype.map || function (f) {
-    var result = [];
-
-    this.forEach(function (element) {
-      result.push(f(element, result.length));
-    });
-
-    return result;
-  };
-}
-},{}],14:[function(require,module,exports){
+},{"../selection":27}],17:[function(require,module,exports){
 (function(){var Stream = require('stream');
 var Response = require('./response');
 var concatStream = require('concat-stream')
@@ -7856,301 +8099,7 @@ var indexOf = function (xs, x) {
 };
 
 })()
-},{"stream":19,"buffer":10,"./response":21,"concat-stream":26}],22:[function(require,module,exports){
-var utils = require('./utils'),
-    events = require('../events');
-
-var editableCell = {
-    init: function (element, valueAccessor, allBindings, viewModel, bindingContext) {
-        var table = $(element).parents('table')[0],
-            selection = utils.initializeSelection(table),
-            valueBindingName = 'editableCell';
-
-        selection.registerCell(element);
-
-        if (allBindings.has('cellValue')) {
-            valueBindingName = 'cellValue';
-            valueAccessor = function () { return allBindings.get('cellValue'); };
-        }
-
-        element._cellTemplated = element.innerHTML.trim() !== '';
-        element._cellValue = valueAccessor;
-        element._cellContent = function () { return allBindings.get('cellHTML') || allBindings.get('cellText') || this._cellValue(); };
-        element._cellText = function () { return allBindings.get('cellText'); };
-        element._cellHTML = function () { return allBindings.get('cellHTML'); };
-        element._cellReadOnly = function () { return ko.utils.unwrapObservable(allBindings.get('cellReadOnly')); };
-        element._cellValueUpdater = function (newValue) {
-            utils.updateBindingValue(element, valueBindingName, this._cellValue, allBindings, newValue);
-
-            if (!ko.isObservable(this._cellValue())) {
-                ko.bindingHandlers.editableCell.update(element, valueAccessor, allBindings, viewModel, bindingContext);
-            }
-        };
-
-        ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
-            selection.unregisterCell(element);
-
-            element._cellValue = null;
-            element._cellContent = null;
-            element._cellText = null;
-            element._cellHTML = null;
-            element._cellReadOnly = null;
-            element._cellValueUpdater = null;
-        });
-
-        if (element._cellTemplated) {
-            ko.utils.domData.set(element, 'editableCellTemplate', {});
-            return { 'controlsDescendantBindings': true };
-        }
-
-        element.initialBind = true;
-    },
-    update: function (element, valueAccessor, allBindings, viewModel, bindingContext) {
-        var value = ko.utils.unwrapObservable(valueAccessor());
-
-        if (element._cellTemplated) {
-            var template = ko.utils.domData.get(element, 'editableCellTemplate');
-
-            if (!template.savedNodes) {
-                template.savedNodes = utils.cloneNodes(ko.virtualElements.childNodes(element), true /* shouldCleanNodes */);
-            }
-            else {
-                ko.virtualElements.setDomNodeChildren(element, utils.cloneNodes(template.savedNodes));
-            }
-
-            ko.applyBindingsToDescendants(bindingContext.createChildContext(value), element);
-        }
-        else {
-            if (element._cellHTML()) {
-                element.innerHTML = ko.utils.unwrapObservable(element._cellHTML());
-            }
-            else {
-                element.textContent = ko.utils.unwrapObservable(element._cellText() || element._cellValue());
-            }
-        }
-
-        if (!element.initialBind) {
-            events.private.emit('cellValueChanged', element);
-        }
-
-        if (element.initialBind) {
-            element.initialBind = undefined;
-        }
-    }
-};
-
-module.exports = editableCell;
-},{"./utils":27,"../events":16}],23:[function(require,module,exports){
-var utils = require('./utils');
-
-var editableCellSelection = {
-    _selectionMappings: [],
-
-    init: function (element, valueAccessor, allBindingsAccessor) {
-        if (element.tagName !== 'TABLE') {
-            throw new Error('editableCellSelection binding can only be applied to tables');
-        }
-
-        var table = element,
-            selection = utils.initializeSelection(table);
-
-        // Update supplied observable array when selection range changes
-        selection.on('change', rangeChanged);
-
-        function rangeChanged (newSelection) {
-            newSelection = ko.utils.arrayMap(newSelection, function (cell) {
-                return {
-                    cell: cell,
-                    value: cell._cellValue(),
-                    content: cell._cellContent()
-                };
-            });
-
-            utils.updateBindingValue(element, 'editableCellSelection', valueAccessor, allBindingsAccessor, newSelection);
-        }
-
-        // Keep track of selections
-        ko.bindingHandlers.editableCellSelection._selectionMappings.push([valueAccessor, table]);
-
-        // Perform clean-up when table is removed from DOM
-        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
-            // Remove selection from list
-            var selectionIndex = ko.utils.arrayFirst(ko.bindingHandlers.editableCellSelection._selectionMappings, function (tuple) {
-                return tuple[0] === valueAccessor;
-            });
-            ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
-
-            // Remove event listener
-            selection.removeListener('change', rangeChanged);
-        });
-    },
-    update: function (element, valueAccessor, allBindingsAccessor) {
-        var table = element,
-            selection = table._cellSelection,
-            newSelection = ko.utils.unwrapObservable(valueAccessor()) || [];
-
-        // Empty selection, so simply clear it out
-        if (newSelection.length === 0) {
-            selection.clear();
-            return;
-        }
-
-        var start = newSelection[0],
-            end = newSelection[newSelection.length - 1];
-
-        var isDirectUpdate = start.tagName === 'TD' || start.tagName === 'TH';
-
-        // Notification of changed selection, either after programmatic  
-        // update or after changing current selection in user interface
-        if (!isDirectUpdate) {
-            start = start.cell;
-            end = end.cell;
-        }
-
-        // Make sure selected cells belongs to current table, or else hide selection
-        var parentRowHidden = !start.parentNode;
-        var belongingToOtherTable = start.parentNode && start.parentNode.parentNode && start.parentNode.parentNode.parentNode !== table;
-
-        if (parentRowHidden || belongingToOtherTable) {
-            // Selection cannot be cleared, since that will affect selection in other table
-            selection.view.hide();
-            return;
-        }
-
-        // Programmatic update of selection, i.e. selection([startCell, endCell]);
-        if (isDirectUpdate) {
-            selection.setRange(start, end);
-        }
-    }
-};
-
-module.exports = editableCellSelection;
-},{"./utils":27}],26:[function(require,module,exports){
-(function(Buffer){var stream = require('stream')
-var util = require('util')
-
-function ConcatStream(cb) {
-  stream.Stream.call(this)
-  this.writable = true
-  if (cb) this.cb = cb
-  this.body = []
-  if (this.cb) this.on('error', cb)
-}
-
-util.inherits(ConcatStream, stream.Stream)
-
-ConcatStream.prototype.write = function(chunk) {
-  this.body.push(chunk)
-}
-
-ConcatStream.prototype.arrayConcat = function(arrs) {
-  if (arrs.length === 0) return []
-  if (arrs.length === 1) return arrs[0]
-  return arrs.reduce(function (a, b) { return a.concat(b) })
-}
-
-ConcatStream.prototype.isArray = function(arr) {
-  var isArray = Array.isArray(arr)
-  var isTypedArray = arr.toString().match(/Array/)
-  return isArray || isTypedArray
-}
-
-ConcatStream.prototype.getBody = function () {
-  if (this.body.length === 0) return
-  if (typeof(this.body[0]) === "string") return this.body.join('')
-  if (this.isArray(this.body[0])) return this.arrayConcat(this.body)
-  if (typeof(Buffer) !== "undefined" && Buffer.isBuffer(this.body[0])) {
-    return Buffer.concat(this.body)
-  }
-  return this.body
-}
-
-ConcatStream.prototype.end = function() {
-  if (this.cb) this.cb(false, this.getBody())
-}
-
-module.exports = function(cb) {
-  return new ConcatStream(cb)
-}
-
-module.exports.ConcatStream = ConcatStream
-
-})(require("__browserify_buffer").Buffer)
-},{"stream":19,"util":7,"__browserify_buffer":15}],25:[function(require,module,exports){
-var utils = require('./utils');
-
-var editableCellScrollHost = {
-    init: function (element) {
-        if (element.tagName !== 'TABLE') {
-            throw new Error('editableCellScrollHost binding can only be applied to tables');
-        }
-
-        utils.initializeSelection(element);
-    },
-    update: function (element, valueAccessor) {
-        var table = element,
-            selection = table._cellSelection,
-            scrollHost = ko.utils.unwrapObservable(valueAccessor());
-
-        selection.setScrollHost(scrollHost);
-    }
-};
-
-module.exports = editableCellScrollHost;
-},{"./utils":27}],27:[function(require,module,exports){
-var Selection = require('../selection');
-
-module.exports = {
-    initializeSelection: initializeSelection,
-    updateBindingValue: updateBindingValue,
-    cloneNodes: cloneNodes
-};
-
-function initializeSelection (table) {
-    var selection = table._cellSelection;
-
-    if (selection === undefined) {
-        table._cellSelection = selection = new Selection(table, ko.bindingHandlers.editableCellSelection._selectionMappings);
-
-        ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
-            table._cellSelection.destroy();
-        });
-    }
-
-    return selection;
-}
-
-// `updateBindingValue` is a helper function borrowing private binding update functionality
-// from Knockout.js for supporting updating of both observables and non-observables.
-function updateBindingValue (element, bindingName, valueAccessor, allBindingsAccessor, newValue) {
-    var options = {
-        cell: element
-    };
-
-    if (ko.isWriteableObservable(valueAccessor())) {
-        valueAccessor()(newValue, options);
-        return;
-    }
-
-    var propertyWriters = allBindingsAccessor()._ko_property_writers;
-    if (propertyWriters && propertyWriters[bindingName]) {
-        propertyWriters[bindingName](newValue, options);
-    }
-
-    if (!ko.isObservable(valueAccessor())) {
-        allBindingsAccessor()[bindingName] = newValue;
-    }
-}
-
-// Borrowed from Knockout.js
-function cloneNodes (nodesArray, shouldCleanNodes) {
-    for (var i = 0, j = nodesArray.length, newNodesArray = []; i < j; i++) {
-        var clonedNode = nodesArray[i].cloneNode(true);
-        newNodesArray.push(shouldCleanNodes ? ko.cleanNode(clonedNode) : clonedNode);
-    }
-    return newNodesArray;
-}
-},{"../selection":28}],28:[function(require,module,exports){
+},{"stream":25,"buffer":14,"./response":26,"concat-stream":28}],27:[function(require,module,exports){
 var SelectionView = require('./selectionView'),
     SelectionRange = require('./selectionRange'),
     EventEmitter = require('events').EventEmitter,
@@ -8498,7 +8447,58 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"events":8,"./selectionView":29,"./selectionRange":30,"./polyfill":24,"./events":16}],29:[function(require,module,exports){
+},{"events":13,"./selectionView":29,"./events":7,"./polyfill":18,"./selectionRange":30}],28:[function(require,module,exports){
+(function(Buffer){var stream = require('stream')
+var util = require('util')
+
+function ConcatStream(cb) {
+  stream.Stream.call(this)
+  this.writable = true
+  if (cb) this.cb = cb
+  this.body = []
+  if (this.cb) this.on('error', cb)
+}
+
+util.inherits(ConcatStream, stream.Stream)
+
+ConcatStream.prototype.write = function(chunk) {
+  this.body.push(chunk)
+}
+
+ConcatStream.prototype.arrayConcat = function(arrs) {
+  if (arrs.length === 0) return []
+  if (arrs.length === 1) return arrs[0]
+  return arrs.reduce(function (a, b) { return a.concat(b) })
+}
+
+ConcatStream.prototype.isArray = function(arr) {
+  var isArray = Array.isArray(arr)
+  var isTypedArray = arr.toString().match(/Array/)
+  return isArray || isTypedArray
+}
+
+ConcatStream.prototype.getBody = function () {
+  if (this.body.length === 0) return
+  if (typeof(this.body[0]) === "string") return this.body.join('')
+  if (this.isArray(this.body[0])) return this.arrayConcat(this.body)
+  if (typeof(Buffer) !== "undefined" && Buffer.isBuffer(this.body[0])) {
+    return Buffer.concat(this.body)
+  }
+  return this.body
+}
+
+ConcatStream.prototype.end = function() {
+  if (this.cb) this.cb(false, this.getBody())
+}
+
+module.exports = function(cb) {
+  return new ConcatStream(cb)
+}
+
+module.exports.ConcatStream = ConcatStream
+
+})(require("__browserify_buffer").Buffer)
+},{"stream":25,"util":9,"__browserify_buffer":16}],29:[function(require,module,exports){
 var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
@@ -8568,13 +8568,13 @@ function SelectionView (table, selection) {
         if (topOffset < 0) {
             scrollHost.scrollTop += topOffset;
         }
-        else if (bottomOffset < 0) {
+        if (bottomOffset < 0) {
             scrollHost.scrollTop -= bottomOffset;
         }
-        else if (leftOffset < 0) {
+        if (leftOffset < 0) {
             scrollHost.scrollLeft += leftOffset;
         }
-        else if (rightOffset < 0) {
+        if (rightOffset < 0) {
             scrollHost.scrollLeft -= rightOffset;
         }
     };
@@ -8725,7 +8725,7 @@ function SelectionView (table, selection) {
 
     html.addEventListener("mouseup", self.onMouseUp);
 }
-},{"./polyfill":24}],30:[function(require,module,exports){
+},{"./polyfill":18}],30:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill');
 
@@ -8923,5 +8923,5 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
         return colSpanSum;
     }
 }
-},{"events":8,"./polyfill":24}]},{},[2])
+},{"events":13,"./polyfill":18}]},{},[2])
 ;
