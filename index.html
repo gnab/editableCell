@@ -2,8 +2,16 @@
 <html>
     <head>
         <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
-        <script type="text/javascript" src="http://knockoutjs.com/downloads/knockout-3.2.0.js"></script>
-        <script type="text/javascript" src="out/editableCell.js"></script>
+
+        <!-- Either use RequireJS ... -->
+
+        <script type="text/javascript" src="http://requirejs.org/docs/release/2.1.14/minified/require.js"></script>
+
+        <!-- .. or include Knockout and editableCell manually -->
+
+        <!--<script type="text/javascript" src="http://knockoutjs.com/downloads/knockout-3.2.0.js"></script>-->
+        <!--<script type="text/javascript" src="out/editableCell.js"></script>-->
+
         <style type="text/css">
             @import url('http://getbootstrap.com/dist/css/bootstrap.css');
 
@@ -62,71 +70,82 @@
             </tbody>
         </table>
         <script type="text/javascript">
-            function ViewModel() {
-                var self = this;
 
-                self.entries = ko.observableArray([
-                    new Person('Bob', 'Geldof', 41),
-                    new Person('Roger', 'Moore', 42),
-                    new Person('James', 'Jameson', 43),
-                    new Person('Andy', 'McLaren', 44),
-                    new Person('Richard', 'Anderson', 45),
-                ]);
+            requirejs.config({
+              paths: {
+                knockout: 'http://knockoutjs.com/downloads/knockout-3.2.0',
+                editableCell: './out/editableCell'
+              }
+            });
 
-                self.combinedAge = ko.computed(function () {
-                    var sum = 0;
-                    ko.utils.arrayForEach(self.entries(), function (person) {
-                        sum += parseFloat(person.age());
-                    });
-                    return sum;
-                });
+            require(['knockout', 'editableCell'], function (ko, ec) {
+              function ViewModel() {
+                  var self = this;
 
-                self.selection = ko.observableArray();
+                  self.entries = ko.observableArray([
+                      new Person('Bob', 'Geldof', 41),
+                      new Person('Roger', 'Moore', 42),
+                      new Person('James', 'Jameson', 43),
+                      new Person('Andy', 'McLaren', 44),
+                      new Person('Richard', 'Anderson', 45),
+                  ]);
 
-                self.selectionSum = ko.computed(function () {
-                    return self.selection()
-                        .filter(function (cell) { return typeof ko.utils.unwrapObservable(cell.value) === 'number'; })
-                        .reduce(function (sum, cell) {
-                        return sum + ko.utils.unwrapObservable(cell.value);
-                    }, 0);
-                });
-            }
+                  self.combinedAge = ko.computed(function () {
+                      var sum = 0;
+                      ko.utils.arrayForEach(self.entries(), function (person) {
+                          sum += parseFloat(person.age());
+                      });
+                      return sum;
+                  });
 
-            function Person(firstName, surName, age) {
-                var self = this;
+                  self.selection = ko.observableArray();
 
-                this._age = ko.observable(age);
+                  self.selectionSum = ko.computed(function () {
+                      return self.selection()
+                          .filter(function (cell) { return typeof ko.utils.unwrapObservable(cell.value) === 'number'; })
+                          .reduce(function (sum, cell) {
+                          return sum + ko.utils.unwrapObservable(cell.value);
+                      }, 0);
+                  });
+              }
 
-                this.firstName = firstName;
-                this.surName = ko.observable(surName);
-                this.age = ko.computed({
-                    read: this._age,
-                    write: function (newAge) {
-                        var number = parseFloat(newAge);
+              function Person(firstName, surName, age) {
+                  var self = this;
 
-                        if (!isNaN(number)) {
-                            self._age(number);
-                        }
-                    }
-                });
-                this.props = {
-                  age: ko.observable(10)
-                };
-                this.visible = ko.observable(true);
-            }
+                  this._age = ko.observable(age);
 
-            var viewModel = new ViewModel();
+                  this.firstName = firstName;
+                  this.surName = ko.observable(surName);
+                  this.age = ko.computed({
+                      read: this._age,
+                      write: function (newAge) {
+                          var number = parseFloat(newAge);
 
-            ko.applyBindings(viewModel);
+                          if (!isNaN(number)) {
+                              self._age(number);
+                          }
+                      }
+                  });
+                  this.props = {
+                    age: ko.observable(10)
+                  };
+                  this.visible = ko.observable(true);
+              }
 
-            window.onkeydown = function (event) {
-                if (event.keyCode === 27) {
+              var viewModel = new ViewModel(ko);
 
-                    viewModel.selection([document.getElementsByTagName('TD')[0], document.getElementsByTagName('TD')[1]]);
+              ko.applyBindings(viewModel);
 
-                    event.preventDefault();
-                }
-            };
+              window.onkeydown = function (event) {
+                  if (event.keyCode === 27) {
+
+                      viewModel.selection([document.getElementsByTagName('TD')[0], document.getElementsByTagName('TD')[1]]);
+
+                      event.preventDefault();
+                  }
+              };
+
+            });
         </script>
     </body>
 </html>
