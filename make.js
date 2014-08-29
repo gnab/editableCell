@@ -17,7 +17,11 @@ target.lint = function () {
 
 target.bundle = function () {
   console.log('Bundling...');
-  run('browserify -s editableCell src/editableCell.js', {silent: true}).output.to('out/editableCell.js');
+  run('browserify --external knockout -s editableCell src/editableCell.js', {silent: true})
+    .output
+    // Add 'knockout' as a dependency for AMD scenario
+    .replace('define(e);', 'define([\'knockout\'],e);')
+    .to('out/editableCell.js');
 };
 
 target.minify = function () {
