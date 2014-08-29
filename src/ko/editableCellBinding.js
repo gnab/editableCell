@@ -1,5 +1,6 @@
 var utils = require('./utils'),
-    events = require('../events');
+    events = require('../events'),
+    ko = require('./wrapper');
 
 var editableCell = {
     init: function (element, valueAccessor, allBindings, viewModel, bindingContext) {

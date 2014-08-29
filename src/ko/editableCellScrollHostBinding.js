@@ -1,4 +1,5 @@
-var utils = require('./utils');
+var utils = require('./utils'),
+    ko = require('./wrapper');
 
 var editableCellScrollHost = {
     init: function (element) {

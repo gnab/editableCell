@@ -1,4 +1,5 @@
 var polyfill = require('../polyfill');
+var ko = require('./wrapper');
 
 // Knockout binding handlers
 var bindingHandlers = {

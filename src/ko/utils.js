@@ -1,4 +1,5 @@
-var Selection = require('../selection');
+var Selection = require('../selection'),
+    ko = require('./wrapper');
 
 module.exports = {
     initializeSelection: initializeSelection,
