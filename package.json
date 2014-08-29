@@ -9,7 +9,7 @@
   },
   "devDependencies": {
     "knockout": "3.0.0",
-    "browserify": "2.14.2",
+    "browserify": "2.27.1",
     "uglify-js": "2.3.5",
     "mocha": "1.17.0",
     "mocha-phantomjs": "3.3.1",
