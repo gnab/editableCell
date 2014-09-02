@@ -8390,7 +8390,8 @@ var SelectionView = require('./selectionView'),
     SelectionRange = require('./selectionRange'),
     EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill'),
-    events = require('./events');
+    events = require('./events'),
+    ko = require('./ko/wrapper');
 
 module.exports = Selection;
 
@@ -8733,7 +8734,7 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
-},{"./events":32,"./polyfill":39,"./selectionRange":41,"./selectionView":42,"events":3}],41:[function(require,module,exports){
+},{"./events":32,"./ko/wrapper":38,"./polyfill":39,"./selectionRange":41,"./selectionView":42,"events":3}],41:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill');
 
