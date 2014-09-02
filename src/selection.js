@@ -2,7 +2,8 @@ var SelectionView = require('./selectionView'),
     SelectionRange = require('./selectionRange'),
     EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill'),
-    events = require('./events');
+    events = require('./events'),
+    ko = require('./ko/wrapper');
 
 module.exports = Selection;
 
