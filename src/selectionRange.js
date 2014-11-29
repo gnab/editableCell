@@ -3,7 +3,7 @@ var EventEmitter = require('events').EventEmitter,
 
 module.exports = SelectionRange;
 
-SelectionRange.prototype = new EventEmitter();
+SelectionRange.prototype = EventEmitter.prototype;
 
 function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
     var self = this;
@@ -36,7 +36,7 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
             endChanged = newEnd && newEnd !== self.end;
 
         if (newEnd) {
-            self.setEnd(newEnd);    
+            self.setEnd(newEnd);
         }
 
         if (endChanged) {
@@ -154,7 +154,7 @@ function SelectionRange (getRowByIndex, getCellByIndex, cellIsSelectable, cellIs
 
         return cells;
     };
-    
+
     function getDirectionXDelta (direction, cell) {
         if (direction === 'Left') {
             return -1;

@@ -1,22 +1,22 @@
 {
   "name": "editableCell",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "dependencies": {},
   "repository": {
     "type": "git",
     "url": "https://github.com/gnab/editableCell.git"
   },
   "devDependencies": {
-    "browserify": "2.27.1",
+    "browserify": "^6.3.3",
     "jquery": "^2.1.1",
-    "jshint": "2.1.2",
+    "jshint": "^2.5.10",
     "knockout": "^3.2.0",
-    "mocha": "1.17.0",
-    "mocha-phantomjs": "3.3.1",
-    "phantomjs": "1.9.2-6",
-    "shelljs": "0.1.4",
-    "should": "1.2.2",
-    "uglify-js": "2.3.5"
+    "mocha": "^2.0.1",
+    "mocha-phantomjs": "^3.5.1",
+    "phantomjs": "^1.9.12",
+    "shelljs": "^0.3.0",
+    "should": "^4.3.0",
+    "uglify-js": "^2.4.15"
   },
   "scripts": {
     "test": "node make test"
