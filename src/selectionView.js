@@ -175,6 +175,10 @@ function SelectionView (table, selection) {
             }, 0);
         } else if (event.keyCode === 9) {
             selection.onTab(event);
+        } else if (event.keyCode === 46 || (event.keyCode === 8 && event.ctrlKey)) {
+            // either DELETE key || CTRL + BACKSPACE
+            var cell = selection.getRange().start;
+            selection.updateCellValue(cell, null);
         }
     };
     self.onInputKeydown = function (event) {
@@ -223,4 +227,4 @@ function SelectionView (table, selection) {
     self.inputElement.addEventListener("blur", onInputBlur);
 
     html.addEventListener("mouseup", self.onMouseUp);
-}
+}
