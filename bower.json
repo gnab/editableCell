@@ -1,0 +1,36 @@
+{
+    "name": "editableCell",
+    "version": "0.0.4",
+    "homepage": "https://github.com/gnab/editableCell",
+    "description": "A binding for turning ordinary table cells into selectable, editable cells, behaving much like cells in Microsoft Excel.",
+    "main": "out/editableCell.min.js",
+    "keywords": [
+        "knockout",
+        "grid",
+        "Excel"
+    ],
+    "license": "",
+    "dependencies": {
+        "jquery": "^2.1.1",
+        "knockout": "^3.2.0"
+    },
+    "moduleType": [
+        "amd",
+        "globals",
+        "node"
+    ],
+    "ignore": [
+        "**/.*",
+        "node_modules",
+        "docs",
+        "src",
+        "test",
+        "out/tests.js",
+        ".gitattributes",
+        ".gitignore",
+        "index.html",
+        "make.js",
+        "package.json",
+        "*.md"
+    ]
+}
