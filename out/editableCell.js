@@ -984,7 +984,7 @@ Selection.prototype.onMouseOver = function(event) {
         cell = cell.parentNode;
     }
 
-    if (cell && cell !== range.end) {
+    if (cell && cell !== this.range.end) {
         this.range.setEnd(cell);
     }
 };
@@ -1096,7 +1096,7 @@ Selection.prototype.onPaste = function(text) {
 };
 
 Selection.prototype.onTab = function(event) {
-    range.start.focus();
+    this.range.start.focus();
 };
 
 Selection.prototype.keyCodeIdentifier = {
