@@ -8058,7 +8058,7 @@ var SelectionView = require('./selectionView'),
 
 module.exports = Selection;
 
-Selection.prototype = new EventEmitter();
+Selection.prototype = EventEmitter.prototype;
 
 function Selection (table, selectionMappings) {
     var self = this,
@@ -8109,7 +8109,7 @@ function Selection (table, selectionMappings) {
     self.focus = function () {
         self.view.focus();
     };
-    
+
     self.setScrollHost = function (scrollHost) {
         self.view.scrollHost = scrollHost;
     };
@@ -8235,7 +8235,7 @@ function Selection (table, selectionMappings) {
                 }
             }
         }
-        
+
         return targetTable.rows[index];
     }
     function getCellByIndex (row, index) {
@@ -8358,7 +8358,7 @@ function Selection (table, selectionMappings) {
             return line.join('\t');
         }).join('\r\n');
 
-        
+
         events.private.emit('beforeCopy', copyEventData);
 
         return copyEventData.text;
@@ -8397,6 +8397,7 @@ function Selection (table, selectionMappings) {
         40: 'Down'
     };
 }
+
 },{"./events":38,"./ko/wrapper":44,"./polyfill":45,"./selectionRange":47,"./selectionView":48,"events":7}],47:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill');
