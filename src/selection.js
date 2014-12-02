@@ -12,7 +12,7 @@ function Selection(table, selectionMappings) {
     this.table = table;
     this.selectionMappings = selectionMappings;
 
-    this.range = new SelectionRange(this.getRowByIndex.bind(this), this.getCellByIndex.bind(this), this.cellIsSelectable.bind(this), this.cellIsVisible.bind(this));
+    this.range = new SelectionRange(this.getRowByIndex.bind(this), getCellByIndex, cellIsSelectable, cellIsVisible);
     this.view = new SelectionView(this.table, this);
 
     this.range.on('change', this.onSelectionChange.bind(this));
@@ -95,7 +95,7 @@ Selection.prototype.onMouseDown = function(event) {
 Selection.prototype.updateCellValue = function(cell, newValue) {
     var value;
 
-    if (!this.cellIsEditable(cell)) {
+    if (!cellIsEditable(cell)) {
         return undefined;
     }
 
@@ -119,7 +119,7 @@ Selection.prototype.startLockedEditing = function() {
 };
 
 Selection.prototype.startEditingCell = function(cell, isLockedToCell) {
-    if (!this.cellIsEditable(cell)) {
+    if (!cellIsEditable(cell)) {
         return;
     }
 
@@ -155,17 +155,17 @@ Selection.prototype.endEditingCell = function(cell) {
     return this.updateCellValue(cell);
 };
 
-Selection.prototype.cellIsSelectable = function(cell) {
+function cellIsSelectable(cell) {
     return cell._cellValue !== undefined;
-};
+}
 
-Selection.prototype.cellIsEditable = function(cell) {
+function cellIsEditable(cell) {
     return cell._cellReadOnly() !== true;
-};
+}
 
-Selection.prototype.cellIsVisible = function(cell) {
+function cellIsVisible(cell) {
     return cell && cell.offsetHeight !== 0;
-};
+}
 
 Selection.prototype.getRowByIndex = function(index, originTable) {
     var targetTable = originTable || this.table;
@@ -210,7 +210,7 @@ Selection.prototype.getRowByIndex = function(index, originTable) {
     return targetTable.rows[index];
 };
 
-Selection.prototype.getCellByIndex = function(row, index) {
+function getCellByIndex(row, index) {
     var i, colSpanSum = 0;
 
     for (i = 0; i < row.children.length; i++) {
@@ -223,7 +223,7 @@ Selection.prototype.getCellByIndex = function(row, index) {
 
         colSpanSum += row.children[i].colSpan;
     }
-};
+}
 
 Selection.prototype.getSelectionMappingForTable = function(table) {
     return this.selectionMappings.filter(function(tuple) {
