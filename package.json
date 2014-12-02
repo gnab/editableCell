@@ -1,8 +1,7 @@
 {
   "name": "editableCell",
-  "version": "0.0.1",
-  "dependencies": {
-  },
+  "version": "1.0.0",
+  "dependencies": {},
   "repository": {
     "type": "git",
     "url": "https://github.com/gnab/editableCell.git"
