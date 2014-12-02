@@ -5009,18 +5009,6 @@ Selection.prototype.endEditingCell = function(cell) {
     return this.updateCellValue(cell);
 };
 
-function cellIsSelectable(cell) {
-    return cell._cellValue !== undefined;
-}
-
-function cellIsEditable(cell) {
-    return cell._cellReadOnly() !== true;
-}
-
-function cellIsVisible(cell) {
-    return cell && cell.offsetHeight !== 0;
-}
-
 Selection.prototype.getRowByIndex = function(index, originTable) {
     var targetTable = originTable || this.table;
 
@@ -5063,21 +5051,6 @@ Selection.prototype.getRowByIndex = function(index, originTable) {
 
     return targetTable.rows[index];
 };
-
-function getCellByIndex(row, index) {
-    var i, colSpanSum = 0;
-
-    for (i = 0; i < row.children.length; i++) {
-        if (index < colSpanSum) {
-            return row.children[i - 1];
-        }
-        if (index === colSpanSum) {
-            return row.children[i];
-        }
-
-        colSpanSum += row.children[i].colSpan;
-    }
-}
 
 Selection.prototype.getSelectionMappingForTable = function(table) {
     return this.selectionMappings.filter(function(tuple) {
@@ -5243,6 +5216,33 @@ Selection.prototype.keyCodeIdentifier = {
     39: 'Right',
     40: 'Down'
 };
+
+function cellIsSelectable(cell) {
+    return cell._cellValue !== undefined;
+}
+
+function cellIsEditable(cell) {
+    return cell._cellReadOnly() !== true;
+}
+
+function cellIsVisible(cell) {
+    return cell && cell.offsetHeight !== 0;
+}
+
+function getCellByIndex(row, index) {
+    var i, colSpanSum = 0;
+
+    for (i = 0; i < row.children.length; i++) {
+        if (index < colSpanSum) {
+            return row.children[i - 1];
+        }
+        if (index === colSpanSum) {
+            return row.children[i];
+        }
+
+        colSpanSum += row.children[i].colSpan;
+    }
+}
 
 },{"./events":34,"./ko/wrapper":40,"./polyfill":41,"./selectionRange":43,"./selectionView":44,"events":7,"inherits":12}],43:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter,
