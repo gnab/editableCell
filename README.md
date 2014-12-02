@@ -3,13 +3,13 @@ editableCell
 
 (Currently Chrome support only)
 
-A binding for turning ordinary table cells into selectable, editable cells, 
-behaving much like cells in Microsoft Excel, supporting features like applying 
+A binding for turning ordinary table cells into selectable, editable cells,
+behaving much like cells in Microsoft Excel, supporting features like applying
 the same change to all selected cells.
 
 ### Usage
 
-Table cells bound using the `editableCell` property are by default selectable and editable. 
+Table cells bound using the `editableCell` property are by default selectable and editable.
 
 To customize the default behaviour, you may use the following supplemental bindings:
 
@@ -46,3 +46,7 @@ Whenever the selection changes, the observable array `selection` will be populat
 ### Demo
 
 Check out the live [demo](http://gnab.github.com/editableCell/).
+
+### License
+
+This project is licensed under the MIT license.
