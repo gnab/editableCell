@@ -5,6 +5,7 @@ var EventEmitter = require('events').EventEmitter,
 module.exports = SelectionRange;
 
 function SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
+    EventEmitter.call(this);
     this.start = undefined;
     this.end = undefined;
     this.selection = [];
