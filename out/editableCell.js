@@ -1328,229 +1328,304 @@ module.exports = SelectionView;
 
 SelectionView.prototype = {};
 
-function SelectionView (table, selection) {
-    var self = this,
-        html = document.getElementsByTagName('html')[0];
+function SelectionView(table, selection) {
+    this.table = table;
+    this.selection = selection;
 
-    self.element = document.createElement('div');
-    self.element.className = 'editable-cell-selection';
-    self.element.style.position = 'absolute';
-    self.element.style.display = 'none';
-    self.element.tabIndex = -1;
+    this.element = undefined;
+    this.inputElement = undefined;
+    this.copyPasteElement = undefined;
+    this.isDragging = false;
+    this.canDrag = false;
 
-    self.inputElement = document.createElement('input');
-    self.inputElement.className = 'editable-cell-input';
-    self.inputElement.style.position = 'absolute';
-    self.inputElement.style.display = 'none';
+    this.init();
+}
 
-    self.copyPasteElement = document.createElement('textarea');
-    self.copyPasteElement.style.position = 'absolute';
-    self.copyPasteElement.style.opacity = '0.0';
-    self.copyPasteElement.style.display = 'none';
+SelectionView.prototype.init = function() {
+    var tableParent = this.table.parentNode;
 
-    table.parentNode.insertBefore(self.element, table.nextSibling);
-    table.parentNode.insertBefore(self.inputElement, table.nextSibling);
-    table.appendChild(self.copyPasteElement);
+    this.element = createElement(document);
+    this.inputElement = createInputElement(document);
+    this.copyPasteElement = createCopyPasteElement(document);
 
-    self.destroy = function () {
-        self.element.removeEventListener('mousedown', self.onMouseDown);
-        self.element.removeEventListener('dblclick', self.onDblClick);
-        self.element.removeEventListener('keypress', self.onKeyPress);
-        self.element.removeEventListener('keydown', self.onKeyDown);
+    tableParent.insertBefore(this.element, this.table.nextSibling);
+    tableParent.insertBefore(this.inputElement, this.table.nextSibling);
+    this.table.appendChild(this.copyPasteElement);
 
-        self.inputElement.removeEventListener('keydown', self.onInputKeydown);
-        self.inputElement.removeEventListener('blur', onInputBlur);
+    /* assign 'bound' eventHandlers */
+    this.onMouseDown = onMouseDown.bind(this);
+    this.onDblClick = onDblClick.bind(this);
+    this.onKeyPress = onKeyPress.bind(this);
+    this.onKeyDown = onKeyDown.bind(this);
 
-        html.removeEventListener('mouseup', self.onMouseUp);
+    this.element.addEventListener("mousedown", this.onMouseDown);
+    this.element.addEventListener("dblclick", this.onDblClick);
+    this.element.addEventListener("keypress", this.onKeyPress);
+    this.element.addEventListener("keydown", this.onKeyDown);
 
-        table.parentNode.removeChild(self.element);
-        table.parentNode.removeChild(self.inputElement);
-        table.removeChild(self.copyPasteElement);
-        
-        selection = null;
-        self = null;
-    };
-    self.show = function () {
-        self.element.style.display = 'block';
-        self.element.focus();
+    this.onInputKeydown = onInputKeydown.bind(this);
+    this.onInputBlur = onInputBlur.bind(this);
 
-        var rect = selection.getRange().end.getBoundingClientRect(),
-            horizontalMargin = rect.width,
-            verticalMargin = rect.height,
-            scrollHost = self.scrollHost || document.body,
-            viewport = scrollHost.getBoundingClientRect(),
-            viewportTop = Math.max(viewport.top, 0),
-            viewportLeft = Math.max(viewport.left, 0),
-            viewportBottom = Math.min(viewport.bottom, window.innerHeight),
-            viewportRight = Math.min(viewport.right, window.innerWidth),
-            topOffset = rect.top - verticalMargin - viewportTop,
-            bottomOffset = viewportBottom - rect.bottom - verticalMargin,
-            leftOffset = rect.left - horizontalMargin - viewportLeft,
-            rightOffset = viewportRight - rect.right - horizontalMargin;
+    this.inputElement.addEventListener("keydown", this.onInputKeydown);
+    this.inputElement.addEventListener("blur", this.onInputBlur);
 
-        if (topOffset < 0) {
-            scrollHost.scrollTop += topOffset;
-        }
-        if (bottomOffset < 0) {
-            scrollHost.scrollTop -= bottomOffset;
-        }
-        if (leftOffset < 0) {
-            scrollHost.scrollLeft += leftOffset;
-        }
-        if (rightOffset < 0) {
-            scrollHost.scrollLeft -= rightOffset;
-        }
-    };
-    
-    function resolve (value) {
-        if (typeof value === 'function') {
-            return value();
-        }
+    var html = window.document.getElementsByTagName('html')[0];
+    this.onMouseUp = onMouseUp.bind(this);
+    html.addEventListener("mouseup", this.onMouseUp);
+};
 
-        return value;
+function createElement(document) {
+    var elem = createElem(document, 'div');
+    return initElem(elem, 'editable-cell-selection', -1);
+}
+
+function createInputElement(document) {
+    var elem = createElem(document, 'input');
+    return initElem(elem, 'editable-cell-input');
+}
+
+function createCopyPasteElement(document){
+    var e = createElem(document, 'textarea');
+    return initElem(e, '', undefined, '0.0');
+}
+
+function createElem(document, tag) {
+    return document.createElement(tag);
+}
+
+function initElem(elem, className, tabIndex, opacity){
+    elem.className = className;
+    elem.style.position = 'absolute';
+    elem.style.display = 'none';
+    if (opacity !== undefined) elem.style.opacity = opacity;
+    if (tabIndex !== undefined) elem.tabIndex = tabIndex;
+    return elem;
+}
+
+SelectionView.prototype.destroy = function () {
+    this.element.removeEventListener('mousedown', this.onMouseDown);
+    this.element.removeEventListener('dblclick', this.onDblClick);
+    this.element.removeEventListener('keypress', this.onKeyPress);
+    this.element.removeEventListener('keydown', this.onKeyDown);
+
+    this.inputElement.removeEventListener('keydown', this.onInputKeydown);
+    this.inputElement.removeEventListener('blur', this.onInputBlur);
+
+    var html = window.document.getElementsByTagName('html')[0];
+    html.removeEventListener('mouseup', this.onMouseUp);
+
+    var tableParent = this.table.parentNode;
+    tableParent.removeChild(this.element);
+    tableParent.removeChild(this.inputElement);
+    this.table.removeChild(this.copyPasteElement);
+
+    this.selection = null;
+};
+
+SelectionView.prototype.show = function () {
+    this.element.style.display = 'block';
+    this.element.focus();
+
+    var rect = this.selection.getRange().end.getBoundingClientRect(),
+        horizontalMargin = rect.width,
+        verticalMargin = rect.height,
+        // fix: `this` doesn't have a scrollhost, but this.selection does...
+        scrollHost = this.scrollHost || document.body,
+        viewport = scrollHost.getBoundingClientRect(),
+        viewportTop = Math.max(viewport.top, 0),
+        viewportLeft = Math.max(viewport.left, 0),
+        viewportBottom = Math.min(viewport.bottom, window.innerHeight),
+        viewportRight = Math.min(viewport.right, window.innerWidth),
+        topOffset = rect.top - verticalMargin - viewportTop,
+        bottomOffset = viewportBottom - rect.bottom - verticalMargin,
+        leftOffset = rect.left - horizontalMargin - viewportLeft,
+        rightOffset = viewportRight - rect.right - horizontalMargin;
+
+    if (topOffset < 0) {
+        scrollHost.scrollTop += topOffset;
+    }
+    if (bottomOffset < 0) {
+        scrollHost.scrollTop -= bottomOffset;
+    }
+    if (leftOffset < 0) {
+        scrollHost.scrollLeft += leftOffset;
+    }
+    if (rightOffset < 0) {
+        scrollHost.scrollLeft -= rightOffset;
+    }
+};
+
+function resolve (value) {
+    if (typeof value === 'function') {
+        return value();
     }
 
-    self.hide = function () {
-        self.element.style.display = 'none';
-    };
-    self.focus = function () {
-        self.element.focus();
-    };
-    self.update = function (start, end) {
-        var top = Math.min(start.offsetTop, end.offsetTop),
-            left = Math.min(start.offsetLeft, end.offsetLeft),
-            bottom = Math.max(start.offsetTop + start.offsetHeight,
-                            end.offsetTop + end.offsetHeight),
-            right = Math.max(start.offsetLeft + start.offsetWidth,
-                            end.offsetLeft + end.offsetWidth);
+    return value;
+}
 
-        self.element.style.top = table.offsetTop + top + 1 + 'px';
-        self.element.style.left = table.offsetLeft + left + 1 + 'px';
-        self.element.style.height = bottom - top - 1 + 'px';
-        self.element.style.width = right - left - 1 + 'px';
-        self.element.style.backgroundColor = 'rgba(245, 142, 00, 0.15)';
+SelectionView.prototype.hide = function () {
+    this.element.style.display = 'none';
+};
 
-        self.show();
-    };
-    self.beginDrag = function () {
-        self.canDrag = true;
-        self.element.addEventListener('mousemove', self.doBeginDrag);
-    };
-    self.doBeginDrag = function () {
-        self.element.removeEventListener('mousemove', self.doBeginDrag);
+SelectionView.prototype.focus = function () {
+    this.element.focus();
+};
 
-        if (!self.canDrag) {
-            return;
+SelectionView.prototype.update = function (start, end) {
+    var top = Math.min(start.offsetTop, end.offsetTop),
+        left = Math.min(start.offsetLeft, end.offsetLeft),
+        bottom = Math.max(start.offsetTop + start.offsetHeight, end.offsetTop + end.offsetHeight),
+        right = Math.max(start.offsetLeft + start.offsetWidth, end.offsetLeft + end.offsetWidth);
+
+    this.element.style.top = this.table.offsetTop + top + 1 + 'px';
+    this.element.style.left = this.table.offsetLeft + left + 1 + 'px';
+    this.element.style.height = bottom - top - 1 + 'px';
+    this.element.style.width = right - left - 1 + 'px';
+    this.element.style.backgroundColor = 'rgba(245, 142, 00, 0.15)';
+
+    this.show();
+};
+
+/* Begin event handlers */
+
+SelectionView.prototype.beginDrag = function () {
+    this.canDrag = true;
+
+    this.doBeginDrag = doBeginDrag.bind(this);
+    this.element.addEventListener('mousemove', this.doBeginDrag);
+};
+
+function doBeginDrag() {
+    this.element.removeEventListener('mousemove', this.doBeginDrag);
+
+    if (!this.canDrag) {
+        return;
+    }
+
+    this.isDragging = true;
+    this.element.style.pointerEvents = 'none';
+}
+
+SelectionView.prototype.endDrag = function () {
+    this.element.removeEventListener('mousemove', this.doBeginDrag);
+
+    this.isDragging = false;
+    this.canDrag = false;
+    this.element.style.pointerEvents = 'inherit';
+};
+
+function onMouseUp(event) {
+    this.endDrag();
+}
+
+function onMouseDown(event) {
+    if (event.button !== 0) {
+        return;
+    }
+
+    this.hide();
+
+    var cell = event.view.document.elementFromPoint(event.clientX, event.clientY);
+    this.selection.onCellMouseDown(cell, event.shiftKey);
+
+    event.preventDefault();
+}
+
+function onDblClick(event) {
+    this.selection.startLockedEditing();
+}
+
+function onKeyPress(event) {
+    this.selection.startEditing();
+}
+
+function onKeyDown(event) {
+    if (event.keyCode === 13) {
+
+        this.selection.onReturn(event);
+
+    } else if ([37, 38, 39, 40].indexOf(event.keyCode) !== -1) {
+
+        this.selection.onArrows(event);
+
+    } else if (event.keyCode === 86 && event.ctrlKey) {
+
+        this.copyPasteElement.value = '';
+        this.copyPasteElement.style.display = 'block';
+        this.copyPasteElement.focus();
+
+        setTimeout(function () {
+            this.selection.onPaste(this.copyPasteElement.value);
+            this.copyPasteElement.style.display = 'none';
+            this.focus();
+        }, 0);
+
+    } else if (event.keyCode === 67 && event.ctrlKey) {
+
+        this.copyPasteElement.value = this.selection.onCopy();
+        this.copyPasteElement.style.display = 'block';
+        this.copyPasteElement.focus();
+
+        document.execCommand('selectAll', false, null);
+
+        setTimeout(function () {
+            this.copyPasteElement.style.display = 'none';
+            this.focus();
+        }, 0);
+
+    } else if (event.keyCode === 9) {
+
+        this.selection.onTab(event);
+
+    } else if (event.keyCode === 46 || (event.keyCode === 8 && event.ctrlKey)) {
+
+        // either DELETE key || CTRL + BACKSPACE
+        var cell = this.selection.getRange().start;
+        this.selection.updateCellValue(cell, null);
+
+    }
+}
+
+function onInputKeydown(event) {
+    var cell = this.selection.getRange().start;
+
+    if (event.keyCode === 13) { // Return
+        var value = this.selection.endEditingCell(cell);
+
+        if (event.ctrlKey) {
+            var self = this;
+            this.selection.getCells().forEach(function (cellInSelection) {
+                if (cellInSelection !== cell) {
+                    self.selection.updateCellValue(cellInSelection, value);
+                }
+            });
         }
 
-        self.isDragging = true;
-        self.element.style.pointerEvents = 'none';
-    };
-    self.endDrag = function () {
-        self.element.removeEventListener('mousemove', self.doBeginDrag);
-        self.isDragging = false;
-        self.canDrag = false;
-        self.element.style.pointerEvents = 'inherit';
-    };
-
-    self.onMouseUp = function (event) {
-        self.endDrag();
-    };
-    self.onMouseDown = function (event) {
-        if (event.button !== 0) {
-            return;
-        }
-
-        self.hide();
-
-        var cell = event.view.document.elementFromPoint(event.clientX, event.clientY);
-        selection.onCellMouseDown(cell, event.shiftKey);
-
+        this.selection.onReturn(event, event.ctrlKey);
+        this.focus();
         event.preventDefault();
-    };
-    self.onDblClick = function (event) {
-        selection.startLockedEditing();
-    };
-    self.onKeyPress = function (event) {
-        selection.startEditing();
-    };
-    self.onKeyDown = function (event) {
-        if (event.keyCode === 13) {
-            selection.onReturn(event);
-        } else if ([37, 38, 39, 40].indexOf(event.keyCode) !== -1) {
-            selection.onArrows(event);
-        } else if (event.keyCode === 86 && event.ctrlKey) {
-            self.copyPasteElement.value = '';
-            self.copyPasteElement.style.display = 'block';
-            self.copyPasteElement.focus();
-            setTimeout(function () {
-                selection.onPaste(self.copyPasteElement.value);
-                self.copyPasteElement.style.display = 'none';
-                self.focus();
-            }, 0);
-        } else if (event.keyCode === 67 && event.ctrlKey) {
-            self.copyPasteElement.value = selection.onCopy();
-            self.copyPasteElement.style.display = 'block';
-            self.copyPasteElement.focus();
-            document.execCommand('selectAll', false, null);
-            setTimeout(function () {
-                self.copyPasteElement.style.display = 'none';
-                self.focus();
-            }, 0);
-        } else if (event.keyCode === 9) {
-            selection.onTab(event);
-        } else if (event.keyCode === 46 || (event.keyCode === 8 && event.ctrlKey)) {
-            // either DELETE key || CTRL + BACKSPACE
-            var cell = selection.getRange().start;
-            selection.updateCellValue(cell, null);
-        }
-    };
-    self.onInputKeydown = function (event) {
-        var cell = selection.getRange().start;
-
-        if (event.keyCode === 13) { // Return
-            var value = selection.endEditingCell(cell);
-
-            if (event.ctrlKey) {
-                selection.getCells().forEach(function (cellInSelection) {
-                    if (cellInSelection !== cell) {
-                        selection.updateCellValue(cellInSelection, value);
-                    }
-                });
-            }
-
-            selection.onReturn(event, event.ctrlKey);
-            self.focus();
+    }
+    else if (event.keyCode === 27) { // Escape
+        this.selection.cancelEditingCell(cell);
+        this.focus();
+    }
+    else if ([37, 38, 39, 40].indexOf(event.keyCode) !== -1) { // Arrows
+        if(!this.isLockedToCell) {
+            this.focus();
+            this.selection.onArrows(event);
             event.preventDefault();
         }
-        else if (event.keyCode === 27) { // Escape
-            selection.cancelEditingCell(cell);
-            self.focus();
-        }
-        else if ([37, 38, 39, 40].indexOf(event.keyCode) !== -1) { // Arrows
-            if(!self.isLockedToCell) {
-                self.focus();
-                selection.onArrows(event);
-                event.preventDefault();
-            }
-        }
-    };
-    function onInputBlur (event) {
-        if (!selection.isEditingCell()) {
-            return;
-        }
-        selection.endEditingCell(selection.getRange().start);
+    }
+}
+
+function onInputBlur(event) {
+    if (!this.selection.isEditingCell()) {
+        return;
     }
 
-    self.element.addEventListener("mousedown", self.onMouseDown);
-    self.element.addEventListener("dblclick", self.onDblClick);
-    self.element.addEventListener("keypress", self.onKeyPress);
-    self.element.addEventListener("keydown", self.onKeyDown);
-
-    self.inputElement.addEventListener("keydown", self.onInputKeydown);
-    self.inputElement.addEventListener("blur", onInputBlur);
-
-    html.addEventListener("mouseup", self.onMouseUp);
+    this.selection.endEditingCell(this.selection.getRange().start);
 }
+/* End event handlers */
+
 },{"./polyfill":11}]},{},[3])(3)
 });
