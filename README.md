@@ -7,7 +7,7 @@ selectable, editable cells, behaving much like cells in Microsoft Excel.
 It supports features like:
 
 * Keyboard and mouse navigation
-* Cell election (both via the keyboard and the mouse)
+* Cell selection (both via the keyboard and the mouse)
 * In-place editing of a Knockout observable
 * Additional display customization of the observable value (via `cellText` and `cellHTML` functions)
 * Applying a new value to all selected cells (via Ctrl+ENTER)
@@ -110,11 +110,6 @@ Whenever the user selects one or more cells in the table, the observable array w
 ]
 ```
 
-#### Navigation across multiple tables
-
-If one or more tables on the page use the `editableCell` binding,
-you can navigate using the keyboard from one table to the next.
-
 #### Rows / cells not using `editableCell`
 
 If you have rows or cells that don't use the `editableCell` binding,
@@ -123,7 +118,8 @@ navigate to them (using the keyboard, for instance).
 
 If there are rows or cells not using the `editableCell` binding
 separating rows or cells that are, then navigation will <strong>hop over</strong>
-the unbound cells, similarly to the way navigating between tables.
+the unbound cells, similarly to the way navigating between tables (see *Sharing
+selection*, below).
 
 #### Copying & Pasting
 
@@ -131,12 +127,15 @@ the unbound cells, similarly to the way navigating between tables.
 cells, and copying values from table cells. In the latter case, the values
 will be pasted as a <em>tab-delimited</em> array of values.
 
-#### Sharing selection / prevent multiple selection in different tables
+#### Sharing selection
 
 The parent table uses the `editableCellSelection` binding for keeping
 track of selected cells. If two or more tables <strong>share</strong> the same
-`editableCellSelection` binding, then `editableCell` will
-ensure that the user can only select cells in one table at a time.
+Knockout observable array in their `editableCellSelection` bindings, then
+`editableCell` will:
+
+* ensure that the user can only select cells in one table at a time.
+* allow the user to navigate between the linked tables using the keyboard.
 
 #### List of keyboard shortcuts
 
