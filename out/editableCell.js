@@ -1348,6 +1348,7 @@ function SelectionView(table, selection) {
     this.element = undefined;
     this.inputElement = undefined;
     this.copyPasteElement = undefined;
+    this.scrollHost = undefined; // Selection's setScrollHost sets this
 
     this.isDragging = false;
     this.canDrag = false;
@@ -1443,6 +1444,7 @@ SelectionView.prototype.destroy = function () {
     tableParent.removeChild(this.inputElement);
     this.table.removeChild(this.copyPasteElement);
 
+    // note: this is *really* important because this is a circular reference
     this.selection = null;
 };
 
@@ -1453,7 +1455,6 @@ SelectionView.prototype.show = function () {
     var rect = this.selection.getRange().end.getBoundingClientRect(),
         horizontalMargin = rect.width,
         verticalMargin = rect.height,
-        // fix: `this` doesn't have a scrollhost, but this.selection does...
         scrollHost = this.scrollHost || document.body,
         viewport = scrollHost.getBoundingClientRect(),
         viewportTop = Math.max(viewport.top, 0),
