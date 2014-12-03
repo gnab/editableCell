@@ -1,21 +1,63 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
-        <script type="text/javascript" src="http://knockoutjs.com/downloads/knockout-2.2.1.js"></script>
-        <script type="text/javascript" src="out/editableCell.js"></script>
-        <style type="text/css">
-            @import url('http://getbootstrap.com/dist/css/bootstrap.css');
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.1/js/bootstrap.min.js"></script>
 
+        <!-- Either use RequireJS ... -->
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.15/require.min.js"></script>
+
+        <!-- .. or include Knockout and editableCell manually -->
+        <!--<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.2.0/knockout-min.js"></script>-->
+        <!--<script type="text/javascript" src="https://rawgit.com/gnab/editableCell/develop/out/editableCell.min.js"></script>-->
+
+        <style type="text/css">
+            @import url('https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css');
             body    { padding: 30px; }
-            h3 code { font-size: 0.8em; }
+            dt { font-weight: normal; }
             input   { padding-left: 8px; }
         </style>
     </head>
     <body>
-        <h3><code>editableCell</code> binding</h3>
-        <p><a href="./docs/knockout.editableCell.html">Documentation</a></p>
-        <table style="position: relative" class="table table-bordered table-condensed table-striped" data-bind="editableCellSelection: selection">
+        <p><small><a href="https://github.com/gnab/editableCell" target="_blank">More info</a></small>
+
+        <h3>Knockout-EditableCell Demo</h3>
+
+        <p class="pull-right"></p>
+
+        <h4>Keyboard shortcuts</h4>
+        <dl class="dl-horizontal">
+            <dt>
+                <i class="glyphicon glyphicon-arrow-left"></i>
+                <i class="glyphicon glyphicon-arrow-right"></i>
+                <i class="glyphicon glyphicon-arrow-up"></i>
+                <i class="glyphicon glyphicon-arrow-down"></i>
+                <kbd>arrows</kbd>
+            </dt>
+            <dd>Navigate in the table.</dd>
+
+            <dt>
+                <kbd><kbd>Shift</kbd> + <kbd>arrow</kbd></kbd>
+            </dt>
+            <dd>Select cells in the table</dd>
+
+            <dt><kbd><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>arrow</kbd></kbd>
+            </dt>
+            <dd>Select all cells in the table, starting from currently-selected cell</dd>
+
+            <dt><kbd>Escape</kbd></dt>
+            <dd>Cancel editing</dd>
+
+            <dt><kbd>Enter</kbd></dt>
+            <dd>Complete editing. Your change will also be automatically applied if you navigate away from the cell</dd>
+
+            <dt><kbd><kbd>Ctrl</kbd> + <kbd>Enter</kbd></kbd></dt>
+            <dd>If you have multiple cells selected, and begin editing, this will apply the value to all selected cells</dd>
+        </dl>
+
+        <p>In any editable cell, you can just start typing to edit values. <em>Double-clicking</em> will show the raw value (as in <em>Age</em>, below)</p>
+
+        <table style="position: relative" class="table table-bordered table-condensed table-striped table-hover" data-bind="editableCellSelection: selection">
             <thead>
                 <tr>
                     <th width="30%">Firstname (editable, non-observable)</th>
@@ -53,7 +95,7 @@
                 <tr>
                     <td data-bind="editableCell: firstName" tabindex="0"></td>
                     <td data-bind="editableCell: surName" tabindex="0"></td>
-                    <td data-bind="editableCell: 100, cellReadOnly: true" tabindex="0"></td>
+                    <td data-bind="editableCell: 100, cellHTML: salaryFormatted, cellReadOnly: true" tabindex="0"></td>
                     <td data-bind="editableCell: age" tabindex="0">
                       <span data-bind="text: $data"></span> years
                     </td>
@@ -61,72 +103,88 @@
                 <!-- /ko -->
             </tbody>
         </table>
+
+        <blockquote>
+        <p>Because both tables shared the same <code>selection</code>, your selection
+            will automatically be confined to a single table. In addition, you
+            can navigate between the two tables using the arrow keys.</p>
+        </blockquote>
+
+        <p>Developers: See the <a href="./docs/knockout.editableCell.html">documented version of the code</a> (created using <a href="http://jashkenas.github.io/docco/">Docco</a>), or <a href="https://github.com/gnab/editableCell/blob/master/index.html" target="_blank">view the  source</a> for this page.
+        </p>
         <script type="text/javascript">
-            function ViewModel() {
-                var self = this;
 
-                self.entries = ko.observableArray([
-                    new Person('Bob', 'Geldof', 41),
-                    new Person('Roger', 'Moore', 42),
-                    new Person('James', 'Jameson', 43),
-                    new Person('Andy', 'McLaren', 44),
-                    new Person('Richard', 'Anderson', 45),
-                ]);
+            requirejs.config({
+              paths: {
+                knockout: 'https://cdnjs.cloudflare.com/ajax/libs/knockout/3.2.0/knockout-min',
+                editableCell: 'https://rawgit.com/gnab/editableCell/develop/out/editableCell.min'
+              }
+            });
 
-                self.combinedAge = ko.computed(function () {
-                    var sum = 0;
-                    ko.utils.arrayForEach(self.entries(), function (person) {
-                        sum += parseFloat(person.age());
-                    });
-                    return sum;
-                });
+            require(['knockout', 'editableCell'], function (ko, ec) {
+              function ViewModel() {
+                  var self = this;
 
-                self.selection = ko.observableArray();
+                  self.entries = ko.observableArray([
+                      new Person('Bob', 'Geldof', 41),
+                      new Person('Roger', 'Moore', 42),
+                      new Person('James', 'Jameson', 43),
+                      new Person('Andy', 'McLaren', 44),
+                      new Person('Richard', 'Anderson', 45),
+                  ]);
 
-                self.selectionSum = ko.computed(function () {
-                    return self.selection()
-                        .filter(function (cell) { return typeof ko.utils.unwrapObservable(cell.value) === 'number'; })
-                        .reduce(function (sum, cell) {
-                        return sum + ko.utils.unwrapObservable(cell.value);
-                    }, 0);
-                });
-            }
+                  self.combinedAge = ko.computed(function () {
+                      var sum = 0;
+                      ko.utils.arrayForEach(self.entries(), function (person) {
+                          sum += parseFloat(person.age());
+                      });
+                      return sum;
+                  });
 
-            function Person(firstName, surName, age) {
-                var self = this;
+                  self.selection = ko.observableArray();
 
-                this._age = ko.observable(age);
+                  self.selectionSum = ko.computed(function () {
+                      return self.selection()
+                          .filter(function (cell) { return typeof ko.utils.unwrapObservable(cell.value) === 'number'; })
+                          .reduce(function (sum, cell) {
+                          return sum + ko.utils.unwrapObservable(cell.value);
+                      }, 0);
+                  });
+              }
 
-                this.firstName = firstName;
-                this.surName = ko.observable(surName);
-                this.age = ko.computed({
-                    read: this._age,
-                    write: function (newAge) {
-                        var number = parseFloat(newAge);
+              function Person(firstName, surName, age) {
+                  var self = this;
 
-                        if (!isNaN(number)) {
-                            self._age(number);
-                        }
-                    }
-                });
-                this.props = {
-                  age: ko.observable(10)
-                };
-                this.visible = ko.observable(true);
-            }
+                  self._age = ko.observable(age);
 
-            var viewModel = new ViewModel();
+                  self.firstName = firstName;
+                  self.surName = ko.observable(surName);
+                  self.age = ko.computed({
+                      read: this._age,
+                      write: function (newAge) {
+                          var number = parseFloat(newAge);
 
-            ko.applyBindings(viewModel);
+                          if (!isNaN(number)) {
+                              self._age(number);
+                          }
+                      }
+                  });
+                  self.props = {
+                    age: ko.observable(10)
+                  };
+                  self.salaryFormatted = ko.computed(function() {
+                      return (self._age() > 30) ?
+                          '<span class="bold">100</span>' :
+                          '<span><i class="glyphicon glyphicon-asterisk"></i> 100</span>';
 
-            window.onkeydown = function (event) {
-                if (event.keyCode === 27) {
+                  });
+              }
 
-                    viewModel.selection([document.getElementsByTagName('TD')[0], document.getElementsByTagName('TD')[1]]);
-
-                    event.preventDefault();
-                }
-            };
+              var viewModel = new ViewModel(ko);
+              ko.applyBindings(viewModel);
+            });
         </script>
+
+
     </body>
 </html>

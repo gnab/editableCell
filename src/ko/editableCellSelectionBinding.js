@@ -1,4 +1,5 @@
-var utils = require('./utils');
+var utils = require('./utils'),
+    ko = require('./wrapper');
 
 var editableCellSelection = {
     _selectionMappings: [],
@@ -57,7 +58,7 @@ var editableCellSelection = {
 
         var isDirectUpdate = start.tagName === 'TD' || start.tagName === 'TH';
 
-        // Notification of changed selection, either after programmatic  
+        // Notification of changed selection, either after programmatic
         // update or after changing current selection in user interface
         if (!isDirectUpdate) {
             start = start.cell;
@@ -66,7 +67,7 @@ var editableCellSelection = {
 
         // Make sure selected cells belongs to current table, or else hide selection
         var parentRowHidden = !start.parentNode;
-        var belongingToOtherTable = start.parentNode && start.parentNode.parentNode.parentNode !== table;
+        var belongingToOtherTable = start.parentNode && start.parentNode.parentNode && start.parentNode.parentNode.parentNode !== table;
 
         if (parentRowHidden || belongingToOtherTable) {
             // Selection cannot be cleared, since that will affect selection in other table

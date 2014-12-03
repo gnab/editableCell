@@ -1,0 +1,46 @@
+{
+    "name": "knockout-editableCell",
+    "description": "EditableCell is an extension to Knockout.js for turning ordinary table cells into selectable, editable cells, behaving much like cells in Microsoft Excel.",
+    "main": "out/editableCell.js",
+    "license": "MIT",
+    "ignore": [
+        "**/.*",
+        "node_modules",
+        "docs",
+        "src",
+        "test",
+        "out/tests.js",
+        ".gitattributes",
+        ".gitignore",
+        "index.html",
+        "make.js",
+        "package.json",
+        "README.md"
+    ],
+    "keywords": [
+        "knockout",
+        "editable",
+        "cell",
+        "grid",
+        "Excel"
+    ],
+    "authors": [
+        { "name": "Ole Petter Bang", "email": "olepbang@gmail.com" },
+        { "name": "Espen Halvorsen", "email": "espen.halvorsen@gmail.com" },
+        { "name": "John St. Clair", "email": "stclairjohn@gmail.com" }
+    ],
+    "homepage": "https://github.com/gnab/editableCell",
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/gnab/editableCell.git"
+    },
+    "dependencies": {
+        "jquery": "^2.1.1",
+        "knockout": "^3.2.0"
+    },
+    "moduleType": [
+        "amd",
+        "globals",
+        "node"
+    ],
+}
