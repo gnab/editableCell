@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <script type="text/javascript" src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
-        <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.1/js/bootstrap.min.js"></script>
 
         <!-- Either use RequireJS ... -->
-        <script type="text/javascript" src="http://requirejs.org/docs/release/2.1.14/minified/require.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.15/require.min.js"></script>
 
         <!-- .. or include Knockout and editableCell manually -->
-        <!--<script type="text/javascript" src="http://knockoutjs.com/downloads/knockout-3.2.0.js"></script>-->
-        <!--<script type="text/javascript" src="out/editableCell.js"></script>-->
+        <!--<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.2.0/knockout-min.js"></script>-->
+        <!--<script type="text/javascript" src="https://rawgit.com/gnab/editableCell/develop/out/editableCell.min.js"></script>-->
 
         <style type="text/css">
             @import url('https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css');
@@ -116,8 +116,8 @@
 
             requirejs.config({
               paths: {
-                knockout: './node_modules/knockout/build/output/knockout-latest',
-                editableCell: './out/editableCell'
+                knockout: 'https://cdnjs.cloudflare.com/ajax/libs/knockout/3.2.0/knockout-min',
+                editableCell: 'https://rawgit.com/gnab/editableCell/develop/out/editableCell.min'
               }
             });
 
