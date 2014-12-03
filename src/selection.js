@@ -16,19 +16,16 @@ function Selection(table, selectionMappings) {
     this.range = new SelectionRange(this.getRowByIndex.bind(this), getCellByIndex, cellIsSelectable, cellIsVisible);
     this.view = new SelectionView(this.table, this);
 
-    this.range.on('change', this.onSelectionChange.bind(this));
+    this.onSelectionChange = onSelectionChange.bind(this);
+    this.onMouseDown = onMouseDown.bind(this);
+    this.onMouseOver = onMouseOver.bind(this);
+    this.onCellFocus = onCellFocus.bind(this);
+
+    this.range.on('change', this.onSelectionChange);
 }
 
 inherits(Selection, EventEmitter);
 
-Selection.prototype.onSelectionChange = function(newSelection) {
-    this.emit('change', newSelection);
-    if (newSelection.length === 0) {
-        this.view.hide();
-        return;
-    }
-    this.view.update(newSelection[0], newSelection[newSelection.length - 1]);
-};
 
 Selection.prototype.setRange = function(start, end) {
     this.range.setStart(start);
@@ -72,24 +69,29 @@ Selection.prototype.setScrollHost = function(scrollHost) {
 };
 
 Selection.prototype.registerCell = function(cell) {
-    cell.addEventListener("mousedown", this.onMouseDown.bind(this));
-    cell.addEventListener("mouseover", this.onMouseOver.bind(this));
-    cell.addEventListener("focus", this.onCellFocus.bind(this));
+    cell.addEventListener('mousedown', this.onMouseDown);
+    cell.addEventListener('mouseover', this.onMouseOver);
+    cell.addEventListener('focus', this.onCellFocus);
 };
 
 Selection.prototype.unregisterCell = function(cell) {
-    cell.removeEventListener('mousedown', this.onMouseDown.bind(this));
-    cell.removeEventListener('mouseover', this.onMouseOver.bind(this));
-    cell.removeEventListener('focus', this.onCellFocus.bind(this));
+    /* note: we can be confident that we be cleaned up,
+       because the call to registerCell is made only when initializing the binding,
+       and unregisterCell is called by the binding's
+       `ko.utils.domNodeDisposal.addDisposeCallback` */
+    cell.removeEventListener('mousedown', this.onMouseDown);
+    cell.removeEventListener('mouseover', this.onMouseOver);
+    cell.removeEventListener('focus', this.onCellFocus);
 };
 
-Selection.prototype.onMouseDown = function(event) {
-    var cell = event.target;
-    if (this.isEditingCell(cell)) {
-        return;
+Selection.prototype.onCellMouseDown = function(cell, shiftKey) {
+    if (shiftKey) {
+        this.range.setEnd(cell);
+    } else {
+        this.range.setStart(cell);
     }
 
-    this.onCellMouseDown(cell, event.shiftKey);
+    this.view.beginDrag();
     event.preventDefault();
 };
 
@@ -220,44 +222,8 @@ Selection.prototype.updateSelectionMapping = function(newStartOrEnd) {
     }
 };
 
-Selection.prototype.onCellMouseDown = function(cell, shiftKey) {
-    if (shiftKey) {
-        this.range.setEnd(cell);
-    } else {
-        this.range.setStart(cell);
-    }
 
-    this.view.beginDrag();
-    event.preventDefault();
-};
 
-Selection.prototype.onMouseOver = function(event) {
-    var cell = event.target;
-
-    if (!this.view.isDragging) {
-        return;
-    }
-
-    while (cell && !(cell.tagName === 'TD' || cell.tagName === 'TH')) {
-        cell = cell.parentNode;
-    }
-
-    if (cell && cell !== this.range.end) {
-        this.range.setEnd(cell);
-    }
-};
-
-Selection.prototype.onCellFocus = function(event) {
-    var cell = event.target;
-
-    if (cell === this.range.start) {
-        return;
-    }
-
-    setTimeout(function() {
-        this.range.setStart(cell);
-    }, 0);
-};
 
 Selection.prototype.onReturn = function(event, preventMove) {
     if (preventMove !== true) {
@@ -363,6 +329,53 @@ Selection.prototype.keyCodeIdentifier = {
     39: 'Right',
     40: 'Down'
 };
+
+function onSelectionChange(newSelection) {
+    this.emit('change', newSelection);
+    if (newSelection.length === 0) {
+        this.view.hide();
+        return;
+    }
+    this.view.update(newSelection[0], newSelection[newSelection.length - 1]);
+}
+
+function onMouseDown(event) {
+    var cell = event.target;
+    if (this.isEditingCell(cell)) {
+        return;
+    }
+
+    this.onCellMouseDown(cell, event.shiftKey);
+    event.preventDefault();
+}
+
+function onMouseOver(event) {
+    var cell = event.target;
+
+    if (!this.view.isDragging) {
+        return;
+    }
+
+    while (cell && !(cell.tagName === 'TD' || cell.tagName === 'TH')) {
+        cell = cell.parentNode;
+    }
+
+    if (cell && cell !== this.range.end) {
+        this.range.setEnd(cell);
+    }
+}
+
+function onCellFocus(event) {
+    var cell = event.target;
+
+    if (cell === this.range.start) {
+        return;
+    }
+
+    setTimeout(function() {
+        this.range.setStart(cell);
+    }, 0);
+}
 
 function cellIsSelectable(cell) {
     return cell._cellValue !== undefined;
