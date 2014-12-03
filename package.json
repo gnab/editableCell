@@ -1,6 +1,6 @@
 {
   "name": "editableCell",
-  "version": "0.0.7",
+  "version": "0.1.0",
   "dependencies": {},
   "repository": {
     "type": "git",
@@ -8,6 +8,7 @@
   },
   "devDependencies": {
     "browserify": "^6.3.3",
+    "inherits": "^2.0.1",
     "jquery": "^2.1.1",
     "jshint": "^2.5.10",
     "knockout": "^3.2.0",
