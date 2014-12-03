@@ -9,6 +9,7 @@ var SelectionView = require('./selectionView'),
 module.exports = Selection;
 
 function Selection(table, selectionMappings) {
+    EventEmitter.call(this);
     this.table = table;
     this.selectionMappings = selectionMappings;
 

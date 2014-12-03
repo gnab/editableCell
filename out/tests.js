@@ -4863,6 +4863,7 @@ var SelectionView = require('./selectionView'),
 module.exports = Selection;
 
 function Selection(table, selectionMappings) {
+    EventEmitter.call(this);
     this.table = table;
     this.selectionMappings = selectionMappings;
 
@@ -5252,6 +5253,7 @@ var EventEmitter = require('events').EventEmitter,
 module.exports = SelectionRange;
 
 function SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
+    EventEmitter.call(this);
     this.start = undefined;
     this.end = undefined;
     this.selection = [];
