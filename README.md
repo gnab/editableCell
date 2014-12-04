@@ -200,6 +200,31 @@ supports it.</dd>
 
 </dl>
 
+### Overriding Styling
+
+#### Cell styling
+For the `table`, `tr`, and `td` or `th` tags, `editableCell` does not add any styles itself. Feel free to style your table how you please.
+
+When editing a cell, `editableCell` uses an `input` element with the CSS class `editable-cell-input` for
+editing. This is only directly visible when the user double-clicks on the cell.
+
+If you wanted to make the text bold when it's being edited, you could:
+
+```css
+    .editable-cell-input { font-weight: bold; }
+```
+
+#### Selection styling
+
+The selection styling is done with a semi-transparent `div` that has the CSS class
+`editable-cell-selection`.
+
+If you wanted to have a selection that was light blue, rather than orange, you could:
+
+```css
+    .editable-cell-selection { background-color: rgba(200, 100, 30, .015) !important; }
+```
+
 
 ## Comparison to other editing libraries
 
