@@ -724,8 +724,11 @@ var SelectionView = require('./selectionView'),
 
 module.exports = Selection;
 
+inherits(Selection, EventEmitter);
+
 function Selection(table, selectionMappings) {
     EventEmitter.call(this);
+
     this.table = table;
     this.selectionMappings = selectionMappings;
 
@@ -739,9 +742,6 @@ function Selection(table, selectionMappings) {
 
     this.range.on('change', this.onSelectionChange);
 }
-
-inherits(Selection, EventEmitter);
-
 
 Selection.prototype.setRange = function(start, end) {
     this.range.setStart(start);
@@ -938,9 +938,6 @@ Selection.prototype.updateSelectionMapping = function(newStartOrEnd) {
     }
 };
 
-
-
-
 Selection.prototype.onReturn = function(event, preventMove) {
     if (preventMove !== true) {
         this.range.moveInDirection('Down');
@@ -1127,8 +1124,11 @@ var EventEmitter = require('events').EventEmitter,
 
 module.exports = SelectionRange;
 
+inherits(SelectionRange, EventEmitter);
+
 function SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
     EventEmitter.call(this);
+
     this.start = undefined;
     this.end = undefined;
     this.selection = [];
@@ -1139,17 +1139,15 @@ function SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsV
     this.cellIsVisible = cellIsVisible;
 }
 
-inherits(SelectionRange, EventEmitter);
-
-SelectionRange.prototype.setSelection =function(cells) {
+SelectionRange.prototype.setSelection = function (cells) {
     this.selection = cells;
     this.emit('change', cells);
 };
 
 SelectionRange.prototype.moveInDirection = function (direction, toEnd) {
     var newStart = toEnd ? this.getLastSelectableCellInDirection(this.start, direction) : this.getSelectableCellInDirection(this.start, direction),
-    startChanged = newStart !== this.start,
-    belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== this.start.parentNode.parentNode.parentNode;
+        startChanged = newStart !== this.start,
+        belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== this.start.parentNode.parentNode.parentNode;
 
     if (!belongingToOtherTable && (startChanged || this.start !== this.end)) {
         this.setStart(newStart);
@@ -1224,11 +1222,9 @@ SelectionRange.prototype.setEnd = function (element) {
 };
 
 SelectionRange.prototype.getCellInDirection = function (originCell, direction) {
-
-    var rowIndex = originCell.parentNode.rowIndex;
-    var cellIndex = getCellIndex(originCell);
-
-    var table = originCell.parentNode.parentNode.parentNode,
+    var rowIndex = originCell.parentNode.rowIndex,
+        cellIndex = getCellIndex(originCell),
+        table = originCell.parentNode.parentNode.parentNode,
         row = this.getRowByIndex(rowIndex + getDirectionYDelta(direction), table),
         cell = row && this.getCellByIndex(row, cellIndex + getDirectionXDelta(direction, originCell));
 
@@ -1268,7 +1264,7 @@ SelectionRange.prototype.getLastSelectableCellInDirection = function (originCell
     do {
         cell = nextCell;
         nextCell = this.getSelectableCellInDirection(cell, direction);
-    } while(nextCell !== cell);
+    } while (nextCell !== cell);
 
     return cell;
 };
@@ -1381,21 +1377,21 @@ SelectionView.prototype.init = function() {
     this.onKeyPress = onKeyPress.bind(this);
     this.onKeyDown = onKeyDown.bind(this);
 
-    this.element.addEventListener("mousedown", this.onMouseDown);
-    this.element.addEventListener("dblclick", this.onDblClick);
-    this.element.addEventListener("keypress", this.onKeyPress);
-    this.element.addEventListener("keydown", this.onKeyDown);
+    this.element.addEventListener('mousedown', this.onMouseDown);
+    this.element.addEventListener('dblclick', this.onDblClick);
+    this.element.addEventListener('keypress', this.onKeyPress);
+    this.element.addEventListener('keydown', this.onKeyDown);
 
     this.onInputKeydown = onInputKeydown.bind(this);
     this.onInputBlur = onInputBlur.bind(this);
 
-    this.inputElement.addEventListener("keydown", this.onInputKeydown);
-    this.inputElement.addEventListener("blur", this.onInputBlur);
+    this.inputElement.addEventListener('keydown', this.onInputKeydown);
+    this.inputElement.addEventListener('blur', this.onInputBlur);
 
     this.onMouseUp = onMouseUp.bind(this);
     //var html = window.document.getElementsByTagName('html')[0];
     //html.addEventListener("mouseup", this.onMouseUp);
-    document.addEventListener("mouseup", this.onMouseUp);
+    document.addEventListener('mouseup', this.onMouseUp);
 };
 
 function createElement(document) {

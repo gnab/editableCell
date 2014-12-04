@@ -4,8 +4,11 @@ var EventEmitter = require('events').EventEmitter,
 
 module.exports = SelectionRange;
 
+inherits(SelectionRange, EventEmitter);
+
 function SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsVisible) {
     EventEmitter.call(this);
+
     this.start = undefined;
     this.end = undefined;
     this.selection = [];
@@ -16,17 +19,15 @@ function SelectionRange(getRowByIndex, getCellByIndex, cellIsSelectable, cellIsV
     this.cellIsVisible = cellIsVisible;
 }
 
-inherits(SelectionRange, EventEmitter);
-
-SelectionRange.prototype.setSelection =function(cells) {
+SelectionRange.prototype.setSelection = function (cells) {
     this.selection = cells;
     this.emit('change', cells);
 };
 
 SelectionRange.prototype.moveInDirection = function (direction, toEnd) {
     var newStart = toEnd ? this.getLastSelectableCellInDirection(this.start, direction) : this.getSelectableCellInDirection(this.start, direction),
-    startChanged = newStart !== this.start,
-    belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== this.start.parentNode.parentNode.parentNode;
+        startChanged = newStart !== this.start,
+        belongingToOtherTable = newStart.parentNode.parentNode.parentNode !== this.start.parentNode.parentNode.parentNode;
 
     if (!belongingToOtherTable && (startChanged || this.start !== this.end)) {
         this.setStart(newStart);
@@ -101,11 +102,9 @@ SelectionRange.prototype.setEnd = function (element) {
 };
 
 SelectionRange.prototype.getCellInDirection = function (originCell, direction) {
-
-    var rowIndex = originCell.parentNode.rowIndex;
-    var cellIndex = getCellIndex(originCell);
-
-    var table = originCell.parentNode.parentNode.parentNode,
+    var rowIndex = originCell.parentNode.rowIndex,
+        cellIndex = getCellIndex(originCell),
+        table = originCell.parentNode.parentNode.parentNode,
         row = this.getRowByIndex(rowIndex + getDirectionYDelta(direction), table),
         cell = row && this.getCellByIndex(row, cellIndex + getDirectionXDelta(direction, originCell));
 
@@ -145,7 +144,7 @@ SelectionRange.prototype.getLastSelectableCellInDirection = function (originCell
     do {
         cell = nextCell;
         nextCell = this.getSelectableCellInDirection(cell, direction);
-    } while(nextCell !== cell);
+    } while (nextCell !== cell);
 
     return cell;
 };

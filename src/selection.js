@@ -8,8 +8,11 @@ var SelectionView = require('./selectionView'),
 
 module.exports = Selection;
 
+inherits(Selection, EventEmitter);
+
 function Selection(table, selectionMappings) {
     EventEmitter.call(this);
+
     this.table = table;
     this.selectionMappings = selectionMappings;
 
@@ -23,9 +26,6 @@ function Selection(table, selectionMappings) {
 
     this.range.on('change', this.onSelectionChange);
 }
-
-inherits(Selection, EventEmitter);
-
 
 Selection.prototype.setRange = function(start, end) {
     this.range.setStart(start);
@@ -221,9 +221,6 @@ Selection.prototype.updateSelectionMapping = function(newStartOrEnd) {
         }
     }
 };
-
-
-
 
 Selection.prototype.onReturn = function(event, preventMove) {
     if (preventMove !== true) {
