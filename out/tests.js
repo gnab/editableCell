@@ -5704,15 +5704,15 @@ function onKeyPress(event) {
 
 function onKeyDown(event) {
     if (event.keyCode === 13) {
-
+        // ENTER
         this.selection.onReturn(event);
 
     } else if ([37, 38, 39, 40].indexOf(event.keyCode) !== -1) {
-
+        // ARROWS
         this.selection.onArrows(event);
 
     } else if (event.keyCode === 86 && event.ctrlKey) {
-
+        // CTRL + V
         this.copyPasteElement.value = '';
         this.copyPasteElement.style.display = 'block';
         this.copyPasteElement.focus();
@@ -5724,7 +5724,7 @@ function onKeyDown(event) {
         }, 0);
 
     } else if (event.keyCode === 67 && event.ctrlKey) {
-
+        // CTRL + C
         this.copyPasteElement.value = this.selection.onCopy();
         this.copyPasteElement.style.display = 'block';
         this.copyPasteElement.focus();
@@ -5737,15 +5737,23 @@ function onKeyDown(event) {
         }, 0);
 
     } else if (event.keyCode === 9) {
-
+        // TAB
         this.selection.onTab(event);
 
     } else if (event.keyCode === 46 || (event.keyCode === 8 && event.ctrlKey)) {
-
-        // either DELETE key || CTRL + BACKSPACE
-        var cell = this.selection.getRange().start;
-        this.selection.updateCellValue(cell, null);
-
+        // DELETE key || CTRL + BACKSPACE
+        selection.getCells().forEach(function (cellInSelection) {
+            // The following was an opt-in model for handling `null`
+            // where you would be expected to put <td data-value-null="true" data-bind="..."
+            // for each cell that could support handling null
+            /*
+            var value = 0;
+            if (cellInSelection.hasAttribute('data-value-null') &&
+                Boolean(cellInSelection.getAttribute('data-value-null') === true)){
+                    value = null;
+            } */
+            selection.updateCellValue(cellInSelection, null /* value */);
+        });
     }
 }
 
