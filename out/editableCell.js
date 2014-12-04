@@ -1620,10 +1620,12 @@ function onKeyDown(event) {
 
     } else if (event.keyCode === 46 || (event.keyCode === 8 && event.ctrlKey)) {
         // DELETE key || CTRL + BACKSPACE
+        var selection = this.selection; // need local to call inside forEach
         selection.getCells().forEach(function (cellInSelection) {
             // The following was an opt-in model for handling `null`
             // where you would be expected to put <td data-value-null="true" data-bind="..."
             // for each cell that could support handling null
+
             /*
             var value = 0;
             if (cellInSelection.hasAttribute('data-value-null') &&
