@@ -541,13 +541,13 @@ var editableCellSelection = {
                 index = 0,
                 selectionMappings = ko.bindingHandlers.editableCellSelection._selectionMappings;
 
-            for (; index < selectionMappings.length; i++) {
+            for (; index < selectionMappings.length; index++) {
                 if (selectionMappings[index].length > 1 && selectionMappings[index][1] === table) {
                     found = true;
                     break;
                 }
             }
-            
+
             if (found) {
                 ko.bindingHandlers.editableCellSelection._selectionMappings.splice(index, 1);
             } else {
@@ -1456,6 +1456,10 @@ SelectionView.prototype.destroy = function () {
         this.table.removeChild(this.copyPasteElement);
     }
 
+    this.element = null;
+    this.inputElement = null;
+    this.copyPasteElement = null;
+    this.scrollHost = null;
     // note: this is *really* important because this is a circular reference
     this.selection = null;
 };
