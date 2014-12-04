@@ -111,6 +111,10 @@ SelectionView.prototype.destroy = function () {
         this.table.removeChild(this.copyPasteElement);
     }
 
+    this.element = null;
+    this.inputElement = null;
+    this.copyPasteElement = null;
+    this.scrollHost = null;
     // note: this is *really* important because this is a circular reference
     this.selection = null;
 };
