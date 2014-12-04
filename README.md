@@ -18,14 +18,30 @@ _NOTE: At the current time, `editableCell` only supports Chrome (see <a href="ht
 
 ## Requirements
 
-`editableCell` depends upon [Knockout](http://www.knockoutjs.com)s (and therefore has an implicit dependency on jQuery).
-v1.0.0 supports Knockout v3.0.0+, and any version of jQuery supported by Knockout.
+`editableCell` depends upon [Knockout](http://www.knockoutjs.com) (and therefore
+has an implicit dependency on jQuery).
+
+v2.0.0 supports Knockout v3.0.0+, and is compatible with any version of jQuery supported by Knockout.
 
 ## Getting Started
 
 ### Adding `editableCell` to your project
 
-`editableCell` can be loaded via a normal script tag, or via AMD (like `RequireJS`).
+You can obtain `editableCell` in a number of ways:
+
+* Download the files in the `out` folder manually (shown below, assuming you've placed the files in the `vendor` folder)
+* __NEW__: `editableCell` is now available via [Bower](http://www.bower.io)! The
+package name is `knockout-editable-cell`
+
+```bash
+$ bower install knockout-editable-cell
+```
+* You can use a CDN: `https://cdn.rawgit.com/gnab/editableCell/v2.0.1/out/editableCell.min.js`
+* __SOON__: Via NuGet!
+
+### Loading `editableCell`
+
+`editableCell` can be loaded via a normal script tag, or using and AMD loader (like [RequireJS](http://www.requirejs.org)).
 
 Via a `script` tag:
 
@@ -36,6 +52,7 @@ Via a `script` tag:
 ```
 
 Via `RequireJS`:
+
 ```javascript
 /* Add 'editableCell' to your existing requireJs configuration */
 
@@ -49,17 +66,21 @@ requirejs.config({
 
 ### Usage
 
-Table cells are bound using an `editableCell` binding, and are (by default) selectable
-and editable. You just need to pass a Knockout observable or writeable computed property
-to the binding:
+`editableCell` is a Knockout binding targeting table cells (`td`). By default, they
+will be selectable and editable. You just need to pass a Knockout observable or
+computed property to the binding:
 
 ```html
-<td data-bind="editableCell: name"></td>
+<table>
+    <tr>
+        <td data-bind="editableCell: name"></td>
+    </tr>
+</table>
 ```
 
 To customize the default behaviour, you may use the following supplemental binding properties:
 
- - `cellReadOnly` - Whether or not the cell should be editable. It will always, however, remain selectable.
+ - `cellReadOnly` - Whether the cell should be editable. It will always, however, remain selectable.
  - `cellText` - The text to display when the cell is not being edited.
  - `cellHTML` - A more advanced version of `cellText` that allows additional customization.
 
@@ -77,8 +98,8 @@ To customize the default behaviour, you may use the following supplemental bindi
 
 <!-- Turns a string into an HTML element inside the TD.
      If the user edits the cell, the function will be called
-     with the new 'age' value -->
-<td data-bind="editableCell: age, cellHTML: showFancyDivForYear"></td>
+     with the new 'price' value -->
+<td data-bind="editableCell: price, cellHTML: priceWithCurrencySpan"></td>
 
 ```
 
@@ -125,7 +146,8 @@ selection*, below).
 
 `editableCell` supports both pasting in structured data to one or more
 cells, and copying values from table cells. In the latter case, the values
-will be pasted as a <em>tab-delimited</em> array of values.
+will be pasted as a _tab-delimited_ array of values (columns), and rows will
+be separated by `cr-lf`.
 
 #### Sharing selection
 
@@ -179,22 +201,39 @@ supports it.</dd>
 </dl>
 
 
-## Comparision to other editing libraries
+## Comparison to other editing libraries
 
 Other 'editable' libraries approach the same problem in slightly-different ways.
 
 Some, like <a href="http://vitalets.github.io/x-editable/">x-editable</a> don't
-fit particularly well with table-structured data.
+fit particularly well with large amounts of table-structured data. We wanted
+an user-experience closer to Excel-style editing.
 
-Others are wrappers around `contentEditable`. An early version of `editableCell`
-tried this, but ran into some issues. <small>(For more details, see <a href="https://github.com/gnab/editableCell/issues/3" target="_blank">issue #3)</a>.
+Others try to build a wrapper around `contentEditable`. An early version of `editableCell`
+tried this, but we ran into some issues. <small>(For more details, see <a href="https://github.com/gnab/editableCell/issues/3" target="_blank">issue #3)</a>.
 
-Others, like <a href="www.handsontable.com">Handsontable</a>, <a href-"https://github.com/Knockout-Contrib/KoGrid">ko-grid</a>, and others, are
-very focused on controlling the entire table 'surface'. We wanted to be able to
-(potentially) make only a single row (or even cell) editable.
+Finally, there are a large number of **table** or **grid** components, like
+<a href="www.handsontable.com">Handsontable</a>, <a href-"https://github.com/Knockout-Contrib/KoGrid">ko-grid</a>,
+and others. These are great solutions, but the drawback is that they are
+very focused on controlling the entire table 'surface'. That is, they usually
+assume that you will configure the table definition in javascript and give them
+a container DOM element to render into. We wanted to embrace the existing
+layout, and (potentially) make only a single row (or even cell) editable.
 
-Finally, we wanted to fit well in a project already using `Knockout`.
+And of course, we wanted to fit well in a project already using `Knockout`.
 
 ## License
 
 This project is licensed under the MIT license.
+
+## Contributing
+
+### Building `editableCell`
+
+* Clone the repository
+* Install dependencies
+```bash
+$ npm install
+```
+* Run `node make` - both minified and non-minified versions of `editableCell` will
+be placed in the `out` folder
