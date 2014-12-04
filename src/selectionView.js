@@ -62,30 +62,36 @@ SelectionView.prototype.init = function() {
 };
 
 function createElement(document) {
-    var elem = createElem(document, 'div');
-    return initElem(elem, 'editable-cell-selection', -1);
+    var elem = createElem(document, 'div', 'editable-cell-selection');
+
+    elem.tabIndex = -1;
+    elem.style.backgroundColor = 'rgba(245, 142, 00, 0.15)';
+
+    return elem;
 }
 
 function createInputElement(document) {
-    var elem = createElem(document, 'input');
-    return initElem(elem, 'editable-cell-input');
+    var elem = createElem(document, 'input', 'editable-cell-input');
+    return elem;
 }
 
 function createCopyPasteElement(document){
-    var e = createElem(document, 'textarea');
-    return initElem(e, '', undefined, '0.0');
+    var elem = createElem(document, 'textarea');
+
+    elem.style.opacity = '0.0';
+
+    return elem;
 }
 
-function createElem(document, tag) {
-    return document.createElement(tag);
+function createElem(document, tag, className) {
+    var elem = document.createElement(tag);
+    return initElem(elem, className);
 }
 
-function initElem(elem, className, tabIndex, opacity){
-    elem.className = className;
+function initElem(elem, className){
+    elem.className = className || '';
     elem.style.position = 'absolute';
     elem.style.display = 'none';
-    if (opacity !== undefined) elem.style.opacity = opacity;
-    if (tabIndex !== undefined) elem.tabIndex = tabIndex;
     return elem;
 }
 
@@ -177,7 +183,6 @@ SelectionView.prototype.update = function (start, end) {
     this.element.style.left = this.table.offsetLeft + left + 1 + 'px';
     this.element.style.height = bottom - top - 1 + 'px';
     this.element.style.width = right - left - 1 + 'px';
-    this.element.style.backgroundColor = 'rgba(245, 142, 00, 0.15)';
 
     this.show();
 };
@@ -275,7 +280,7 @@ function onKeyDown(event) {
 
     } else if (event.keyCode === 46 || (event.keyCode === 8 && event.ctrlKey)) {
         // DELETE key || CTRL + BACKSPACE
-        var selection = this.selection; // need local to call inside forEach
+        var selection = this.selection; // needed for scoping in forEach
         selection.getCells().forEach(function (cellInSelection) {
             // The following was an opt-in model for handling `null`
             // where you would be expected to put <td data-value-null="true" data-bind="..."
