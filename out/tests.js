@@ -5576,7 +5576,11 @@ SelectionView.prototype.destroy = function () {
     var tableParent = this.table.parentNode;
     tableParent.removeChild(this.element);
     tableParent.removeChild(this.inputElement);
-    this.table.removeChild(this.copyPasteElement);
+    // if ko has re-created the element, it's possible that the copyPasteElement
+    // has been re-parented
+    if (this.table === this.copyPasteElement.parentNode) {
+        this.table.removeChild(this.copyPasteElement);
+    }
 
     // note: this is *really* important because this is a circular reference
     this.selection = null;
