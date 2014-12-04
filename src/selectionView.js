@@ -44,21 +44,21 @@ SelectionView.prototype.init = function() {
     this.onKeyPress = onKeyPress.bind(this);
     this.onKeyDown = onKeyDown.bind(this);
 
-    this.element.addEventListener("mousedown", this.onMouseDown);
-    this.element.addEventListener("dblclick", this.onDblClick);
-    this.element.addEventListener("keypress", this.onKeyPress);
-    this.element.addEventListener("keydown", this.onKeyDown);
+    this.element.addEventListener('mousedown', this.onMouseDown);
+    this.element.addEventListener('dblclick', this.onDblClick);
+    this.element.addEventListener('keypress', this.onKeyPress);
+    this.element.addEventListener('keydown', this.onKeyDown);
 
     this.onInputKeydown = onInputKeydown.bind(this);
     this.onInputBlur = onInputBlur.bind(this);
 
-    this.inputElement.addEventListener("keydown", this.onInputKeydown);
-    this.inputElement.addEventListener("blur", this.onInputBlur);
+    this.inputElement.addEventListener('keydown', this.onInputKeydown);
+    this.inputElement.addEventListener('blur', this.onInputBlur);
 
     this.onMouseUp = onMouseUp.bind(this);
     //var html = window.document.getElementsByTagName('html')[0];
     //html.addEventListener("mouseup", this.onMouseUp);
-    document.addEventListener("mouseup", this.onMouseUp);
+    document.addEventListener('mouseup', this.onMouseUp);
 };
 
 function createElement(document) {
