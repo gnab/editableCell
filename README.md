@@ -21,7 +21,7 @@ _NOTE: At the current time, `editableCell` only supports Chrome (see <a href="ht
 `editableCell` depends upon [Knockout](http://www.knockoutjs.com) (and therefore
 has an implicit dependency on jQuery).
 
-v2.0.0 supports Knockout v3.0.0+, and is compatible with any version of jQuery supported by Knockout.
+v2.1.0 supports Knockout v3.0.0+, and is compatible with any version of jQuery supported by Knockout.
 
 ## Getting Started
 
@@ -36,7 +36,7 @@ package name is `knockout-editable-cell`
 ```bash
 $ bower install knockout-editable-cell
 ```
-* You can use a CDN: `https://cdn.rawgit.com/gnab/editableCell/v2.0.1/out/editableCell.min.js`
+* You can use a CDN: `https://cdn.rawgit.com/gnab/editableCell/v2.1.0/out/editableCell.min.js`
 * __SOON__: Via NuGet!
 
 ### Loading `editableCell`
