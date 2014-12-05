@@ -33,10 +33,22 @@ var editableCellSelection = {
         // Perform clean-up when table is removed from DOM
         ko.utils.domNodeDisposal.addDisposeCallback(table, function () {
             // Remove selection from list
-            var selectionIndex = ko.utils.arrayFirst(ko.bindingHandlers.editableCellSelection._selectionMappings, function (tuple) {
-                return tuple[0] === valueAccessor;
-            });
-            ko.bindingHandlers.editableCellSelection._selectionMappings.splice(selectionIndex, 1);
+            var found = false,
+                index = 0,
+                selectionMappings = ko.bindingHandlers.editableCellSelection._selectionMappings;
+
+            for (; index < selectionMappings.length; index++) {
+                if (selectionMappings[index].length > 1 && selectionMappings[index][1] === table) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (found) {
+                ko.bindingHandlers.editableCellSelection._selectionMappings.splice(index, 1);
+            } else {
+                console.warn('[editableCell] Selection binding did not clean up a mapping. Likely leaked table');
+            }
 
             // Remove event listener
             selection.removeListener('change', rangeChanged);
