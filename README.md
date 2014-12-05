@@ -12,7 +12,7 @@ It supports features like:
 * Additional display customization of the observable value (via `cellText` and `cellHTML` functions)
 * Applying a new value to all selected cells (via Ctrl+ENTER)
 
-#### Try out the [demo](http://gnab.github.com/editableCell/)!
+#### Try out the [demo](http://gnab.github.com/editableCell/)! Or on [JSBin](http://jsbin.com/wuvoluzovi/2/edit)!
 
 _NOTE: At the current time, `editableCell` only supports Chrome (see <a href="https://github.com/gnab/editableCell/issues/27" target="_blank">#27</a> for progress)._
 
