@@ -1,3 +1,4 @@
+"option strict";
 var utils = require('./utils'),
     ko = require('./wrapper');
 

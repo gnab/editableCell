@@ -1,3 +1,4 @@
+"option strict";
 var utils = require('./utils'),
     events = require('../events'),
     ko = require('./wrapper');

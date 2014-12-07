@@ -1,3 +1,4 @@
+"option strict";
 var EventEmitter = require('events').EventEmitter,
     polyfill = require('./polyfill'),
     inherits = require('inherits');

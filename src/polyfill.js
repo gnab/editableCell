@@ -1,3 +1,4 @@
+"option strict";
 function forEach (list, f) {
   var i;
 

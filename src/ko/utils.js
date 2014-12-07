@@ -1,3 +1,4 @@
+"option strict";
 var Selection = require('../selection'),
     ko = require('./wrapper');
 

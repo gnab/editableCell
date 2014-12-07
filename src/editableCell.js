@@ -1,3 +1,4 @@
+"option strict";
 var koBindingHandlers = require('./ko'),
     events = require('./events');
 
@@ -46,7 +47,7 @@ var proxyEvents = ['cellValueChanged', 'beforeCopy'],
 for (i = 0; i < proxyEvents.length; ++i) {
     eventName = proxyEvents[i];
 
-    events.private.on(eventName, createProxy(eventName));    
+    events.private.on(eventName, createProxy(eventName));
 }
 
 function createProxy (eventName) {

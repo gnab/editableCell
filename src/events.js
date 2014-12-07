@@ -1,3 +1,4 @@
+"option strict";
 var EventEmitter = require('events').EventEmitter,
 	publicEvents = new EventEmitter(),
 	privateEvents = new EventEmitter();

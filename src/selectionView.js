@@ -1,3 +1,4 @@
+"option strict";
 var polyfill = require('./polyfill');
 
 module.exports = SelectionView;
