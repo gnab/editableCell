@@ -251,8 +251,8 @@ function onKeyDown(event) {
         // ARROWS
         this.selection.onArrows(event);
 
-    } else if (event.keyCode === 86 && event.ctrlKey) {
-        // CTRL + V
+    } else if (event.keyCode === 86 && (event.ctrlKey || event.metaKey)) {
+        // (CTRL|CMD) + V
         this.copyPasteElement.style.display = 'block';
         this.copyPasteElement.focus();
 
@@ -263,8 +263,8 @@ function onKeyDown(event) {
             self.focus();
         }, 0);
 
-    } else if (event.keyCode === 67 && event.ctrlKey) {
-        // CTRL + C
+    } else if (event.keyCode === 67 && (event.ctrlKey || event.metaKey)) {
+        // (CTRL|CMD) + C
         this.copyPasteElement.value = this.selection.onCopy();
         this.copyPasteElement.style.display = 'block';
         this.copyPasteElement.focus();
