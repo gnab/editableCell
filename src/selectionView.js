@@ -241,6 +241,8 @@ function onKeyPress(event) {
 }
 
 function onKeyDown(event) {
+    var self = this;
+
     if (event.keyCode === 13) {
         // ENTER
         this.selection.onReturn(event);
@@ -251,14 +253,14 @@ function onKeyDown(event) {
 
     } else if (event.keyCode === 86 && event.ctrlKey) {
         // CTRL + V
-        this.copyPasteElement.value = '';
         this.copyPasteElement.style.display = 'block';
         this.copyPasteElement.focus();
 
         setTimeout(function () {
-            this.selection.onPaste(this.copyPasteElement.value);
-            this.copyPasteElement.style.display = 'none';
-            this.focus();
+            self.selection.onPaste(self.copyPasteElement.value);
+            self.copyPasteElement.value = '';
+            self.copyPasteElement.style.display = 'none';
+            self.focus();
         }, 0);
 
     } else if (event.keyCode === 67 && event.ctrlKey) {
@@ -270,8 +272,8 @@ function onKeyDown(event) {
         document.execCommand('selectAll', false, null);
 
         setTimeout(function () {
-            this.copyPasteElement.style.display = 'none';
-            this.focus();
+            self.copyPasteElement.style.display = 'none';
+            self.focus();
         }, 0);
 
     } else if (event.keyCode === 9) {
@@ -280,8 +282,7 @@ function onKeyDown(event) {
 
     } else if (event.keyCode === 46 || (event.keyCode === 8 && event.ctrlKey)) {
         // DELETE key || CTRL + BACKSPACE
-        var selection = this.selection; // need local to call inside forEach
-        selection.getCells().forEach(function (cellInSelection) {
+        this.selection.getCells().forEach(function (cellInSelection) {
             // The following was an opt-in model for handling `null`
             // where you would be expected to put <td data-value-null="true" data-bind="..."
             // for each cell that could support handling null
@@ -292,7 +293,7 @@ function onKeyDown(event) {
                 Boolean(cellInSelection.getAttribute('data-value-null') === true)){
                     value = null;
             } */
-            selection.updateCellValue(cellInSelection, null /* value */);
+            self.selection.updateCellValue(cellInSelection, null /* value */);
         });
     }
 }
