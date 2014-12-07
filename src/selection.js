@@ -178,11 +178,11 @@ Selection.prototype.getRowByIndex = function(index, originTable) {
             });
 
             var beforeTables = tables.filter(function(t) {
-                return t.getBoundingClientRect().bottom <= table.getBoundingClientRect().top;
+                return t.getBoundingClientRect().bottom <= targetTable.getBoundingClientRect().top;
             });
 
             var afterTables = tables.filter(function(t) {
-                return t.getBoundingClientRect().top >= table.getBoundingClientRect().bottom;
+                return t.getBoundingClientRect().top >= targetTable.getBoundingClientRect().bottom;
             });
 
             // Moving upwards
