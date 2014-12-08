@@ -122,9 +122,12 @@
 
             requirejs.config({
               paths: {
-                knockout: 'https://cdnjs.cloudflare.com/ajax/libs/knockout/3.2.0/knockout-min',
-                editableCell: 'https://cdn.rawgit.com/gnab/editableCell/v2.1.0/out/editableCell.min'
-              }
+                  knockout:         "https://cdnjs.cloudflare.com/ajax/libs/knockout/3.2.0/knockout-min",
+                  editableCell:     "https://cdn.rawgit.com/gnab/editableCell/v2.1.0/out/editableCell.min"
+                },
+                shim: {
+                    editableCell: { deps: ["knockout"] }
+                }
             });
 
             require(['knockout', 'editableCell'], function (ko, ec) {
