@@ -67,6 +67,7 @@ function createElement(document) {
 
     elem.tabIndex = -1;
     elem.style.backgroundColor = 'rgba(245, 142, 00, 0.15)';
+    elem.style.outline = '1px solid #86bae8';
 
     return elem;
 }
