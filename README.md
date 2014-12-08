@@ -14,14 +14,21 @@ It supports features like:
 
 #### Try out the [demo](http://gnab.github.com/editableCell/)! Or on [JSBin](http://jsbin.com/wuvoluzovi/2/edit)!
 
-_NOTE: At the current time, `editableCell` only supports Chrome (see <a href="https://github.com/gnab/editableCell/issues/27" target="_blank">#27</a> for progress)._
-
 ## Requirements
 
 `editableCell` depends upon [Knockout](http://www.knockoutjs.com) (and therefore
 has an implicit dependency on jQuery).
 
-v2.1.0 supports Knockout v3.0.0+, and is compatible with any version of jQuery supported by Knockout.
+v2.1.1 supports Knockout v3.0.0+, and is compatible with any version of jQuery supported by Knockout.
+
+### Browser support
+
+`editableCell` should support most modern browsers: IE8+, FF 31+, Chrome 31+, Safari 7+
+
+Support will also depend on the versions of Knockout and jQuery in use.
+
+_Please file an [issue](https://github.com/gnab/editableCell/issues/) or update our [tracking issue](https://github.com/gnab/editableCell/issues/27) if your run into any problems_
+
 
 ## Getting Started
 
@@ -36,7 +43,7 @@ package name is `knockout-editable-cell`
 ```bash
 $ bower install knockout-editable-cell
 ```
-* You can use a CDN: `https://cdn.rawgit.com/gnab/editableCell/v2.1.0/out/editableCell.min.js`
+* You can use a CDN: `https://cdn.rawgit.com/gnab/editableCell/v2.1.1/out/editableCell.min.js`
 * __SOON__: Via NuGet!
 
 ### Loading `editableCell`
