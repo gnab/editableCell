@@ -12,7 +12,7 @@ It supports features like:
 * Additional display customization of the observable value (via `cellText` and `cellHTML` functions)
 * Applying a new value to all selected cells (via Ctrl+ENTER)
 
-#### Try out the [demo](http://gnab.github.com/editableCell/)! Or on [JSBin](http://jsbin.com/wuvoluzovi/2/edit)!
+#### Try out the [demo](http://gnab.github.com/editableCell/)! Or on [JSBin](http://jsbin.com/leqoyuyeva/1/edit)!
 
 ## Requirements
 
