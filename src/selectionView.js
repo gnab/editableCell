@@ -1,5 +1,5 @@
 "option strict";
-var polyfill = require('./polyfill');
+var polyfill = require('./polyfill'); // jshint ignore: line
 
 module.exports = SelectionView;
 
@@ -158,14 +158,6 @@ SelectionView.prototype.show = function () {
         scrollHost.scrollLeft -= rightOffset;
     }
 };
-
-function resolve (value) {
-    if (typeof value === 'function') {
-        return value();
-    }
-
-    return value;
-}
 
 SelectionView.prototype.hide = function () {
     this.element.style.display = 'none';

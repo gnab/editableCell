@@ -1,3 +1,5 @@
+/* global $ */
+
 "option strict";
 var utils = require('./utils'),
     events = require('../events'),

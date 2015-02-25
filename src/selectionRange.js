@@ -1,6 +1,6 @@
 "option strict";
 var EventEmitter = require('events').EventEmitter,
-    polyfill = require('./polyfill'),
+    polyfill = require('./polyfill'), // jshint ignore:line
     inherits = require('inherits');
 
 module.exports = SelectionRange;
@@ -126,8 +126,7 @@ SelectionRange.prototype.getCellInDirection = function (originCell, direction) {
 };
 
 SelectionRange.prototype.getSelectableCellInDirection = function (originCell, direction) {
-    var lastCell,
-        cell = originCell;
+    var cell = originCell;
 
     while (cell) {
         cell = this.getCellInDirection(cell, direction);
@@ -141,7 +140,9 @@ SelectionRange.prototype.getSelectableCellInDirection = function (originCell, di
 };
 
 SelectionRange.prototype.getLastSelectableCellInDirection = function (originCell, direction) {
-    var nextCell = originCell;
+    var nextCell = originCell,
+        cell = nextCell;
+
     do {
         cell = nextCell;
         nextCell = this.getSelectableCellInDirection(cell, direction);
