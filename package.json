@@ -7,7 +7,7 @@
     "url": "https://github.com/gnab/editableCell.git"
   },
   "devDependencies": {
-    "browserify": "^6.3.3",
+    "browserify": "^9.0.3",
     "inherits": "^2.0.1",
     "jquery": "^2.1.1",
     "jshint": "^2.5.10",
