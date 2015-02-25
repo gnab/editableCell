@@ -160,6 +160,8 @@ Selection.prototype.endEditingCell = function(cell) {
 };
 
 Selection.prototype.getRowByIndex = function(index, originTable) {
+    if (isNaN(index)) return null;
+    
     var targetTable = originTable || this.table;
 
     // Check if we're moving out of table
@@ -380,7 +382,7 @@ function cellIsSelectable(cell) {
 }
 
 function cellIsEditable(cell) {
-    return cell._cellReadOnly() !== true;
+    return cell && typeof cell._cellReadOnly === 'function' && cell._cellReadOnly() !== true;
 }
 
 function cellIsVisible(cell) {
