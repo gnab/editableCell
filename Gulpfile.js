@@ -17,7 +17,7 @@ var config = {
     target: './out',
     externals: ['knockout', 'jquery'],
     increment: argv.inc || 'patch',
-    dryRun: argv.dryrun || true
+    dryRun: argv.dryrun || false
 };
 
 gulp.task('default', function(done) {
