@@ -1,5 +1,9 @@
+/* globals describe, it, ko */
+"use strict";
+
 var editableCell = require('../../src/editableCell');
 var utils = require('../utils');
+require('should');
 
 describe('editableCell binding', function () {
     it('should be registered with Knockout', function () {
