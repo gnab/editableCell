@@ -30,13 +30,12 @@
     "mocha-phantomjs": "^3.5.1",
     "phantomjs": "^1.9.12",
     "run-sequence": "^1.0.2",
-    "shelljs": "^0.3.0",
     "should": "^4.3.0",
     "uglify-js": "^2.4.15",
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.0.0"
   },
   "scripts": {
-    "test": "node make test"
+    "test": "gulp bundle test"
   }
 }
