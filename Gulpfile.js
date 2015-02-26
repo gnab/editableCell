@@ -17,7 +17,7 @@ var config = {
     target: './out',
     externals: ['knockout', 'jquery'],
     increment: argv.inc || 'patch',
-    dryRun: argv.dryrun || false
+    dryRun: argv.dryrun || true
 };
 
 gulp.task('default', function(done) {
@@ -108,6 +108,50 @@ gulp.task('bump', function() {
         .pipe($.bump({ version: newVer }))
         .pipe(gulp.dest('./'))
         .pipe($.if(!config.dryRun, $.git.commit('Bumped version to v' + newVer)));
+});
+
+gulp.task('_add_output_folder', function() {
+    return gulp.src(['./out/*'])
+        .pipe($.git.add({ args: '-f'}));
+});
+
+gulp.task('_publish', function(done) {
+    /*
+    git add -f out/*
+    git checkout head
+    git commit -m "Version {version} for distribution"
+    git tag -a v{version} -m "Add tag v{verson}"
+    git checkout master
+    git push origin --tags
+    */
+    var ver = getPackageJson().version,
+        opt = { quiet: true };
+
+    $.git.checkout('head', function(err){
+        if (err) { throw err; }
+
+        $.git.commit('Version ' + ver + ' for distribution', opt);
+
+        $.git.tag('v' + ver, 'Add tag v' + ver, opt, function(err) {
+            if (err) { throw err; }
+
+            $.git.reset('master', { args: '--hard', quiet: true }, function(err) {
+                if (err) { throw err; }
+
+                if (!config.dryRun) {
+                    $.git.push('origin', 'master', { args: '--tags', quiet: true }, function(err){
+                        if (err) { throw err; }
+                        done();
+                    });
+                }
+            });
+        });
+
+    });
+});
+
+gulp.task('release', function(done) {
+    runSequence('default', 'bump', '_add_output_folder', '_publish', done);
 });
 
 function getPackageJson() {
