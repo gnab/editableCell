@@ -1,5 +1,9 @@
+/* globals describe, it, ko */
+"use strict";
+
 var editableCell = require('../../src/editableCell');
 var utils = require('../utils');
+require('should');
 
 describe('editableCellSelection binding', function () {
     it('should be registered with Knockout', function () {
@@ -55,7 +59,7 @@ describe('editableCellSelection binding', function () {
             var aCell = utils.createCell("editableCell: 'a'");
             var row = aCell.parentNode;
             var table = row.parentNode.parentNode;
-            
+
             var bCell = utils.addCell(row, "editableCell: 'b'");
             var cCell = utils.addCell(row, "editableCell: 'c'");
             bCell.style.display = 'none';

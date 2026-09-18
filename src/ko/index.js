@@ -1,5 +1,5 @@
 "option strict";
-var polyfill = require('../polyfill');
+var polyfill = require('../polyfill'); // jshint ignore:line
 var ko = require('./wrapper');
 
 // Knockout binding handlers

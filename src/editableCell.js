@@ -1,5 +1,5 @@
 "option strict";
-var koBindingHandlers = require('./ko'),
+var koBindingHandlers = require('./ko'), //jshint ignore:line
     events = require('./events');
 
 exports.selectCell = function (cell) {

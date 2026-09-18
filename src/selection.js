@@ -2,7 +2,7 @@
 var SelectionView = require('./selectionView'),
     SelectionRange = require('./selectionRange'),
     EventEmitter = require('events').EventEmitter,
-    polyfill = require('./polyfill'),
+    polyfill = require('./polyfill'), // jshint ignore: line
     events = require('./events'),
     ko = require('./ko/wrapper'),
     inherits = require('inherits');
@@ -160,8 +160,8 @@ Selection.prototype.endEditingCell = function(cell) {
 };
 
 Selection.prototype.getRowByIndex = function(index, originTable) {
-    if (isNaN(index)) return null;
-    
+    if (isNaN(index)) { return null; }
+
     var targetTable = originTable || this.table;
 
     // Check if we're moving out of table

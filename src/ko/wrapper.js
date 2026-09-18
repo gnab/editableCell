@@ -1,3 +1,4 @@
+/* global ko */
 if (typeof ko !== 'undefined') {
   module.exports = ko;
 }
